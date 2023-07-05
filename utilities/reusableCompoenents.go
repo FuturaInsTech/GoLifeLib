@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shijith.chand/go-jwt/initializers"
-	"github.com/shijith.chand/go-jwt/models"
+	"github.com/FuturaInsTech/GoLifeLib/initializers"
+	"github.com/FuturaInsTech/GoLifeLib/models"
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 
-	"github.com/shijith.chand/go-jwt/types"
+	"github.com/FuturaInsTech/GoLifeLib/types"
 	"gorm.io/gorm"
 )
 

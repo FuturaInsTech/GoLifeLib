@@ -1,17 +1,17 @@
 package models
 
 import (
-	"github.com/shijith.chand/go-jwt/models/quotation"
-	"github.com/shijith.chand/go-jwt/types"
+	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
+	"github.com/FuturaInsTech/GoLifeLib/types"
 	"gorm.io/gorm"
 )
 
 type Agency struct {
 	gorm.Model
 	types.CModel
-	AgencyChannelSt string `gorm:"type:varchar(05)"` // P0017
-	Office          string `gorm:"type:varchar(05)"` // P0018
-	AgencySt        string `gorm:"type:varchar(05)"` // P0019
+	AgencyChannelSt   string `gorm:"type:varchar(05)"` // P0017
+	Office            string `gorm:"type:varchar(05)"` // P0018
+	AgencySt          string `gorm:"type:varchar(05)"` // P0019
 	LicenseNo         string `gorm:"type:varchar(20)"`
 	LicenseStartDate  string `gorm:"type:varchar(08)"`
 	LicenseEndDate    string `gorm:"type:varchar(08)"`

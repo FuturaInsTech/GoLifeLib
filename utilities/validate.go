@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/shijith.chand/go-jwt/initializers"
-	"github.com/shijith.chand/go-jwt/models"
-	"github.com/shijith.chand/go-jwt/models/quotation"
-	"github.com/shijith.chand/go-jwt/types"
+	"github.com/FuturaInsTech/GoLifeLib/initializers"
+	"github.com/FuturaInsTech/GoLifeLib/models"
+	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
+	"github.com/FuturaInsTech/GoLifeLib/types"
 )
 
 func CompareDate(fromdate, todate string, language uint) error {

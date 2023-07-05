@@ -1,7 +1,7 @@
 package models
 
 import (
-	"github.com/shijith.chand/go-jwt/models/quotation"
+	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
 	"gorm.io/gorm"
 )
 

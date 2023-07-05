@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/shijith.chand/go-jwt/initializers"
-	"github.com/shijith.chand/go-jwt/models"
+	"github.com/FuturaInsTech/GoLifeLib/models"
+	"github.com/FuturaInsTech/GoLifeLib/initializers"
 )
 
 func GetUserAccess(iuser any, imethod string) (map[string]interface{}, error) {

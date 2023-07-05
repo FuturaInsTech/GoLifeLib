@@ -1,7 +1,7 @@
 package quotation
 
 import (
-	"github.com/shijith.chand/go-jwt/types"
+	"github.com/FuturaInsTech/GoLifeLib/types"
 	"gorm.io/gorm"
 )
 

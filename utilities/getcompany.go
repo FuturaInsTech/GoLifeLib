@@ -1,8 +1,8 @@
 package utilities
 
 import (
-	"github.com/shijith.chand/go-jwt/initializers"
-	"github.com/shijith.chand/go-jwt/models"
+	"github.com/FuturaInsTech/GoLifeLib/models"
+	"github.com/FuturaInsTech/GoLifeLib/initializers"
 )
 
 func AppendData(data map[string]interface{}, icoid uint) map[string]interface{} {

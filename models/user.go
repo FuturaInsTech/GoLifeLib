@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"github.com/shijith.chand/go-jwt/types"
+	"github.com/FuturaInsTech/GoLifeLib/types"
 )
 
 type User struct {

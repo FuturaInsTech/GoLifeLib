@@ -10,10 +10,6 @@ import (
 
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
-
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
-
 	"github.com/FuturaInsTech/GoLifeLib/types"
 	"gorm.io/gorm"
 )

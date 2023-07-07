@@ -29,6 +29,7 @@ type Q0005Data struct {
 	FuturePremAdjYrs      int    // eg., 3 Yrs
 	LapsedDays            int
 	BillingLeadDays       int
+	LapseInterest         float64
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {

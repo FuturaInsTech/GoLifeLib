@@ -1799,7 +1799,7 @@ func TDFSurvbD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 	results := initializers.DB.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
 
 	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	results = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
 	if results.Error != nil {
 		return "", results.Error
@@ -2718,4 +2718,21 @@ func TDFCollD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate
 		initializers.DB.Create(&tdfpolicy)
 		return "", nil
 	}
+}
+
+func GetFutureDue(iFromDate string, iToDate string, iFreq string) (oDate string) {
+	// iFrom is Paid To Date
+	// iTo is Current Date
+	// Frequency is Policy Freqency
+	a := iFromDate
+	for {
+		nxtDate := GetNextDue(a, iFreq, "")
+		a = Date2String(nxtDate)
+		if a > iToDate {
+			break
+		}
+		return a
+	}
+
+	return a
 }

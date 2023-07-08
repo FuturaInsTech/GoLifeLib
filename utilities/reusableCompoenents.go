@@ -420,7 +420,7 @@ func SimpleInterest(iPrincipal, iInterest, iDays float64) (oInterest float64) {
 // ©  FuturaInsTech
 func CompoundInterest(iPrincipal, iInterest, iDays float64) (oInterest float64) {
 	oDays := iDays / 365
-	oInt := (iInterest / 100)
+	oInt := 1 + (iInterest / 100)
 	oInterest1 := iPrincipal * (math.Pow(oInt, oDays))
 	oInterest = oInterest1 - iPrincipal
 	//	fmt.Println("Compounding Interest", iPrincipal, iInterest, iDays, oInterest1, oInterest, oInt)

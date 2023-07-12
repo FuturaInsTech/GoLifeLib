@@ -8,11 +8,10 @@ import (
 type MaturityH struct {
 	gorm.Model
 	types.CModel
-	PolicyID      uint
-	ClientID      uint
-	EffectiveDate string `gorm:"type:varchar(08)"`
-	MaturityDate  string `gorm:"type:varchar(08)"`
-
+	PolicyID          uint
+	ClientID          uint
+	EffectiveDate     string `gorm:"type:varchar(08)"`
+	MaturityDate      string `gorm:"type:varchar(08)"`
 	Status            string `gorm:"type:varchar(02)"`
 	BillDate          string `gorm:"type:varchar(08)"`
 	PaidToDate        string `gorm:"type:varchar(08)"`

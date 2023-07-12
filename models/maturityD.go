@@ -8,13 +8,13 @@ import (
 type MaturityD struct {
 	gorm.Model
 	types.CModel
-	MaturityHID         []uint
+	MaturityHID         uint
 	PolicyID            uint
 	ClientID            uint
 	BenefitID           uint
 	BCoverage           string `gorm:"type:varchar(05)"` //Q0006
 	BSumAssured         uint64
-	SurrAmount          float64
+	MaturityAmount      float64
 	RevBonus            float64
 	AddlBonus           float64
 	TerminalBonus       float64

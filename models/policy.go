@@ -45,4 +45,6 @@ type Policy struct {
 	SurrDs         []SurrD
 	Tdfhs          []Tdfh
 	TDFPolicies    []TDFPolicy
+	MaturityHs     []MaturityH
+	MaturityDs     []MaturityD
 }

@@ -75,5 +75,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate((&models.SurrH{}))
 	// DB.AutoMigrate(&models.SurrD{})
 	//DB.AutoMigrate(&models.BusinessDate{})
+	DB.AutoMigrate(&models.MaturityH{})
+	DB.AutoMigrate(&models.MaturityD{})
 
 }

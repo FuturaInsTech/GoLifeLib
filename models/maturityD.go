@@ -8,7 +8,7 @@ import (
 type MaturityD struct {
 	gorm.Model
 	types.CModel
-	MaturityID          []uint
+	MaturityHID         []uint
 	PolicyID            uint
 	ClientID            uint
 	BenefitID           uint

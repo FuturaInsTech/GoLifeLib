@@ -68,4 +68,6 @@ type Company struct {
 	SurrHs        []SurrH
 	SurrDs        []SurrD
 	BusinessDates []BusinessDate
+	MaturityHs    []MaturityH
+	MaturityDs    []MaturityD
 }

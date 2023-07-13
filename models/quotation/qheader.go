@@ -9,6 +9,7 @@ type QHeader struct {
 	gorm.Model
 	types.CModel
 	QuoteDate     string `gorm:"type:varchar(08)"`
+	POffice       string `gorm:"type:varchar(05)"` //P0018
 	QProduct      string `gorm:"type:varchar(05)"`
 	QContractCurr string `gorm:"type:varchar(03)"`
 	ClientID      uint

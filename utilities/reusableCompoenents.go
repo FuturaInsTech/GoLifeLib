@@ -2766,7 +2766,7 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 	case imatMethod == "MAT001": // Return of SA
 		oAmount = iSA
 		break
-	case imatMethod == "MAT001": // Double SA
+	case imatMethod == "MAT002": // Double SA
 		oAmount = iSA * 2
 		break
 	case imatMethod == "MAT003": // Return of Premium (To be Developed)
@@ -2775,7 +2775,13 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 	case imatMethod == "MAT004": // No Maturity Value
 		oAmount = 0
 		break
-	case imatMethod == "MAT005": // Return of Final Survival Benefit Amount
+	case imatMethod == "MAT005": // No Maturity Value
+		oAmount = 0
+		break
+	case imatMethod == "MAT006": // No Maturity Value
+		oAmount = 0
+		break
+	case imatMethod == "MAT007": // Return of Final Survival Benefit Amount
 		var survbenq models.SurvB
 		result := initializers.DB.First(&survbenq, "company_id=? and policy_id =? and effective_date =? ", iCompany, iPolicy, iEffectiveDate)
 
@@ -2784,7 +2790,9 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 		}
 		oAmount = survbenq.Amount
 		return oAmount
-
+	case imatMethod == "MAT099": // No Maturity Value
+		oAmount = 0
+		break
 	default:
 		oAmount = 0
 		return

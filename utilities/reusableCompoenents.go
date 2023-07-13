@@ -2736,3 +2736,59 @@ func GetFutureDue(iFromDate string, iToDate string, iFreq string) (oDate string)
 
 	return a
 }
+
+func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDate string) (oAmount float64) {
+	var benefit models.Benefit
+	result := initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and b_coverage = ?", iCompany, iPolicy, iCoverage)
+
+	if result.Error != nil {
+		oAmount = 0
+		return
+	}
+
+	// iFund := float64(70000.00)
+	iSA := float64(benefit.BSumAssured)
+	// iStartDate := benefit.BStartDate
+	var q0006data types.Q0006Data
+	var extradata types.Extradata = &q0006data
+	iDate := benefit.BStartDate
+
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
+	if err != nil {
+		oAmount = 0
+		return
+	}
+
+	imatMethod := q0006data.MatMethod //DC001
+	oAmount = 0
+
+	switch {
+	case imatMethod == "MAT001": // Return of SA
+		oAmount = iSA
+		break
+	case imatMethod == "MAT001": // Double SA
+		oAmount = iSA * 2
+		break
+	case imatMethod == "MAT003": // Return of Premium (To be Developed)
+		oAmount = iSA * 2
+		break
+	case imatMethod == "MAT004": // No Maturity Value
+		oAmount = 0
+		break
+	case imatMethod == "MAT005": // Return of Final Survival Benefit Amount
+		var survbenq models.SurvB
+		result := initializers.DB.First(&survbenq, "company_id=? and policy_id =? and effective_date =? ", iCompany, iPolicy, iEffectiveDate)
+
+		if result.RowsAffected == 0 {
+			return oAmount
+		}
+		oAmount = survbenq.Amount
+		return oAmount
+
+	default:
+		oAmount = 0
+		return
+	}
+
+	return oAmount
+}

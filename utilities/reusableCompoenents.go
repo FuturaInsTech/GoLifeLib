@@ -1683,42 +1683,44 @@ func TDFExpiD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 	oDate := ""
 	for i := 0; i < len(benefits); i++ {
-		iCoverage := benefits[i].BCoverage
-		iDate := benefits[i].BStartDate
-		var q0006data types.Q0006Data
-		var extradataq0006 types.Extradata = &q0006data
-		GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
-		if q0006data.MatMethod == "" {
-			if oDate == "" {
-				oDate = benefits[i].BRiskCessDate
-			}
-			if benefits[i].BRiskCessDate < oDate {
-				oDate = benefits[i].BRiskCessDate
-			}
+		if benefits[i].BStatus != "EX" {
+			iCoverage := benefits[i].BCoverage
+			iDate := benefits[i].BStartDate
+			var q0006data types.Q0006Data
+			var extradataq0006 types.Extradata = &q0006data
+			GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+			if q0006data.MatMethod == "" {
+				if oDate == "" {
+					oDate = benefits[i].BRiskCessDate
+				}
+				if benefits[i].BRiskCessDate < oDate {
+					oDate = benefits[i].BRiskCessDate
+				}
 
-			results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-			if results.Error != nil {
-				tdfpolicy.CompanyID = iCompany
-				tdfpolicy.PolicyID = iPolicy
-				tdfpolicy.Seqno = tdfrule.Seqno
-				tdfpolicy.TDFType = iFunction
-				tdfpolicy.EffectiveDate = oDate
-				tdfpolicy.Tranno = iTranno
-				initializers.DB.Create(&tdfpolicy)
-				return "", nil
-			} else {
-				initializers.DB.Delete(&tdfpolicy)
-				var tdfpolicy models.TDFPolicy
-				tdfpolicy.CompanyID = iCompany
-				tdfpolicy.PolicyID = iPolicy
-				tdfpolicy.Seqno = tdfrule.Seqno
-				tdfpolicy.TDFType = iFunction
-				tdfpolicy.ID = 0
-				tdfpolicy.EffectiveDate = oDate
-				tdfpolicy.Tranno = iTranno
+				results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+				if results.Error != nil {
+					tdfpolicy.CompanyID = iCompany
+					tdfpolicy.PolicyID = iPolicy
+					tdfpolicy.Seqno = tdfrule.Seqno
+					tdfpolicy.TDFType = iFunction
+					tdfpolicy.EffectiveDate = oDate
+					tdfpolicy.Tranno = iTranno
+					initializers.DB.Create(&tdfpolicy)
+					return "", nil
+				} else {
+					initializers.DB.Delete(&tdfpolicy)
+					var tdfpolicy models.TDFPolicy
+					tdfpolicy.CompanyID = iCompany
+					tdfpolicy.PolicyID = iPolicy
+					tdfpolicy.Seqno = tdfrule.Seqno
+					tdfpolicy.TDFType = iFunction
+					tdfpolicy.ID = 0
+					tdfpolicy.EffectiveDate = oDate
+					tdfpolicy.Tranno = iTranno
 
-				initializers.DB.Create(&tdfpolicy)
-				return "", nil
+					initializers.DB.Create(&tdfpolicy)
+					return "", nil
+				}
 			}
 		}
 	}

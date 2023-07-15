@@ -33,5 +33,6 @@ type QHeader struct {
 	AgencyID        uint
 	QDetails        []QDetail
 	Finalized       string `gorm:"type:varchar(01)"`
+	Policy          uint64
 	Qcommunications []Qcommunication
 }

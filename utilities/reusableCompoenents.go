@@ -1624,22 +1624,40 @@ func TDFReraD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	var benefits []models.Benefit
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
+	var extraenq []models.Extra
+
+	oDate := ""
+
+	results := initializers.DB.Find(&extraenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if results.Error == nil {
+		if results.RowsAffected > 1 {
+			for i := 0; i < len(extraenq); i++ {
+				if oDate == "" {
+					oDate = extraenq[i].ToDate
+				}
+			}
+		}
+
+	}
 	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	result := initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
 	if result.Error != nil {
 		return "", result.Error
 	}
-	oDate := ""
+
 	for i := 0; i < len(benefits); i++ {
-		if oDate == "" {
-			oDate = benefits[i].BRerate
-		}
-		if benefits[i].BRerate < oDate {
-			oDate = benefits[i].BRerate
+		if benefits[i].BPremCessDate > benefits[i].BRerate {
+			if oDate == "" {
+				oDate = benefits[i].BRerate
+			}
+
+			if benefits[i].BRerate < oDate {
+				oDate = benefits[i].BRerate
+			}
 		}
 
 	}
-	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	results = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 	if results.Error != nil {
 		tdfpolicy.CompanyID = iCompany
 		tdfpolicy.PolicyID = iPolicy
@@ -1665,7 +1683,7 @@ func TDFReraD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 }
 
-// TDFReraD - Time Driven Function - Expiry Date Updation
+// TDFExpidD - Time Driven Function - Expiry Date Updation
 //
 // Inputs: Company, Policy, Function EXPID, Transaction No.
 //

@@ -1819,16 +1819,15 @@ func TDFSurvbD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 	var survb models.SurvB
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	results := initializers.DB.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
 
 	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 
-	result := initializers.DB.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
+	results := initializers.DB.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
 
 	if results.Error != nil {
 		return "", results.Error
 	}
-	results = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	result := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
 
 	if result.Error != nil {
 		tdfpolicy.CompanyID = iCompany

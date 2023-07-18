@@ -1822,12 +1822,13 @@ func TDFSurvbD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 	results := initializers.DB.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
 
 	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	results = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	result := initializers.DB.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
 
 	if results.Error != nil {
 		return "", results.Error
 	}
-	result := initializers.DB.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
+	results = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
 	if result.Error != nil {
 		tdfpolicy.CompanyID = iCompany

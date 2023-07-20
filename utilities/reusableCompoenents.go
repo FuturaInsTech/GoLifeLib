@@ -2411,8 +2411,9 @@ func GetMrtaPrem(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGend
 	}
 
 	for x := 0; x < len(mrtaenq); x++ {
-
-		premTerm := strconv.FormatUint(uint64(iTerm-mrtaenq[x].PremPayingTerm), 10)
+		// Single Premium it is always 1
+		//premTerm := strconv.FormatUint(uint64(iTerm-mrtaenq[x].PremPayingTerm), 10)
+		premTerm := "1"
 		//fmt.Println("****************", iCompany, iCoverage, iAge, iGender, iTerm, iPremMethod, iDate, iMortality)
 		if q0006data.PremCalcType == "A" {
 			q0010key = iCoverage + iGender
@@ -2432,6 +2433,7 @@ func GetMrtaPrem(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGend
 			if q0010data.Rates[i].Age == uint(iAge) {
 				prem = q0010data.Rates[i].Rate
 				prem1 = prem*mrtaenq[x].BSumAssured + prem1
+				break
 			}
 		}
 	}

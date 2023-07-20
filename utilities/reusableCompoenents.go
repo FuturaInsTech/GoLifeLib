@@ -2431,7 +2431,7 @@ func GetMrtaPrem(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGend
 
 		for i := 0; i < len(q0010data.Rates); i++ {
 			if q0010data.Rates[i].Age == uint(iAge) {
-				prem = q0010data.Rates[i].Rate
+				prem = q0010data.Rates[i].Rate / 1000
 				prem1 = prem*mrtaenq[x].BSumAssured + prem1
 				break
 			}

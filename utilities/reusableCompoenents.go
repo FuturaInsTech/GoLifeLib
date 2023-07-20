@@ -2431,7 +2431,7 @@ func GetMrtaPrem(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGend
 
 		for i := 0; i < len(q0010data.Rates); i++ {
 			if q0010data.Rates[i].Age == uint(iAge) {
-				prem = q0010data.Rates[i].Rate / 1000
+				prem = q0010data.Rates[i].Rate / 10000
 				prem1 = prem*mrtaenq[x].BSumAssured + prem1
 				iAge = iAge + 1
 				break
@@ -2825,4 +2825,147 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 	}
 
 	return oAmount
+}
+
+func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
+	policyarray := make([]interface{}, 0)
+	var policy models.Policy
+
+	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	resultOut := map[string]interface{}{
+		"ID":            IDtoPrint(policy.ID),
+		"CompanyID":     IDtoPrint(policy.CompanyID),
+		"PRCD":          DateConvert(policy.PRCD),
+		"PProduct":      policy.PProduct,
+		"PFreq":         policy.PFreq,
+		"PContractCurr": policy.PContractCurr,
+		"PBillCurr":     policy.PBillCurr,
+		"POffice":       policy.POffice,
+		"PolStatus":     policy.PolStatus,
+		"PReceivedDate": DateConvert(policy.PReceivedDate),
+		// "PUWDate":DateConvert(policy.PUWDate),
+		"ClientID":       IDtoPrint(policy.ClientID),
+		"BTDate":         DateConvert(policy.BTDate),
+		"PaidToDate":     DateConvert(policy.PaidToDate),
+		"NxtBTDate":      DateConvert(policy.NxtBTDate),
+		"AnnivDate":      DateConvert(policy.AnnivDate),
+		"AgencyID":       IDtoPrint(policy.AgencyID),
+		"InstalmentPrem": NumbertoPrint(policy.InstalmentPrem),
+	}
+	policyarray = append(policyarray, resultOut)
+
+	fmt.Print(policyarray)
+	return policyarray
+}
+
+func PolicyClientLetter(iCompany uint, iPolicy uint) []interface{} {
+	clientarray := make([]interface{}, 0)
+	var client models.Client
+	var policy models.Policy
+	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	iClientID := policy.ClientID
+	initializers.DB.Find(&client, "company_id = ? and id = ?", iCompany, iClientID)
+	resultOut := map[string]interface{}{
+		"ID":              IDtoPrint(client.ID),
+		"ClientShortName": client.ClientShortName,
+		"ClientLongName":  client.ClientLongName,
+		"ClientSurName":   client.ClientSurName,
+		"Gender":          client.Gender,
+		"Salutation":      client.Salutation,
+		"Language":        client.Language,
+		"ClientDob":       DateConvert(client.ClientDob),
+		// "ClientDod":DateConvert(client.ClientDod),
+		"ClientEmail":  client.ClientEmail,
+		"ClientMobile": client.ClientMobile,
+		"ClientStatus": client.ClientStatus,
+	}
+	clientarray = append(clientarray, resultOut)
+	return clientarray
+}
+
+func PolicyCompanyLetter(iCompany uint, iPolicy uint) []interface{} {
+	companyarray := make([]interface{}, 0)
+	var company models.Company
+	var policy models.Policy
+	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	initializers.DB.Find(&company, "id = ?", iCompany)
+	resultOut := map[string]interface{}{
+		"ID":                       IDtoPrint(company.ID),
+		"CompanyName":              company.CompanyName,
+		"CompanyAddress1":          company.CompanyAddress1,
+		"CompanyAddress2":          company.CompanyAddress2,
+		"CompanyAddress3":          company.CompanyAddress3,
+		"CompanyAddress4":          company.CompanyAddress4,
+		"CompanyAddress5":          company.CompanyAddress5,
+		"CompanyPostalCode":        company.CompanyPostalCode,
+		"CompanyCountry":           company.CompanyCountry,
+		"CompanyUid":               company.CompanyUid,
+		"CompanyGst":               company.CompanyGst,
+		"CompanyPan":               company.CompanyPan,
+		"CompanyTan":               company.CompanyTan,
+		"CompanyIncorporationDate": DateConvert(company.CompanyIncorporationDate),
+		"CompanyTerminationDate":   DateConvert(company.CompanyTerminationDate),
+	}
+	companyarray = append(companyarray, resultOut)
+	return companyarray
+}
+func PolicyAddressLetter(iCompany uint, iPolicy uint) []interface{} {
+	addressarray := make([]interface{}, 0)
+	var address models.Address
+	var policy models.Policy
+	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	iAddress := policy.AddressID
+	initializers.DB.Find(&address, "company_id = ? and id = ?", iCompany, iAddress)
+	resultOut := map[string]interface{}{
+		"ID":              IDtoPrint(address.ID),
+		"AddressType":     address.AddressType,
+		"AddressLine1":    address.AddressLine1,
+		"AddressLine2":    address.AddressLine2,
+		"AddressLine3":    address.AddressLine3,
+		"AddressLine4":    address.AddressLine4,
+		"AddressLine5":    address.AddressLine5,
+		"AddressPostCode": address.AddressPostCode,
+		"AddressState":    address.AddressState,
+		"AddressCountry":  address.AddressCountry,
+	}
+	addressarray = append(addressarray, resultOut)
+	return addressarray
+}
+
+func PolicyBenefitLetter(iCompany uint, iPolicy uint) []interface{} {
+	var benefit []models.Benefit
+	var policy models.Policy
+	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	benefitarray := make([]interface{}, 0)
+	for k := 0; k < len(benefit); k++ {
+		resultOut := map[string]interface{}{
+			"ID":             IDtoPrint(benefit[k].ID),
+			"CompanyID":      IDtoPrint(benefit[k].CompanyID),
+			"ClientID":       IDtoPrint(benefit[k].ClientID),
+			"PolicyID":       IDtoPrint(benefit[k].PolicyID),
+			"BStartDate":     DateConvert(benefit[k].BStartDate),
+			"BRiskCessDate":  DateConvert(benefit[k].BRiskCessDate),
+			"BPremCessDate":  DateConvert(benefit[k].BPremCessDate),
+			"BTerm":          benefit[k].BTerm,
+			"BPTerm":         benefit[k].BPTerm,
+			"BRiskCessAge":   benefit[k].BRiskCessAge,
+			"BPremCessAge":   benefit[k].BPremCessAge,
+			"BBasAnnualPrem": NumbertoPrint(benefit[k].BBasAnnualPrem),
+			"BLoadPrem":      NumbertoPrint(benefit[k].BLoadPrem),
+			"BCoverage":      benefit[k].BCoverage,
+			"BSumAssured":    NumbertoPrint(float64(benefit[k].BLoadPrem)),
+			"BPrem":          NumbertoPrint(benefit[k].BPrem),
+			"BGender":        benefit[k].BGender,
+			"BDOB":           benefit[k].BDOB,
+			"BMortality":     benefit[k].BMortality,
+			"BStatus":        benefit[k].BStatus,
+			"BAge":           benefit[k].BAge,
+			"BRerate":        benefit[k].BRerate,
+		}
+		benefitarray = append(benefitarray, resultOut)
+	}
+	return benefitarray
 }

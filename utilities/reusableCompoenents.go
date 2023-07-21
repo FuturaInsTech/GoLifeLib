@@ -1748,6 +1748,62 @@ func TDFExpiD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	return "", nil
 }
 
+// For Single Premium
+func TDFExpiDS(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string, error) {
+	var benefits []models.Benefit
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	result := initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "SP")
+	if result.Error != nil {
+		return "", result.Error
+	}
+	oDate := ""
+	for i := 0; i < len(benefits); i++ {
+		if benefits[i].BStatus != "EX" {
+			iCoverage := benefits[i].BCoverage
+			iDate := benefits[i].BStartDate
+			var q0006data types.Q0006Data
+			var extradataq0006 types.Extradata = &q0006data
+			GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+			if q0006data.MatMethod == "" {
+				if oDate == "" {
+					oDate = benefits[i].BRiskCessDate
+				}
+				if benefits[i].BRiskCessDate < oDate {
+					oDate = benefits[i].BRiskCessDate
+				}
+
+				results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+				if results.Error != nil {
+					tdfpolicy.CompanyID = iCompany
+					tdfpolicy.PolicyID = iPolicy
+					tdfpolicy.Seqno = tdfrule.Seqno
+					tdfpolicy.TDFType = iFunction
+					tdfpolicy.EffectiveDate = oDate
+					tdfpolicy.Tranno = iTranno
+					initializers.DB.Create(&tdfpolicy)
+					return "", nil
+				} else {
+					initializers.DB.Delete(&tdfpolicy)
+					var tdfpolicy models.TDFPolicy
+					tdfpolicy.CompanyID = iCompany
+					tdfpolicy.PolicyID = iPolicy
+					tdfpolicy.Seqno = tdfrule.Seqno
+					tdfpolicy.TDFType = iFunction
+					tdfpolicy.ID = 0
+					tdfpolicy.EffectiveDate = oDate
+					tdfpolicy.Tranno = iTranno
+
+					initializers.DB.Create(&tdfpolicy)
+					return "", nil
+				}
+			}
+		}
+	}
+	return "", nil
+}
+
 // TDFReraD - Time Driven Function - Expiry Date Updation
 //
 // Inputs: Company, Policy, Function EXPID, Transaction No.

@@ -1526,6 +1526,15 @@ func TDFBillD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
+	var benefitenq []models.Benefit
+	odate := "00000000"
+	initializers.DB.Find(&benefitenq, "company_code = ? and policy_id = ?", iCompany, iPolicy)
+	for i := 0; i < len(benefitenq); i++ {
+		if benefitenq[i].BPremCessDate > odate {
+			odate = benefitenq[i].BPremCessDate
+		}
+	}
+
 	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	result := initializers.DB.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 	if iRevFlag == "R" {
@@ -1543,6 +1552,11 @@ func TDFBillD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	if result.Error != nil {
 		return "", result.Error
 	}
+
+	if policy.NxtBTDate > odate {
+		return "Date Exceeded", nil
+	}
+
 	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 	if results.Error != nil {
 		tdfpolicy.CompanyID = iCompany

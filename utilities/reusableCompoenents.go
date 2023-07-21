@@ -1553,7 +1553,7 @@ func TDFBillD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 		return "", result.Error
 	}
 
-	if policy.NxtBTDate > odate {
+	if policy.PaidToDate >= odate {
 		return "Date Exceeded", errors.New("Premium Cessation Date is Exceeded")
 	}
 

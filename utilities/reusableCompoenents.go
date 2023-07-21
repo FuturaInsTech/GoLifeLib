@@ -1528,7 +1528,7 @@ func TDFBillD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	var tdfrule models.TDFRule
 	var benefitenq []models.Benefit
 	odate := "00000000"
-	initializers.DB.Find(&benefitenq, "company_code = ? and policy_id = ?", iCompany, iPolicy)
+	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	for i := 0; i < len(benefitenq); i++ {
 		if benefitenq[i].BPremCessDate > odate {
 			odate = benefitenq[i].BPremCessDate

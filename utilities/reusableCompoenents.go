@@ -1554,7 +1554,7 @@ func TDFBillD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	}
 
 	if policy.NxtBTDate > odate {
-		return "Date Exceeded", nil
+		return "Date Exceeded", errors.New("Premium Cessation Date is Exceeded")
 	}
 
 	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)

@@ -2893,63 +2893,7 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 	return oAmount
 }
 
-func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
-	policyarray := make([]interface{}, 0)
-	var policy models.Policy
-
-	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-	resultOut := map[string]interface{}{
-		"ID":            IDtoPrint(policy.ID),
-		"CompanyID":     IDtoPrint(policy.CompanyID),
-		"PRCD":          DateConvert(policy.PRCD),
-		"PProduct":      policy.PProduct,
-		"PFreq":         policy.PFreq,
-		"PContractCurr": policy.PContractCurr,
-		"PBillCurr":     policy.PBillCurr,
-		"POffice":       policy.POffice,
-		"PolStatus":     policy.PolStatus,
-		"PReceivedDate": DateConvert(policy.PReceivedDate),
-		// "PUWDate":DateConvert(policy.PUWDate),
-		"ClientID":       IDtoPrint(policy.ClientID),
-		"BTDate":         DateConvert(policy.BTDate),
-		"PaidToDate":     DateConvert(policy.PaidToDate),
-		"NxtBTDate":      DateConvert(policy.NxtBTDate),
-		"AnnivDate":      DateConvert(policy.AnnivDate),
-		"AgencyID":       IDtoPrint(policy.AgencyID),
-		"InstalmentPrem": NumbertoPrint(policy.InstalmentPrem),
-	}
-	policyarray = append(policyarray, resultOut)
-
-	fmt.Print(policyarray)
-	return policyarray
-}
-
-func PolicyClientLetter(iCompany uint, iPolicy uint) []interface{} {
-	clientarray := make([]interface{}, 0)
-	var client models.Client
-	var policy models.Policy
-	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-
-	iClientID := policy.ClientID
-	initializers.DB.Find(&client, "company_id = ? and id = ?", iCompany, iClientID)
-	resultOut := map[string]interface{}{
-		"ID":              IDtoPrint(client.ID),
-		"ClientShortName": client.ClientShortName,
-		"ClientLongName":  client.ClientLongName,
-		"ClientSurName":   client.ClientSurName,
-		"Gender":          client.Gender,
-		"Salutation":      client.Salutation,
-		"Language":        client.Language,
-		"ClientDob":       DateConvert(client.ClientDob),
-		// "ClientDod":DateConvert(client.ClientDod),
-		"ClientEmail":  client.ClientEmail,
-		"ClientMobile": client.ClientMobile,
-		"ClientStatus": client.ClientStatus,
-	}
-	clientarray = append(clientarray, resultOut)
-	return clientarray
-}
-
+// Function # 1
 func PolicyCompanyLetter(iCompany uint, iPolicy uint) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
@@ -2977,6 +2921,35 @@ func PolicyCompanyLetter(iCompany uint, iPolicy uint) []interface{} {
 	companyarray = append(companyarray, resultOut)
 	return companyarray
 }
+
+// Function # 2
+func PolicyClientLetter(iCompany uint, iPolicy uint) []interface{} {
+	clientarray := make([]interface{}, 0)
+	var client models.Client
+	var policy models.Policy
+	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	iClientID := policy.ClientID
+	initializers.DB.Find(&client, "company_id = ? and id = ?", iCompany, iClientID)
+	resultOut := map[string]interface{}{
+		"ID":              IDtoPrint(client.ID),
+		"ClientShortName": client.ClientShortName,
+		"ClientLongName":  client.ClientLongName,
+		"ClientSurName":   client.ClientSurName,
+		"Gender":          client.Gender,
+		"Salutation":      client.Salutation,
+		"Language":        client.Language,
+		"ClientDob":       DateConvert(client.ClientDob),
+		// "ClientDod":DateConvert(client.ClientDod),
+		"ClientEmail":  client.ClientEmail,
+		"ClientMobile": client.ClientMobile,
+		"ClientStatus": client.ClientStatus,
+	}
+	clientarray = append(clientarray, resultOut)
+	return clientarray
+}
+
+// Function # 3
 func PolicyAddressLetter(iCompany uint, iPolicy uint) []interface{} {
 	addressarray := make([]interface{}, 0)
 	var address models.Address
@@ -3000,6 +2973,46 @@ func PolicyAddressLetter(iCompany uint, iPolicy uint) []interface{} {
 	return addressarray
 }
 
+// Function # 4
+func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
+	policyarray := make([]interface{}, 0)
+	var policy models.Policy
+
+	_, oStatus, _ := GetParamDesc(policy.CompanyID, "P0024", policy.PolStatus, 1)
+
+	var q0005data types.Q0005Data
+	var extradataq0005 types.Extradata = &q0005data
+	GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
+	gracedate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
+
+	resultOut := map[string]interface{}{
+		"ID":            IDtoPrint(policy.ID),
+		"CompanyID":     IDtoPrint(policy.CompanyID),
+		"PRCD":          DateConvert(policy.PRCD),
+		"PProduct":      policy.PProduct,
+		"PFreq":         policy.PFreq,
+		"PContractCurr": policy.PContractCurr,
+		"PBillCurr":     policy.PBillCurr,
+		"POffice":       policy.POffice,
+		"PolStatus":     oStatus,
+		"PReceivedDate": DateConvert(policy.PReceivedDate),
+		// "PUWDate":DateConvert(policy.PUWDate),
+		"ClientID":           IDtoPrint(policy.ClientID),
+		"BTDate":             DateConvert(policy.BTDate),
+		"PaidToDate":         DateConvert(policy.PaidToDate),
+		"NxtBTDate":          DateConvert(policy.NxtBTDate),
+		"AnnivDate":          DateConvert(policy.AnnivDate),
+		"AgencyID":           IDtoPrint(policy.AgencyID),
+		"InstalmentPrem":     NumbertoPrint(policy.InstalmentPrem),
+		"GracePeriodEndDate": DateConvert(gracedate),
+	}
+	policyarray = append(policyarray, resultOut)
+
+	fmt.Print(policyarray)
+	return policyarray
+}
+
+// Function # 5
 func PolicyBenefitLetter(iCompany uint, iPolicy uint) []interface{} {
 	var benefit []models.Benefit
 	var policy models.Policy
@@ -3034,4 +3047,48 @@ func PolicyBenefitLetter(iCompany uint, iPolicy uint) []interface{} {
 		benefitarray = append(benefitarray, resultOut)
 	}
 	return benefitarray
+}
+
+// Function # 6
+func PolicySurvBLetter(iCompany uint, iPolicy uint) []interface{} {
+	var survb []models.SurvB
+	var policy models.Policy
+	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	survbarray := make([]interface{}, 0)
+	for k := 0; k < len(survb); k++ {
+		resultOut := map[string]interface{}{
+			"ID":            IDtoPrint(survb[k].ID),
+			"CompanyID":     IDtoPrint(survb[k].CompanyID),
+			"BenefitID":     IDtoPrint(survb[k].BenefitID),
+			"PolicyID":      IDtoPrint(survb[k].PolicyID),
+			"EffectiveDate": DateConvert(survb[k].EffectiveDate),
+			"PaidDate ":     DateConvert(survb[k].PaidDate),
+		}
+		survbarray = append(survbarray, resultOut)
+	}
+	return survbarray
+}
+
+// Check Status
+//
+// # This function, take company code, history code, date and status as inputs
+//
+// # It returns status which is boolean and also output status which is string
+//
+// ©  FuturaInsTech
+func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string) (status bool, oStatus string) {
+	var p0029data types.P0029Data
+	var extradata types.Extradata = &p0029data
+
+	err := GetItemD(int(iCompany), "P0029", iHistoryCD, iDate, &extradata)
+	if err != nil {
+		return true, ""
+	}
+	for i := 0; i < len(p0029data.Statuses); i++ {
+		if iStatus == p0029data.Statuses[i].CurrentStatus {
+			return false, p0029data.Statuses[i].ToBeStatus
+		}
+	}
+	return true, ""
 }

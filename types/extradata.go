@@ -1042,6 +1042,7 @@ type P0034 struct {
 	Templates              string
 	ReportTemplateLocation string
 	PdfLocation            string
+	LetType                []string
 }
 
 func (m *P0034Data) ParseData(datamap map[string]interface{}) {

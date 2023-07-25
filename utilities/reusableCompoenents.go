@@ -1789,32 +1789,32 @@ func TDFExpiDS(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 				}
 			}
 		}
-		results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-		if results.Error != nil {
-			tdfpolicy.CompanyID = iCompany
-			tdfpolicy.PolicyID = iPolicy
-			tdfpolicy.Seqno = tdfrule.Seqno
-			tdfpolicy.TDFType = iFunction
-			tdfpolicy.EffectiveDate = oDate
-			tdfpolicy.Tranno = iTranno
-			initializers.DB.Create(&tdfpolicy)
-			return "", nil
-		} else {
-			initializers.DB.Delete(&tdfpolicy)
-			var tdfpolicy models.TDFPolicy
-			tdfpolicy.CompanyID = iCompany
-			tdfpolicy.PolicyID = iPolicy
-			tdfpolicy.Seqno = tdfrule.Seqno
-			tdfpolicy.TDFType = iFunction
-			tdfpolicy.ID = 0
-			tdfpolicy.EffectiveDate = oDate
-			tdfpolicy.Tranno = iTranno
-
-			initializers.DB.Create(&tdfpolicy)
-			return "", nil
-		}
 	}
-	return "", nil
+	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = oDate
+		tdfpolicy.Tranno = iTranno
+		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	} else {
+		initializers.DB.Delete(&tdfpolicy)
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = oDate
+		tdfpolicy.Tranno = iTranno
+
+		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	}
+
 }
 
 // TDFReraD - Time Driven Function - Expiry Date Updation

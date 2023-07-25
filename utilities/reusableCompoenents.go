@@ -1787,32 +1787,31 @@ func TDFExpiDS(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 				if benefits[i].BRiskCessDate < oDate {
 					oDate = benefits[i].BRiskCessDate
 				}
-
-				results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-				if results.Error != nil {
-					tdfpolicy.CompanyID = iCompany
-					tdfpolicy.PolicyID = iPolicy
-					tdfpolicy.Seqno = tdfrule.Seqno
-					tdfpolicy.TDFType = iFunction
-					tdfpolicy.EffectiveDate = oDate
-					tdfpolicy.Tranno = iTranno
-					initializers.DB.Create(&tdfpolicy)
-					return "", nil
-				} else {
-					initializers.DB.Delete(&tdfpolicy)
-					var tdfpolicy models.TDFPolicy
-					tdfpolicy.CompanyID = iCompany
-					tdfpolicy.PolicyID = iPolicy
-					tdfpolicy.Seqno = tdfrule.Seqno
-					tdfpolicy.TDFType = iFunction
-					tdfpolicy.ID = 0
-					tdfpolicy.EffectiveDate = oDate
-					tdfpolicy.Tranno = iTranno
-
-					initializers.DB.Create(&tdfpolicy)
-					return "", nil
-				}
 			}
+		}
+		results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		} else {
+			initializers.DB.Delete(&tdfpolicy)
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+
+			initializers.DB.Create(&tdfpolicy)
+			return "", nil
 		}
 	}
 	return "", nil
@@ -1848,34 +1847,33 @@ func TDFMatD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (strin
 			if benefits[i].BRiskCessDate < oDate {
 				oDate = benefits[i].BRiskCessDate
 			}
-
-			results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-			if results.Error != nil {
-				tdfpolicy.CompanyID = iCompany
-				tdfpolicy.PolicyID = iPolicy
-				tdfpolicy.Seqno = tdfrule.Seqno
-				tdfpolicy.TDFType = iFunction
-				tdfpolicy.EffectiveDate = oDate
-				tdfpolicy.Tranno = iTranno
-				initializers.DB.Create(&tdfpolicy)
-				return "", nil
-			} else {
-				initializers.DB.Delete(&tdfpolicy)
-				var tdfpolicy models.TDFPolicy
-				tdfpolicy.CompanyID = iCompany
-				tdfpolicy.PolicyID = iPolicy
-				tdfpolicy.Seqno = tdfrule.Seqno
-				tdfpolicy.TDFType = iFunction
-				tdfpolicy.ID = 0
-				tdfpolicy.EffectiveDate = oDate
-				tdfpolicy.Tranno = iTranno
-
-				initializers.DB.Create(&tdfpolicy)
-				return "", nil
-			}
 		}
 	}
-	return "", nil
+	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = oDate
+		tdfpolicy.Tranno = iTranno
+		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	} else {
+		initializers.DB.Delete(&tdfpolicy)
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = oDate
+		tdfpolicy.Tranno = iTranno
+
+		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	}
+
 }
 
 // TDFSurbD - Time Driven Function - Survival Benefit Date Updation
@@ -2894,11 +2892,9 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 }
 
 // Function # 1
-func PolicyCompanyLetter(iCompany uint, iPolicy uint) []interface{} {
+func PolicyCompanyLetter(iCompany uint) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
-	var policy models.Policy
-	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 
 	initializers.DB.Find(&company, "id = ?", iCompany)
 	resultOut := map[string]interface{}{
@@ -2923,14 +2919,11 @@ func PolicyCompanyLetter(iCompany uint, iPolicy uint) []interface{} {
 }
 
 // Function # 2
-func PolicyClientLetter(iCompany uint, iPolicy uint) []interface{} {
+func ClientLetter(iCompany uint, iClient uint) []interface{} {
 	clientarray := make([]interface{}, 0)
 	var client models.Client
-	var policy models.Policy
-	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 
-	iClientID := policy.ClientID
-	initializers.DB.Find(&client, "company_id = ? and id = ?", iCompany, iClientID)
+	initializers.DB.Find(&client, "company_id = ? and id = ?", iCompany, iClient)
 	resultOut := map[string]interface{}{
 		"ID":              IDtoPrint(client.ID),
 		"ClientShortName": client.ClientShortName,
@@ -2950,12 +2943,10 @@ func PolicyClientLetter(iCompany uint, iPolicy uint) []interface{} {
 }
 
 // Function # 3
-func PolicyAddressLetter(iCompany uint, iPolicy uint) []interface{} {
+func AddressLetter(iCompany uint, iAddress uint) []interface{} {
 	addressarray := make([]interface{}, 0)
 	var address models.Address
-	var policy models.Policy
-	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-	iAddress := policy.AddressID
+
 	initializers.DB.Find(&address, "company_id = ? and id = ?", iCompany, iAddress)
 	resultOut := map[string]interface{}{
 		"ID":              IDtoPrint(address.ID),

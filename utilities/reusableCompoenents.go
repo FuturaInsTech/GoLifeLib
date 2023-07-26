@@ -3123,8 +3123,66 @@ func GetReceiptData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 }
 
 // Function # 9  - SA Change Sowmiya
+func GetSaChangeData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+	var sachangeenq []models.SaChange
+	initializers.DB.Find(&sachangeenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	sachangearray := make([]interface{}, 0)
+	for k := 0; k < len(sachangeenq); k++ {
+		resultOut := map[string]interface{}{
+			"PolicyID    ": IDtoPrint(sachangeenq[k].PolicyID),
+			"BenefitID":    IDtoPrint(sachangeenq[k].BenefitID),
+			"BCoverage":    sachangeenq[k].BCoverage,
+			"BStartDate":   DateConvert(sachangeenq[k].BStartDate),
+			"BSumAssured":  sachangeenq[k].BSumAssured,
+			"BTerm":        IDtoPrint(sachangeenq[k].BTerm),
+			"BPTerm":       sachangeenq[k].BPTerm,
+			"BPrem":        sachangeenq[k].BPrem,
+			"BGender":      sachangeenq[k].BGender,
+			"BDOB":         DateConvert(sachangeenq[k].BDOB),
+			"NSumAssured":  sachangeenq[k].NSumAssured,
+			"NTerm":        sachangeenq[k].NTerm,
+			"NPTerm":       sachangeenq[k].NPTerm,
+			"NPrem":        sachangeenq[k].NPrem,
+			"NAnnualPrem":  sachangeenq[k].NAnnualPrem,
+			"Method":       sachangeenq[k].Method,
+			"Frequency":    sachangeenq[k].Frequency,
+		}
+		sachangearray = append(sachangearray, resultOut)
+	}
+	return sachangearray
+}
+
 // Function # 10  - Frequency Change SA - Yukesh
 // Function # 11  - Component Add - Barath
+func GetCompAddData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+	var addcomp []models.Addcomponent
+	initializers.DB.Find(&addcomp, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	addcomparray := make([]interface{}, 0)
+	for k := 0; k < len(addcomp); k++ {
+		resultOut := map[string]interface{}{
+
+			"ID":          IDtoPrint(addcomp[k].ID),
+			"Select":      addcomp[k].Select,
+			"PolicyID":    IDtoPrint(addcomp[k].PolicyID),
+			"ClientID":    IDtoPrint(addcomp[k].ClientID),
+			"BCoverage":   addcomp[k].BCoverage,
+			"BStartDate":  DateConvert(addcomp[k].BStartDate),
+			"BSumAssured": NumbertoPrint(float64(addcomp[k].BSumAssured)),
+			"BTerm":       addcomp[k].BTerm,
+			"BPTerm":      addcomp[k].BPTerm,
+			"BPrem":       NumbertoPrint(addcomp[k].BPrem),
+			"BAnnualPrem": NumbertoPrint(addcomp[k].BAnnualPrem),
+			"BGender":     addcomp[k].BGender,
+			"BDOB":        addcomp[k].BDOB,
+			"Method":      addcomp[k].Method,
+			"Frequency":   addcomp[k].Frequency,
+			"BAge":        addcomp[k].BAge,
+		}
+		addcomparray = append(addcomparray, resultOut)
+	}
+	return addcomparray
+}
 
 // Check Status
 //
@@ -3149,6 +3207,13 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 	return true, ""
 }
 
+// Create Communication
+//
+// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID and Quotation ID
+//
+// # It returns success or failure.  Successful records written in Communciaiton Table
+//
+// ©  FuturaInsTech
 func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint) error {
 
 	var p0034data types.P0034Data
@@ -3210,49 +3275,41 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				switch {
 				case oLetType == "1":
 					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					//	resultarray = append(resultarray, oData)
 					resultMap["CompanyData"] = oData
-
 				case oLetType == "2":
 					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					//	resultarray = append(resultarray, oData)
 					resultMap["ClientData"] = oData
 				case oLetType == "3":
 					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					//	resultarray = append(resultarray, oData)
 					resultMap["AddressData"] = oData
 				case oLetType == "4":
 					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["PolicyData"] = oData
-					//	resultarray = append(resultarray, oData)
 				case oLetType == "5":
 					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["BenefitData"] = oData
-					//resultarray = append(resultarray, oData)
 				case oLetType == "6":
 					oData := GetSurrData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["SurrenderData"] = oData
-					//	resultarray = append(resultarray, oData)
 				case oLetType == "7":
 					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["MRTAData"] = oData
-				//	resultarray = append(resultarray, oData)
 				case oLetType == "8":
 					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["ReceiptData"] = oData
-				//	resultarray = append(resultarray, oData)
-				case oLetType == "10":
-					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["XXXDAta"] = oData
-					//resultarray = append(resultarray, oData)
+				case oLetType == "9":
+					oData := GetSaChangeData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SAChangeData"] = oData
+				case oLetType == "11":
+					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["ComponantAddData"] = oData
 				default:
 
 				}
 
 			}
-			var commMap = make(map[string]interface{})
-			commMap["data"] = resultMap
-			communication.ExtractedData = commMap
+
+			communication.ExtractedData = resultMap
 			communication.PDFPath = p0034data.Letters[i].PdfLocation
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
 

@@ -3185,6 +3185,59 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 	return addcomparray
 }
 
+func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+	var survbenq models.SurvB
+	initializers.DB.Find(&survbenq, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
+	survbparray := make([]interface{}, 0)
+	resultOut := map[string]interface{}{
+		"ID":           IDtoPrint(survbenq.ID),
+		"Sequence":     IDtoPrint(uint(survbenq.Sequence)),
+		"PolicyID":     IDtoPrint(survbenq.PolicyID),
+		"BenefitID":    IDtoPrint(survbenq.BenefitID),
+		"DueDate":      DateConvert(survbenq.EffectiveDate),
+		"PaidDate":     DateConvert(survbenq.PaidDate),
+		"SBPercentage": survbenq.SBPercentage,
+		"SBAmount":     survbenq.Amount,
+	}
+	survbparray = append(survbparray, resultOut)
+	return survbparray
+}
+
+func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+	var benefit []models.Benefit
+	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
+	expiryarray := make([]interface{}, 0)
+
+	for k := 0; k < len(benefit); k++ {
+		resultOut := map[string]interface{}{
+			"ID":             IDtoPrint(benefit[k].ID),
+			"CompanyID":      IDtoPrint(benefit[k].CompanyID),
+			"ClientID":       IDtoPrint(benefit[k].ClientID),
+			"PolicyID":       IDtoPrint(benefit[k].PolicyID),
+			"BStartDate":     DateConvert(benefit[k].BStartDate),
+			"BRiskCessDate":  DateConvert(benefit[k].BRiskCessDate),
+			"BPremCessDate":  DateConvert(benefit[k].BPremCessDate),
+			"BTerm":          benefit[k].BTerm,
+			"BPTerm":         benefit[k].BPTerm,
+			"BRiskCessAge":   benefit[k].BRiskCessAge,
+			"BPremCessAge":   benefit[k].BPremCessAge,
+			"BBasAnnualPrem": NumbertoPrint(benefit[k].BBasAnnualPrem),
+			"BLoadPrem":      NumbertoPrint(benefit[k].BLoadPrem),
+			"BCoverage":      benefit[k].BCoverage,
+			"BSumAssured":    NumbertoPrint(float64(benefit[k].BLoadPrem)),
+			"BPrem":          NumbertoPrint(benefit[k].BPrem),
+			"BGender":        benefit[k].BGender,
+			"BDOB":           benefit[k].BDOB,
+			"BMortality":     benefit[k].BMortality,
+			"BStatus":        benefit[k].BStatus,
+			"BAge":           benefit[k].BAge,
+			"BRerate":        benefit[k].BRerate,
+		}
+		expiryarray = append(expiryarray, resultOut)
+	}
+	return expiryarray
+}
+
 // Check Status
 //
 // # This function, take company code, history code, date and status as inputs
@@ -3305,6 +3358,13 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "11":
 					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["ComponantAddData"] = oData
+				case oLetType == "14":
+					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					resultMap["SurvbPay"] = oData
+				case oLetType == "15":
+					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					resultMap["ExpiryData"] = oData
+
 				default:
 
 				}

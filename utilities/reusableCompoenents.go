@@ -3290,7 +3290,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
 					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurrenderData"] = oData
+					resultMap["SurBData"] = oData
 				case oLetType == "7":
 					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["MRTAData"] = oData

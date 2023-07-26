@@ -2895,7 +2895,7 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 }
 
 // Function # 1
-func GetCompanyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
 	initializers.DB.Find(&company, "id = ?", iCompany)
@@ -2922,7 +2922,7 @@ func GetCompanyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 }
 
 // Function # 2
-func GetClientData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetClientData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	clientarray := make([]interface{}, 0)
 	var client models.Client
 
@@ -2946,7 +2946,7 @@ func GetClientData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iRe
 }
 
 // Function # 3
-func GetAddressData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	addressarray := make([]interface{}, 0)
 	var address models.Address
 
@@ -2968,7 +2968,7 @@ func GetAddressData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 }
 
 // Function # 4
-func GetPolicyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
 	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
@@ -3011,7 +3011,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iRe
 }
 
 // Function # 5
-func GetBenefitData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var benefit []models.Benefit
 
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -3047,7 +3047,7 @@ func GetBenefitData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 }
 
 // Function # 6
-func GetSurrData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var survb []models.SurvB
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -3067,7 +3067,7 @@ func GetSurrData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iRece
 }
 
 // Function # 7
-func GetMrtaData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var mrtaenq []models.Mrta
 	initializers.DB.Find(&mrtaenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -3092,9 +3092,7 @@ func GetMrtaData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iRece
 	return mrtaarray
 }
 
-// Function # 8  - Receipt Sandhya
-
-func GetReceiptData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var receiptenq models.Receipt
 	initializers.DB.Find(&receiptenq, "company_id = ? and id = ?", iCompany, iReceipt)
 
@@ -3122,8 +3120,7 @@ func GetReceiptData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 	return receiptarray
 }
 
-// Function # 9  - SA Change Sowmiya
-func GetSaChangeData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var sachangeenq []models.SaChange
 	initializers.DB.Find(&sachangeenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -3154,11 +3151,13 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, i
 }
 
 // Function # 10  - Frequency Change SA - Yukesh
-// Function # 11  - Component Add - Barath
-func GetCompAddData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+
+func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var addcomp []models.Addcomponent
 	initializers.DB.Find(&addcomp, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
 	addcomparray := make([]interface{}, 0)
+
 	for k := 0; k < len(addcomp); k++ {
 		resultOut := map[string]interface{}{
 
@@ -3230,6 +3229,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 	if result.Error != nil {
 		return result.Error
 	}
+
 	iKey := iTransaction + policy.PProduct
 	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
 

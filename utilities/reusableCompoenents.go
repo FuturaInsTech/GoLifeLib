@@ -2971,7 +2971,10 @@ func GetAddressData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 func GetPolicyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
-
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return nil
+	}
 	_, oStatus, _ := GetParamDesc(policy.CompanyID, "P0024", policy.PolStatus, 1)
 	_, oFreq, _ := GetParamDesc(policy.CompanyID, "Q0009", policy.PFreq, 1)
 
@@ -3097,22 +3100,22 @@ func GetReceiptData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 
 	receiptarray := make([]interface{}, 0)
 	resultOut := map[string]interface{}{
-		"ID":                IDtoPrint(receiptenq.ID),
-		"CompanyID":         IDtoPrint(receiptenq.CompanyID),
-		"Branch":            receiptenq.Branch,
-		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
-		"AccCurry":          receiptenq.AccCurry,
-		"AccAmount":         receiptenq.AccAmount,
-		"PolicyID":          IDtoPrint(receiptenq.PolicyID),
-		"ClientID":          IDtoPrint(receiptenq.ClientID),
-		"DateOfCollection":  receiptenq.DateOfCollection,
-		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
+		"ID":        IDtoPrint(receiptenq.ID),
+		"CompanyID": IDtoPrint(receiptenq.CompanyID),
+		"Branch":    receiptenq.Branch,
+		//		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
+		"AccCurry":  receiptenq.AccCurry,
+		"AccAmount": receiptenq.AccAmount,
+		"PolicyID":  IDtoPrint(receiptenq.PolicyID),
+		"ClientID":  IDtoPrint(receiptenq.ClientID),
+		//		"DateOfCollection":  receiptenq.DateOfCollection,
+		//		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
 		"BankAccountNo":     receiptenq.BankAccountNo,
 		"BankReferenceNo":   receiptenq.BankReferenceNo,
 		"TypeOfReceipt":     receiptenq.TypeOfReceipt,
 		"InstalmentPremium": receiptenq.InstalmentPremium,
-		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
-		"AddressID":         IDtoPrint(receiptenq.AddressID),
+		//		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
+		"AddressID": IDtoPrint(receiptenq.AddressID),
 	}
 	receiptarray = append(receiptarray, resultOut)
 
@@ -3199,46 +3202,56 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.TemplateName = iKey
 			communication.EffectiveDate = policy.PRCD
 			oLetType := ""
+			resultMap := make(map[string]interface{})
 
-			resultarray := make([]interface{}, 0)
 			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
 			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
 					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					//	resultarray = append(resultarray, oData)
+					resultMap["CompanyData"] = oData
+
 				case oLetType == "2":
 					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					//	resultarray = append(resultarray, oData)
+					resultMap["ClientData"] = oData
 				case oLetType == "3":
 					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					//	resultarray = append(resultarray, oData)
+					resultMap["AddressData"] = oData
 				case oLetType == "4":
 					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					resultMap["PolicyData"] = oData
+					//	resultarray = append(resultarray, oData)
 				case oLetType == "5":
 					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					resultMap["BenefitData"] = oData
+					//resultarray = append(resultarray, oData)
 				case oLetType == "6":
 					oData := GetSurrData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					resultMap["SurrenderData"] = oData
+					//	resultarray = append(resultarray, oData)
 				case oLetType == "7":
 					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					resultMap["MRTAData"] = oData
+				//	resultarray = append(resultarray, oData)
 				case oLetType == "8":
 					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					resultMap["ReceiptData"] = oData
+				//	resultarray = append(resultarray, oData)
 				case oLetType == "10":
 					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultarray = append(resultarray, oData)
+					resultMap["XXXDAta"] = oData
+					//resultarray = append(resultarray, oData)
 				default:
 
 				}
 
 			}
 			var commMap = make(map[string]interface{})
-			commMap["data"] = resultarray
+			commMap["data"] = resultMap
 			communication.ExtractedData = commMap
 			communication.PDFPath = p0034data.Letters[i].PdfLocation
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation

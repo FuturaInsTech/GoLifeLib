@@ -3047,7 +3047,7 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // Function # 6
-func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var survb []models.SurvB
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -3059,7 +3059,7 @@ func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 			"BenefitID":     IDtoPrint(survb[k].BenefitID),
 			"PolicyID":      IDtoPrint(survb[k].PolicyID),
 			"EffectiveDate": DateConvert(survb[k].EffectiveDate),
-			"PaidDate ":     DateConvert(survb[k].PaidDate),
+			//		"PaidDate ":     DateConvert(survb[k].PaidDate),
 		}
 		survbarray = append(survbarray, resultOut)
 	}
@@ -3289,7 +3289,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
-					oData := GetSurrData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["SurrenderData"] = oData
 				case oLetType == "7":
 					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)

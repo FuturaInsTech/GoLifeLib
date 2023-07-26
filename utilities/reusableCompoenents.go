@@ -2335,7 +2335,9 @@ func NewNoOfInstalments(iFromDate string, iToDate string) (oinstalment int) {
 //
 // ©  FuturaInsTech
 func DateConvert(iDate string) (oDate string) {
-
+	if iDate == "" {
+		return iDate
+	}
 	dd := iDate[6:8]
 	mm := iDate[4:6]
 	yy := iDate[0:4]
@@ -3290,7 +3292,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
 					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurrenderData"] = oData
+					resultMap["SurBData"] = oData
 				case oLetType == "7":
 					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["MRTAData"] = oData

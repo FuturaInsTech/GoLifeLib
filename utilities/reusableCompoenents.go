@@ -2971,7 +2971,10 @@ func GetAddressData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iR
 func GetPolicyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
-
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return nil
+	}
 	_, oStatus, _ := GetParamDesc(policy.CompanyID, "P0024", policy.PolStatus, 1)
 	_, oFreq, _ := GetParamDesc(policy.CompanyID, "Q0009", policy.PFreq, 1)
 

@@ -2973,6 +2973,7 @@ func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
 	var policy models.Policy
 
 	_, oStatus, _ := GetParamDesc(policy.CompanyID, "P0024", policy.PolStatus, 1)
+	_, oFreq, _ := GetParamDesc(policy.CompanyID, "Q0009", policy.PFreq, 1)
 
 	var q0005data types.Q0005Data
 	var extradataq0005 types.Extradata = &q0005data
@@ -2984,7 +2985,7 @@ func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
 		"CompanyID":     IDtoPrint(policy.CompanyID),
 		"PRCD":          DateConvert(policy.PRCD),
 		"PProduct":      policy.PProduct,
-		"PFreq":         policy.PFreq,
+		"PFreq":         oFreq,
 		"PContractCurr": policy.PContractCurr,
 		"PBillCurr":     policy.PBillCurr,
 		"POffice":       policy.POffice,
@@ -3009,8 +3010,7 @@ func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
 // Function # 5
 func PolicyBenefitLetter(iCompany uint, iPolicy uint) []interface{} {
 	var benefit []models.Benefit
-	var policy models.Policy
-	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	benefitarray := make([]interface{}, 0)
 	for k := 0; k < len(benefit); k++ {
@@ -3046,9 +3046,8 @@ func PolicyBenefitLetter(iCompany uint, iPolicy uint) []interface{} {
 // Function # 6
 func PolicySurvBLetter(iCompany uint, iPolicy uint) []interface{} {
 	var survb []models.SurvB
-	var policy models.Policy
-	initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
 	survbarray := make([]interface{}, 0)
 	for k := 0; k < len(survb); k++ {
 		resultOut := map[string]interface{}{
@@ -3063,6 +3062,37 @@ func PolicySurvBLetter(iCompany uint, iPolicy uint) []interface{} {
 	}
 	return survbarray
 }
+
+// Function # 7
+func PolicyMrtaBLetter(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint) []interface{} {
+	var mrtaenq []models.Mrta
+	initializers.DB.Find(&mrtaenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	mrtaarray := make([]interface{}, 0)
+	for k := 0; k < len(mrtaenq); k++ {
+		resultOut := map[string]interface{}{
+			"ID":         IDtoPrint(mrtaenq[k].ID),
+			"CompanyID":  IDtoPrint(mrtaenq[k].CompanyID),
+			"Term":       mrtaenq[k].BTerm,
+			"Ppt":        mrtaenq[k].PremPayingTerm,
+			"ClientID":   IDtoPrint(mrtaenq[k].ClientID),
+			"BenefitID":  IDtoPrint(mrtaenq[k].BenefitID),
+			"PolicyID":   IDtoPrint(mrtaenq[k].PolicyID),
+			"Coverage":   mrtaenq[k].BCoverage,
+			"Product":    mrtaenq[k].Pproduct,
+			"Interest":   mrtaenq[k].Interest,
+			"DecreaseSA": mrtaenq[k].BSumAssured,
+			"StartDate":  DateConvert(mrtaenq[k].BStartDate),
+		}
+		mrtaarray = append(mrtaarray, resultOut)
+	}
+	return mrtaarray
+}
+
+// Function # 8  - Receipt Sandhya
+// Function # 9  - SA Change Sowmiya
+// Function # 10  - Frequency Change SA - Yukesh
+// Function # 11  - Component Add - Barath
 
 // Check Status
 //

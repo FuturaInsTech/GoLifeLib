@@ -2895,11 +2895,11 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 }
 
 // Function # 1
-func PolicyCompanyLetter(iCompany uint) []interface{} {
+func GetCompanyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
-
 	initializers.DB.Find(&company, "id = ?", iCompany)
+
 	resultOut := map[string]interface{}{
 		"ID":                       IDtoPrint(company.ID),
 		"CompanyName":              company.CompanyName,
@@ -2922,7 +2922,7 @@ func PolicyCompanyLetter(iCompany uint) []interface{} {
 }
 
 // Function # 2
-func ClientLetter(iCompany uint, iClient uint) []interface{} {
+func GetClientData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	clientarray := make([]interface{}, 0)
 	var client models.Client
 
@@ -2946,7 +2946,7 @@ func ClientLetter(iCompany uint, iClient uint) []interface{} {
 }
 
 // Function # 3
-func AddressLetter(iCompany uint, iAddress uint) []interface{} {
+func GetAddressData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	addressarray := make([]interface{}, 0)
 	var address models.Address
 
@@ -2968,7 +2968,7 @@ func AddressLetter(iCompany uint, iAddress uint) []interface{} {
 }
 
 // Function # 4
-func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
+func GetPolicyData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
 
@@ -3008,7 +3008,7 @@ func PolicyLetter(iCompany uint, iPolicy uint) []interface{} {
 }
 
 // Function # 5
-func PolicyBenefitLetter(iCompany uint, iPolicy uint) []interface{} {
+func GetBenefitData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	var benefit []models.Benefit
 
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -3044,7 +3044,7 @@ func PolicyBenefitLetter(iCompany uint, iPolicy uint) []interface{} {
 }
 
 // Function # 6
-func PolicySurvBLetter(iCompany uint, iPolicy uint) []interface{} {
+func GetSurrData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	var survb []models.SurvB
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -3064,7 +3064,7 @@ func PolicySurvBLetter(iCompany uint, iPolicy uint) []interface{} {
 }
 
 // Function # 7
-func PolicyMrtaBLetter(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint) []interface{} {
+func GetMrtaData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
 	var mrtaenq []models.Mrta
 	initializers.DB.Find(&mrtaenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -3090,6 +3090,35 @@ func PolicyMrtaBLetter(iCompany uint, iPolicy uint, iAddress uint, iClient uint,
 }
 
 // Function # 8  - Receipt Sandhya
+
+func GetReceiptData(iCompany uint, iPolicy uint, iAddress uint, iClient uint, iReceipt uint) []interface{} {
+	var receiptenq models.Receipt
+	initializers.DB.Find(&receiptenq, "company_id = ? and id = ?", iCompany, iReceipt)
+
+	receiptarray := make([]interface{}, 0)
+	resultOut := map[string]interface{}{
+		"ID":                IDtoPrint(receiptenq.ID),
+		"CompanyID":         IDtoPrint(receiptenq.CompanyID),
+		"Branch":            receiptenq.Branch,
+		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
+		"AccCurry":          receiptenq.AccCurry,
+		"AccAmount":         receiptenq.AccAmount,
+		"PolicyID":          IDtoPrint(receiptenq.PolicyID),
+		"ClientID":          IDtoPrint(receiptenq.ClientID),
+		"DateOfCollection":  receiptenq.DateOfCollection,
+		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
+		"BankAccountNo":     receiptenq.BankAccountNo,
+		"BankReferenceNo":   receiptenq.BankReferenceNo,
+		"TypeOfReceipt":     receiptenq.TypeOfReceipt,
+		"InstalmentPremium": receiptenq.InstalmentPremium,
+		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
+		"AddressID":         IDtoPrint(receiptenq.AddressID),
+	}
+	receiptarray = append(receiptarray, resultOut)
+
+	return receiptarray
+}
+
 // Function # 9  - SA Change Sowmiya
 // Function # 10  - Frequency Change SA - Yukesh
 // Function # 11  - Component Add - Barath
@@ -3115,4 +3144,112 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 		}
 	}
 	return true, ""
+}
+
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint) error {
+
+	var p0034data types.P0034Data
+	var extradatap0034 types.Extradata = &p0034data
+
+	var p0033data types.P0033Data
+	var extradatap0033 types.Extradata = &p0033data
+	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
+	iTransaction := iHistoryCode
+	var policy models.Policy
+
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		return result.Error
+	}
+	iKey := iTransaction + policy.PProduct
+	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+
+	if err1 != nil {
+		iKey = iTransaction
+		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		if err1 != nil {
+			return err1
+		}
+	}
+
+	for i := 0; i < len(p0034data.Letters); i++ {
+		if p0034data.Letters[i].Templates != "" {
+			iKey = p0034data.Letters[i].Templates
+			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			if err != nil {
+				return err
+			}
+			var communication models.Communication
+			communication.AgencyID = policy.AgencyID
+			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
+			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
+			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
+			communication.ClientID = policy.ClientID
+			communication.PolicyID = policy.ID
+			communication.CompanyID = uint(iCompany)
+			communication.EmailAllowed = p0033data.EmailAllowed
+			communication.SMSAllowed = p0033data.SMSAllowed
+			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
+			communication.DepartmentHead = p0033data.DepartmentHead
+			communication.DepartmentName = p0033data.DepartmentName
+			communication.CompanyPhone = p0033data.CompanyPhone
+			communication.CompanyEmail = p0033data.CompanyEmail
+			communication.Tranno = policy.Tranno
+			communication.TemplateName = iKey
+			communication.EffectiveDate = policy.PRCD
+			oLetType := ""
+
+			resultarray := make([]interface{}, 0)
+			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
+			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
+				oLetType = p0034data.Letters[i].LetType[n]
+				switch {
+				case oLetType == "1":
+					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "2":
+					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "3":
+					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "4":
+					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "5":
+					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "6":
+					oData := GetSurrData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "7":
+					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "8":
+					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				case oLetType == "10":
+					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultarray = append(resultarray, oData)
+				default:
+
+				}
+
+			}
+			var commMap = make(map[string]interface{})
+			commMap["data"] = resultarray
+			communication.ExtractedData = commMap
+			communication.PDFPath = p0034data.Letters[i].PdfLocation
+			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
+
+			results := initializers.DB.Create(&communication)
+
+			if results.Error != nil {
+				return results.Error
+			}
+
+		}
+	}
+	return nil
 }

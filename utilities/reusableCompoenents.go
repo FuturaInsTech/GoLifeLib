@@ -3355,7 +3355,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "9":
 					oData := GetSaChangeData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["SAChangeData"] = oData
-				case oLetType == "11":
+				case oLetType == "10":
 					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "14":

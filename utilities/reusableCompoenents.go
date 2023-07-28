@@ -3322,6 +3322,16 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.TemplateName = iKey
 			communication.EffectiveDate = policy.PRCD
 			oLetType := ""
+			signData := make(map[string]interface{})
+
+			resultOut := map[string]interface{}{
+				"Department":     p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentName,
+				"CoEmail":        p0033data.CompanyEmail,
+				"CoPhone":        p0033data.CompanyPhone,
+			}
+			signData = resultOut
+
 			resultMap := make(map[string]interface{})
 
 			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
@@ -3364,11 +3374,11 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "15":
 					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
 					resultMap["ExpiryData"] = oData
-
+				case oLetType == "99":
+					resultMap["SignData "] = signData
 				default:
 
 				}
-
 			}
 
 			communication.ExtractedData = resultMap

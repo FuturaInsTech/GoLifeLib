@@ -3053,6 +3053,19 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	var survb []models.SurvB
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
+	var benefitenq models.Benefit
+	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id =? and id = ?", iCompany, iPolicy, survb[0].BenefitID)
+	basis := ""
+	var q0006data types.Q0006Data
+	var extradataq0006 types.Extradata = &q0006data
+
+	GetItemD(int(iCompany), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
+	if q0006data.SBType == "A" {
+		basis = "Age Based Survival Benefit"
+	} else {
+		basis = "Term Based Survival Benefit"
+	}
+
 	survbarray := make([]interface{}, 0)
 	for k := 0; k < len(survb); k++ {
 		resultOut := map[string]interface{}{
@@ -3061,6 +3074,7 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 			"BenefitID":     IDtoPrint(survb[k].BenefitID),
 			"PolicyID":      IDtoPrint(survb[k].PolicyID),
 			"EffectiveDate": DateConvert(survb[k].EffectiveDate),
+			"Basis":         basis,
 			//		"PaidDate ":     DateConvert(survb[k].PaidDate),
 		}
 		survbarray = append(survbarray, resultOut)

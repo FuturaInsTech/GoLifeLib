@@ -3336,15 +3336,16 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.TemplateName = iKey
 			communication.EffectiveDate = policy.PRCD
 			oLetType := ""
-			signData := make(map[string]interface{})
 
+			signData := make([]interface{}, 0)
 			resultOut := map[string]interface{}{
 				"Department":     p0033data.DepartmentName,
 				"DepartmentHead": p0033data.DepartmentHead,
 				"CoEmail":        p0033data.CompanyEmail,
 				"CoPhone":        p0033data.CompanyPhone,
 			}
-			signData = resultOut
+
+			signData = append(signData, resultOut)
 
 			resultMap := make(map[string]interface{})
 

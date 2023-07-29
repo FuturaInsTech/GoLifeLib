@@ -289,25 +289,25 @@ func GetNoIstalments(iFromDate, iToDate, iFrequency string) (oInstalments int) {
 	case iFrequency == "Y":
 		// 10 and 0  10
 		noinstalments = (float64(year1) / 1)
-		noinstalments = noinstalments + 0.999
+		noinstalments = noinstalments + 1
 		oInstalments = int(noinstalments)
 		return oInstalments
 	case iFrequency == "H":
 		// 10 and 6  10*2 + 6/6 =  21
 		noinstalments := float32((year1 * 2) + (month1 / 6))
-		noinstalments = noinstalments + 0.999
+		noinstalments = noinstalments + 1
 		oInstalments = int(noinstalments)
 		return oInstalments
 
 	case iFrequency == "Q":
 		// 5 9   = 5 * 4  + 9/3    20 + 3
 		noinstalments := float32((year1 * 4) + (month1 / 3))
-		noinstalments = noinstalments + 0.999
+		noinstalments = noinstalments + 1
 		oInstalments = int(noinstalments)
 		return oInstalments
 	case iFrequency == "M":
 		noinstalments := float32((year1 * 12) + (month1))
-		noinstalments = noinstalments + 0.999
+		noinstalments = noinstalments + 1
 		oInstalments = int(noinstalments)
 		return oInstalments
 	case iFrequency == "S":
@@ -3340,7 +3340,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 
 			resultOut := map[string]interface{}{
 				"Department":     p0033data.DepartmentName,
-				"DepartmentHead": p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentHead,
 				"CoEmail":        p0033data.CompanyEmail,
 				"CoPhone":        p0033data.CompanyPhone,
 			}
@@ -3389,7 +3389,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
 					resultMap["ExpiryData"] = oData
 				case oLetType == "99":
-					resultMap["SignData "] = signData
+					resultMap["SignData"] = signData
 				default:
 
 				}

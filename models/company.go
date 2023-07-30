@@ -70,4 +70,6 @@ type Company struct {
 	BusinessDates []BusinessDate
 	MaturityHs    []MaturityH
 	MaturityDs    []MaturityD
+	BankPols      []BankPol
+	PolBills      []PolBill
 }

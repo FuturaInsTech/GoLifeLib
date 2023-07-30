@@ -1383,3 +1383,34 @@ func (m *P0054Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Billing Type
+type P0055Data struct {
+	BankRequired    string // Y or N
+	BankExtraction  string
+	ExtractionDates []P0055
+}
+
+type P0055 struct {
+	ExtractionDate string
+}
+
+func (m *P0055Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0055Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

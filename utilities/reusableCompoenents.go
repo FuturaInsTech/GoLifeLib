@@ -2979,6 +2979,9 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	}
 	_, oStatus, _ := GetParamDesc(policy.CompanyID, "P0024", policy.PolStatus, 1)
 	_, oFreq, _ := GetParamDesc(policy.CompanyID, "Q0009", policy.PFreq, 1)
+	_, oProduct, _ := GetParamDesc(policy.CompanyID, "Q0005", policy.PProduct, 1)
+	_, oBillCurr, _ := GetParamDesc(policy.CompanyID, "P0023", policy.PBillCurr, 1)
+	_, oContCurr, _ := GetParamDesc(policy.CompanyID, "P0023", policy.PContractCurr, 1)
 
 	var q0005data types.Q0005Data
 	var extradataq0005 types.Extradata = &q0005data
@@ -2989,10 +2992,10 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		"ID":            IDtoPrint(policy.ID),
 		"CompanyID":     IDtoPrint(policy.CompanyID),
 		"PRCD":          DateConvert(policy.PRCD),
-		"PProduct":      policy.PProduct,
+		"PProduct":      oProduct,
 		"PFreq":         oFreq,
-		"PContractCurr": policy.PContractCurr,
-		"PBillCurr":     policy.PBillCurr,
+		"PContractCurr": oContCurr,
+		"PBillCurr":     oBillCurr,
 		"POffice":       policy.POffice,
 		"PolStatus":     oStatus,
 		"PReceivedDate": DateConvert(policy.PReceivedDate),
@@ -3018,8 +3021,14 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	benefitarray := make([]interface{}, 0)
+
 	for k := 0; k < len(benefit); k++ {
+		iCompany := benefit[k].CompanyID
+		_, oGender, _ := GetParamDesc(iCompany, "P0001", benefit[k].BGender, 1)
+		_, oCoverage, _ := GetParamDesc(iCompany, "Q0006", benefit[k].BCoverage, 1)
+		_, oStatus, _ := GetParamDesc(iCompany, "P0024", benefit[k].BStatus, 1)
 		resultOut := map[string]interface{}{
+
 			"ID":             IDtoPrint(benefit[k].ID),
 			"CompanyID":      IDtoPrint(benefit[k].CompanyID),
 			"ClientID":       IDtoPrint(benefit[k].ClientID),
@@ -3033,13 +3042,13 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 			"BPremCessAge":   benefit[k].BPremCessAge,
 			"BBasAnnualPrem": NumbertoPrint(benefit[k].BBasAnnualPrem),
 			"BLoadPrem":      NumbertoPrint(benefit[k].BLoadPrem),
-			"BCoverage":      benefit[k].BCoverage,
+			"BCoverage":      oCoverage,
 			"BSumAssured":    NumbertoPrint(float64(benefit[k].BLoadPrem)),
 			"BPrem":          NumbertoPrint(benefit[k].BPrem),
-			"BGender":        benefit[k].BGender,
+			"BGender":        oGender,
 			"BDOB":           benefit[k].BDOB,
 			"BMortality":     benefit[k].BMortality,
-			"BStatus":        benefit[k].BStatus,
+			"BStatus":        oStatus,
 			"BAge":           benefit[k].BAge,
 			"BRerate":        benefit[k].BRerate,
 		}
@@ -3217,6 +3226,40 @@ func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	return survbparray
 }
 
+func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+
+	bonusarray := make([]interface{}, 0)
+
+	oPolicyDeposit := GetGlBal(iCompany, uint(iPolicy), "PolicyDeposit")
+	oRevBonus := GetGlBal(iCompany, uint(iPolicy), "ReversionaryBonus")
+	oTermBonus := GetGlBal(iCompany, uint(iPolicy), "TerminalBonus")
+	oIntBonus := GetGlBal(iCompany, uint(iPolicy), "InterimBonus")
+	oAccumDiv := GetGlBal(iCompany, uint(iPolicy), "AccumDividend")
+	oAccumDivInt := GetGlBal(iCompany, uint(iPolicy), "AccumDivInt")
+	oAddBonus := GetGlBal(iCompany, uint(iPolicy), "AdditionalBonus")
+	oLoyalBonus := GetGlBal(iCompany, uint(iPolicy), "LoyaltyBonus")
+	oAplAmt := GetGlBal(iCompany, uint(iPolicy), "AplAmount")
+	oPolLoan := GetGlBal(iCompany, uint(iPolicy), "PolicyLoan")
+	oCashDep := GetGlBal(iCompany, uint(iPolicy), "CashDeposit")
+
+	resultOut := map[string]interface{}{
+		"ID":            IDtoPrint(iPolicy),
+		"PolicyDeposit": oPolicyDeposit,
+		"RevBonus":      oRevBonus,
+		"TermBonus":     oTermBonus,
+		"IntBonus":      oIntBonus,
+		"AccDividend":   oAccumDiv,
+		"AccDivInt":     oAccumDivInt,
+		"AddBonus":      oAddBonus,
+		"LoyalBonus":    oLoyalBonus,
+		"AplAmount":     oAplAmt,
+		"PolLoan":       oPolLoan,
+		"CashDeposit":   oCashDep,
+	}
+	bonusarray = append(bonusarray, resultOut)
+
+	return bonusarray
+}
 func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 	var benefit []models.Benefit
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
@@ -3389,6 +3432,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "15":
 					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
 					resultMap["ExpiryData"] = oData
+				case oLetType == "16":
+					oData := GetBonusVals(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					resultMap["BonusData"] = oData
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:

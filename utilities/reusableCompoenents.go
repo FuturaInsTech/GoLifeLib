@@ -2988,6 +2988,20 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 	gracedate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
 
+	var benefitenq []models.Benefit
+
+	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	oRiskCessDate := ""
+	oPremCessDate := ""
+	for i := 0; i < len(benefitenq); i++ {
+		if oRiskCessDate < benefitenq[i].BRiskCessDate {
+			oRiskCessDate = benefitenq[i].BRiskCessDate
+		}
+		if oPremCessDate < benefitenq[i].BPremCessDate {
+			oPremCessDate = benefitenq[i].BPremCessDate
+		}
+	}
+
 	resultOut := map[string]interface{}{
 		"ID":            IDtoPrint(policy.ID),
 		"CompanyID":     IDtoPrint(policy.CompanyID),
@@ -3008,6 +3022,8 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		"AgencyID":           IDtoPrint(policy.AgencyID),
 		"InstalmentPrem":     NumbertoPrint(policy.InstalmentPrem),
 		"GracePeriodEndDate": DateConvert(gracedate),
+		"RiskCessDate":       DateConvert(oRiskCessDate),
+		"PremCessDate":       DateConvert(oPremCessDate),
 	}
 	policyarray = append(policyarray, resultOut)
 
@@ -3260,6 +3276,28 @@ func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 
 	return bonusarray
 }
+func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint, iAgency uint) []interface{} {
+
+	agencyarray := make([]interface{}, 0)
+	var agencyenq models.Agency
+	initializers.DB.Find(&agencyenq, "company_id  = ? and id = ?", iCompany, iAgency)
+	resultOut := map[string]interface{}{
+		"ID":              IDtoPrint(iAgency),
+		"AgyChannelSt":    agencyenq.AgencyChannelSt,
+		"AgyStatus":       agencyenq.AgencySt,
+		"AgyBankId":       agencyenq.BankID,
+		"AgyClientNo":     agencyenq.ClientID,
+		"AgyLicNo":        agencyenq.LicenseNo,
+		"AgyLicEndDate":   agencyenq.LicenseEndDate,
+		"AgyLicStartDate": agencyenq.LicenseStartDate,
+		"AgyOffice":       agencyenq.Office,
+		"AgyTermReason":   agencyenq.TerminationReason,
+		"Agy":             agencyenq.EndDate,
+	}
+	agencyarray = append(agencyarray, resultOut)
+
+	return agencyarray
+}
 func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 	var benefit []models.Benefit
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
@@ -3325,7 +3363,7 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint) error {
 
 	var p0034data types.P0034Data
 	var extradatap0034 types.Extradata = &p0034data
@@ -3435,6 +3473,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "16":
 					oData := GetBonusVals(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
 					resultMap["BonusData"] = oData
+				case oLetType == "17":
+					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
+					resultMap["Agency"] = oData
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:

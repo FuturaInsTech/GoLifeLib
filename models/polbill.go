@@ -23,4 +23,5 @@ type PolBill struct {
 	PaidToDate     string `gorm:"type:varchar(08)"`
 	BillFreq       string `gorm:"type:varchar(08)"`
 	PayeeName      string `gorm:"type:varchar(90)"`
+	CreditBank     string `gorm:"type:varchar(100)"`
 }

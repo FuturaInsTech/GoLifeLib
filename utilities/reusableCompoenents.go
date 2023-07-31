@@ -3358,8 +3358,8 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 
 // Create Communication
 //
-// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID and Quotation ID
-//
+// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
+// 10 Input Variables
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech

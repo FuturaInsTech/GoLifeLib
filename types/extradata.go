@@ -1386,8 +1386,8 @@ func (m *P0054Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Billing Type
 type P0055Data struct {
-	BankRequired    string // Y or N
-	BankExtraction  string
+	BankRequired    string  // Y or N
+	BankExtraction  string  // Bank Account No
 	ExtractionDates []P0055 // 5, 10,15,25,28, 30,31
 }
 

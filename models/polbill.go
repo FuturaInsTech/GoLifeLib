@@ -19,4 +19,9 @@ type PolBill struct {
 	InstalmentPrem float64
 	CreationDate   string `gorm:"type:varchar(08)"`
 	ExtractionDate string `gorm:"type:varchar(08)"`
+	BillDate       string `gorm:"type:varchar(08)"`
+	PaidToDate     string `gorm:"type:varchar(08)"`
+	BillFreq       string `gorm:"type:varchar(08)"`
+	PayeeName      string `gorm:"type:varchar(90)"`
+	CreditBank     string `gorm:"type:varchar(100)"`
 }

@@ -19,6 +19,4 @@ type Bank struct {
 	Payers            []Payer
 	Agencies          []Agency
 	MedProviders      []MedProvider
-	BankPols          []BankPol
-	PolBills          []PolBill
 }

@@ -25,7 +25,8 @@ type Policy struct {
 	AnnivDate      string `gorm:"type:varchar(08)"` // READONLY
 	AgencyID       uint   // NEED TO SELECT
 	InstalmentPrem float64
-	BillingType    string `gorm:"type:varchar(05)"` // P0050
+	BillingType    string `gorm:"type:varchar(05)"` // P0055
+	BankID         uint
 	Benefits       []Benefit
 	PHistories     []PHistory
 	Extras         []Extra
@@ -48,6 +49,5 @@ type Policy struct {
 	TDFPolicies    []TDFPolicy
 	MaturityHs     []MaturityH
 	MaturityDs     []MaturityD
-	BankPols       []BankPol
 	PolBills       []PolBill
 }

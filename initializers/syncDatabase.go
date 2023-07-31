@@ -77,7 +77,6 @@ func SyncDatabase() {
 	//DB.AutoMigrate(&models.BusinessDate{})
 	// DB.AutoMigrate(&models.MaturityH{})
 	// DB.AutoMigrate(&models.MaturityD{})
-	DB.AutoMigrate(&models.BankPol{})
 	DB.AutoMigrate(&models.PolBill{})
 
 }

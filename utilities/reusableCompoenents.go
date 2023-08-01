@@ -98,19 +98,6 @@ func CalculateAge(fromDate, toDate, imethod string) (year, month, day, hour, min
 	dob := String2Date(fromDate1)
 	rcd := String2Date(toDate1)
 
-	//format := "20060102"
-	//dob, err := time.Parse("20060102", temp)
-	// dob, err := time.Parse(format, FromDate1)
-	// if err == nil {
-	// 	fmt.Println("New Values")
-	// 	fmt.Println(dob)
-	// }
-	// //	rcd, err := time.Parse("20060102", temp1)
-	// rcd, err := time.Parse(format, ToDate1)
-	// if err == nil {
-	// 	fmt.Println("New Values")
-	// 	fmt.Println(rcd)
-	// }
 	method := imethod
 	year1, month1, day1, hour1, min1, sec1 := DateDiff(dob, rcd, method)
 	//Age Nearer Birthday
@@ -635,6 +622,7 @@ func AddYears2Date(iDate string, iYrs int, iMonth int, iDays int) (oDate string)
 	c := Date2String(b)
 	return c
 }
+
 func ConvertMapToStruct(m map[string]interface{}, s interface{}) error {
 	stValue := reflect.ValueOf(s).Elem()
 	sType := stValue.Type()
@@ -3191,7 +3179,7 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 	return sachangearray
 }
 
-// Function # 10  - Frequency Change SA - Yukesh
+// Function # 10
 
 func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var addcomp []models.Addcomponent
@@ -3222,6 +3210,57 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 		addcomparray = append(addcomparray, resultOut)
 	}
 	return addcomparray
+}
+
+func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+	var surrhenq models.SurrH
+	var surrdenq []models.SurrD
+	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	surrarray := make([]interface{}, 0)
+
+	// for k := 0; k < len(addcomp); k++ {
+	// 	resultOut := map[string]interface{}{
+
+	// 		"ID":          IDtoPrint(addcomp[k].ID),
+	// 		"Select":      addcomp[k].Select,
+	// 		"PolicyID":    IDtoPrint(addcomp[k].PolicyID),
+	// 		"ClientID":    IDtoPrint(addcomp[k].ClientID),
+	// 		"BCoverage":   addcomp[k].BCoverage,
+	// 		"BStartDate":  DateConvert(addcomp[k].BStartDate),
+	// 		"BSumAssured": NumbertoPrint(float64(addcomp[k].BSumAssured)),
+	// 		"BTerm":       addcomp[k].BTerm,
+	// 		"BPTerm":      addcomp[k].BPTerm,
+	// 		"BPrem":       NumbertoPrint(addcomp[k].BPrem),
+	// 		"BAnnualPrem": NumbertoPrint(addcomp[k].BAnnualPrem),
+	// 		"BGender":     addcomp[k].BGender,
+	// 		"BDOB":        addcomp[k].BDOB,
+	// 		"Method":      addcomp[k].Method,
+	// 		"Frequency":   addcomp[k].Frequency,
+	// 		"BAge":        addcomp[k].BAge,
+	// 	}
+	// 	addcomparray = append(addcomparray, resultOut)
+	// }
+	return surrarray
+}
+
+func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+	var surrhenq models.SurrH
+	var surrdenq []models.SurrD
+	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	surrarray := make([]interface{}, 0)
+
+	return surrarray
+}
+func GetMatData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+	var surrhenq models.SurrH
+	var surrdenq []models.SurrD
+	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	surrarray := make([]interface{}, 0)
+
+	return surrarray
 }
 
 func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
@@ -3276,6 +3315,7 @@ func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 
 	return bonusarray
 }
+
 func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint, iAgency uint) []interface{} {
 
 	agencyarray := make([]interface{}, 0)
@@ -3292,12 +3332,13 @@ func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceip
 		"AgyLicStartDate": agencyenq.LicenseStartDate,
 		"AgyOffice":       agencyenq.Office,
 		"AgyTermReason":   agencyenq.TerminationReason,
-		"Agy":             agencyenq.EndDate,
+		"AgyEndDate":      agencyenq.EndDate,
 	}
 	agencyarray = append(agencyarray, resultOut)
 
 	return agencyarray
 }
+
 func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 	var benefit []models.Benefit
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
@@ -3464,6 +3505,15 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "10":
 					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["ComponantAddData"] = oData
+				case oLetType == "11":
+					oData := GetSurrData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SurrData"] = oData
+				case oLetType == "12":
+					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SurrData"] = oData
+				case oLetType == "13":
+					oData := GetMatData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SurrData"] = oData
 				case oLetType == "14":
 					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
 					resultMap["SurvbPay"] = oData

@@ -3241,8 +3241,9 @@ func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 		"AdjustedAmount":    surrhenq.AdjustedAmount,
 		"ReasonDescription": surrhenq.ReasonDescription,
 	}
-	surrdarray := make([]interface{}, 0)
+	surrarray = append(surrarray, resultOut)
 
+	surrdarray := make([]interface{}, 0)
 	for k := 0; k < len(surrdenq); k++ {
 		resultOut = map[string]interface{}{
 			"BenefitID":       IDtoPrint(surrdenq[k].ID),

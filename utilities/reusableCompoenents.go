@@ -3219,28 +3219,51 @@ func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	surrarray := make([]interface{}, 0)
 
-	// for k := 0; k < len(addcomp); k++ {
-	// 	resultOut := map[string]interface{}{
+	resultOut := map[string]interface{}{
 
-	// 		"ID":          IDtoPrint(addcomp[k].ID),
-	// 		"Select":      addcomp[k].Select,
-	// 		"PolicyID":    IDtoPrint(addcomp[k].PolicyID),
-	// 		"ClientID":    IDtoPrint(addcomp[k].ClientID),
-	// 		"BCoverage":   addcomp[k].BCoverage,
-	// 		"BStartDate":  DateConvert(addcomp[k].BStartDate),
-	// 		"BSumAssured": NumbertoPrint(float64(addcomp[k].BSumAssured)),
-	// 		"BTerm":       addcomp[k].BTerm,
-	// 		"BPTerm":      addcomp[k].BPTerm,
-	// 		"BPrem":       NumbertoPrint(addcomp[k].BPrem),
-	// 		"BAnnualPrem": NumbertoPrint(addcomp[k].BAnnualPrem),
-	// 		"BGender":     addcomp[k].BGender,
-	// 		"BDOB":        addcomp[k].BDOB,
-	// 		"Method":      addcomp[k].Method,
-	// 		"Frequency":   addcomp[k].Frequency,
-	// 		"BAge":        addcomp[k].BAge,
-	// 	}
-	// 	addcomparray = append(addcomparray, resultOut)
-	// }
+		"ID":                IDtoPrint(surrhenq.ID),
+		"PolicyID":          IDtoPrint(surrhenq.PolicyID),
+		"ClientID":          IDtoPrint(surrhenq.ClientID),
+		"EffectiveDate":     DateConvert(surrhenq.EffectiveDate),
+		"SurrDate":          DateConvert(surrhenq.SurrDate),
+		"Cause":             surrhenq.Cause,
+		"Status":            surrhenq.Status,
+		"BillDate":          DateConvert(surrhenq.BillDate),
+		"PaidToDate":        DateConvert(surrhenq.PaidToDate),
+		"Product":           surrhenq.Product,
+		"AplAmount":         surrhenq.AplAmount,
+		"LoanAmount":        surrhenq.LoanAmount,
+		"PolicyDepost":      surrhenq.PolicyDepost,
+		"CashDeposit":       surrhenq.CashDeposit,
+		"RefundPrem":        surrhenq.RefundPrem,
+		"PremTolerance":     surrhenq.PremTolerance,
+		"TotalSurrPayable":  surrhenq.TotalSurrPayable,
+		"AdjustedAmount":    surrhenq.AdjustedAmount,
+		"ReasonDescription": surrhenq.ReasonDescription,
+	}
+	surrdarray := make([]interface{}, 0)
+
+	for k := 0; k < len(surrdenq); k++ {
+		resultOut = map[string]interface{}{
+			"BenefitID":       IDtoPrint(surrdenq[k].ID),
+			"BCoverage":       surrdenq[k].BCoverage,
+			"BSumAssured":     surrdenq[k].BSumAssured,
+			"SurrAmount":      surrdenq[k].SurrAmount,
+			"RevBonus":        surrdenq[k].RevBonus,
+			"AddlBonus":       surrdenq[k].AddlBonus,
+			"TerminalBonus":   surrdenq[k].TerminalBonus,
+			"InterimBonus":    surrdenq[k].InterimBonus,
+			"LoyaltyBonus":    surrdenq[k].LoyaltyBonus,
+			"OtherAmount":     surrdenq[k].OtherAmount,
+			"AccumDividend":   surrdenq[k].AccumDividend,
+			"AccumDivInt":     surrdenq[k].AccumDivInt,
+			"TotalFundValue":  surrdenq[k].TotalFundValue,
+			"TotalSurrAmount": surrdenq[k].TotalSurrAmount,
+		}
+		surrdarray = append(surrdarray, resultOut)
+	}
+	surrarray = append(surrarray, surrdarray)
+
 	return surrarray
 }
 

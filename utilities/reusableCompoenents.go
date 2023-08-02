@@ -2990,18 +2990,29 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		}
 	}
 
+	oAnnivDate := String2Date(policy.AnnivDate)
+	oPRCD := String2Date(policy.PRCD)
+	ocompletedyears, _, _, _, _, _ := DateDiff(oAnnivDate, oPRCD, "")
+
+	sRiskCessDate := String2Date(oRiskCessDate)
+	sPRCD := String2Date(policy.PRCD)
+	oRiskTerm, _, _, _, _, _ := DateDiff(sRiskCessDate, sPRCD, "")
+
+	sPremCessDate := String2Date(oPremCessDate)
+	sPRCD = String2Date(policy.PRCD)
+	oPremTerm, _, _, _, _, _ := DateDiff(sPremCessDate, sPRCD, "")
+
 	resultOut := map[string]interface{}{
-		"ID":            IDtoPrint(policy.ID),
-		"CompanyID":     IDtoPrint(policy.CompanyID),
-		"PRCD":          DateConvert(policy.PRCD),
-		"PProduct":      oProduct,
-		"PFreq":         oFreq,
-		"PContractCurr": oContCurr,
-		"PBillCurr":     oBillCurr,
-		"POffice":       policy.POffice,
-		"PolStatus":     oStatus,
-		"PReceivedDate": DateConvert(policy.PReceivedDate),
-		// "PUWDate":DateConvert(policy.PUWDate),
+		"ID":                 IDtoPrint(policy.ID),
+		"CompanyID":          IDtoPrint(policy.CompanyID),
+		"PRCD":               DateConvert(policy.PRCD),
+		"PProduct":           oProduct,
+		"PFreq":              oFreq,
+		"PContractCurr":      oContCurr,
+		"PBillCurr":          oBillCurr,
+		"POffice":            policy.POffice,
+		"PolStatus":          oStatus,
+		"PReceivedDate":      DateConvert(policy.PReceivedDate),
 		"ClientID":           IDtoPrint(policy.ClientID),
 		"BTDate":             DateConvert(policy.BTDate),
 		"PaidToDate":         DateConvert(policy.PaidToDate),
@@ -3012,6 +3023,10 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		"GracePeriodEndDate": DateConvert(gracedate),
 		"RiskCessDate":       DateConvert(oRiskCessDate),
 		"PremCessDate":       DateConvert(oPremCessDate),
+		"CompletedYears":     ocompletedyears,
+		"PolicyRiskTerm":     oRiskTerm,
+		"PolicyPremTerm":     oPremTerm,
+		// "PUWDate":DateConvert(policy.PUWDate),
 	}
 	policyarray = append(policyarray, resultOut)
 
@@ -3130,22 +3145,22 @@ func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 
 	receiptarray := make([]interface{}, 0)
 	resultOut := map[string]interface{}{
-		"ID":        IDtoPrint(receiptenq.ID),
-		"CompanyID": IDtoPrint(receiptenq.CompanyID),
-		"Branch":    receiptenq.Branch,
-		//		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
-		"AccCurry":  receiptenq.AccCurry,
-		"AccAmount": receiptenq.AccAmount,
-		"PolicyID":  IDtoPrint(receiptenq.PolicyID),
-		"ClientID":  IDtoPrint(receiptenq.ClientID),
-		//		"DateOfCollection":  receiptenq.DateOfCollection,
-		//		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
+		"ID":                IDtoPrint(receiptenq.ID),
+		"CompanyID":         IDtoPrint(receiptenq.CompanyID),
+		"Branch":            receiptenq.Branch,
+		"AccCurry":          receiptenq.AccCurry,
+		"AccAmount":         receiptenq.AccAmount,
+		"PolicyID":          IDtoPrint(receiptenq.PolicyID),
+		"ClientID":          IDtoPrint(receiptenq.ClientID),
+		"DateOfCollection":  DateConvert(receiptenq.DateOfCollection),
 		"BankAccountNo":     receiptenq.BankAccountNo,
 		"BankReferenceNo":   receiptenq.BankReferenceNo,
 		"TypeOfReceipt":     receiptenq.TypeOfReceipt,
 		"InstalmentPremium": receiptenq.InstalmentPremium,
+		"AddressID":         IDtoPrint(receiptenq.AddressID),
 		//		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
-		"AddressID": IDtoPrint(receiptenq.AddressID),
+		//		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
+		//		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
 	}
 	receiptarray = append(receiptarray, resultOut)
 
@@ -3280,10 +3295,9 @@ func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 	return surrarray
 }
 
-// SANDHYA
 func GetMatData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
-	var surrhenq models.SurrH
-	var surrdenq []models.SurrD
+	var surrhenq models.MaturityH
+	var surrdenq []models.MaturityD
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	surrarray := make([]interface{}, 0)

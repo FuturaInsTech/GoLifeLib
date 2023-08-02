@@ -3088,6 +3088,9 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 			"PolicyID":      IDtoPrint(survb[k].PolicyID),
 			"EffectiveDate": DateConvert(survb[k].EffectiveDate),
 			"Basis":         basis,
+			"SeqNo":         survb[k].Sequence,
+			"SBPercentage":  survb[k].SBPercentage,
+			"SBAmount":      survb[k].Amount,
 			//		"PaidDate ":     DateConvert(survb[k].PaidDate),
 		}
 		survbarray = append(survbarray, resultOut)

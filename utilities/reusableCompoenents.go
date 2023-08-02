@@ -3179,8 +3179,6 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 	return sachangearray
 }
 
-// Function # 10
-
 func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var addcomp []models.Addcomponent
 	initializers.DB.Find(&addcomp, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -3268,6 +3266,7 @@ func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	return surrarray
 }
 
+// Not Required
 func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var surrhenq models.SurrH
 	var surrdenq []models.SurrD
@@ -3277,6 +3276,8 @@ func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 
 	return surrarray
 }
+
+// SANDHYA
 func GetMatData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var surrhenq models.SurrH
 	var surrdenq []models.SurrD
@@ -3287,6 +3288,7 @@ func GetMatData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRecei
 	return surrarray
 }
 
+// SANDHYA
 func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 	var survbenq models.SurvB
 	initializers.DB.Find(&survbenq, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)

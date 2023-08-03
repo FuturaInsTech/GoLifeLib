@@ -3046,6 +3046,7 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 		_, oGender, _ := GetParamDesc(iCompany, "P0001", benefit[k].BGender, 1)
 		_, oCoverage, _ := GetParamDesc(iCompany, "Q0006", benefit[k].BCoverage, 1)
 		_, oStatus, _ := GetParamDesc(iCompany, "P0024", benefit[k].BStatus, 1)
+
 		resultOut := map[string]interface{}{
 
 			"ID":             IDtoPrint(benefit[k].ID),
@@ -3227,14 +3228,14 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 	}
 	return addcomparray
 }
-
-func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var surrhenq models.SurrH
 	var surrdenq []models.SurrD
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-	surrarray := make([]interface{}, 0)
+	surrharray := make([]interface{}, 0)
 
+	surrhMap := make(map[string]interface{})
 	resultOut := map[string]interface{}{
 
 		"ID":                IDtoPrint(surrhenq.ID),
@@ -3247,39 +3248,45 @@ func GetSurrData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 		"BillDate":          DateConvert(surrhenq.BillDate),
 		"PaidToDate":        DateConvert(surrhenq.PaidToDate),
 		"Product":           surrhenq.Product,
-		"AplAmount":         surrhenq.AplAmount,
-		"LoanAmount":        surrhenq.LoanAmount,
-		"PolicyDepost":      surrhenq.PolicyDepost,
-		"CashDeposit":       surrhenq.CashDeposit,
-		"RefundPrem":        surrhenq.RefundPrem,
-		"PremTolerance":     surrhenq.PremTolerance,
-		"TotalSurrPayable":  surrhenq.TotalSurrPayable,
-		"AdjustedAmount":    surrhenq.AdjustedAmount,
+		"AplAmount":         float64(surrhenq.AplAmount),
+		"LoanAmount":        float64(surrhenq.LoanAmount),
+		"PolicyDepost":      float64(surrhenq.PolicyDepost),
+		"CashDeposit":       float64(surrhenq.CashDeposit),
+		"RefundPrem":        float64(surrhenq.RefundPrem),
+		"PremTolerance":     float64(surrhenq.PremTolerance),
+		"TotalSurrPayable":  float64(surrhenq.TotalSurrPayable),
+		"AdjustedAmount":    float64(surrhenq.AdjustedAmount),
 		"ReasonDescription": surrhenq.ReasonDescription,
 	}
-	surrarray = append(surrarray, resultOut)
+	surrharray = append(surrharray, resultOut)
+	surrhMap["SurrHData"] = surrharray
 
 	surrdarray := make([]interface{}, 0)
+	surrdMap := make(map[string]interface{})
 	for k := 0; k < len(surrdenq); k++ {
 		resultOut = map[string]interface{}{
+			"ID":              IDtoPrint(surrdenq[k].ID),
+			"PolicyID":        IDtoPrint(surrdenq[k].PolicyID),
+			"ClientID":        IDtoPrint(surrdenq[k].ClientID),
 			"BenefitID":       IDtoPrint(surrdenq[k].ID),
 			"BCoverage":       surrdenq[k].BCoverage,
 			"BSumAssured":     surrdenq[k].BSumAssured,
-			"SurrAmount":      surrdenq[k].SurrAmount,
-			"RevBonus":        surrdenq[k].RevBonus,
-			"AddlBonus":       surrdenq[k].AddlBonus,
-			"TerminalBonus":   surrdenq[k].TerminalBonus,
-			"InterimBonus":    surrdenq[k].InterimBonus,
-			"LoyaltyBonus":    surrdenq[k].LoyaltyBonus,
-			"OtherAmount":     surrdenq[k].OtherAmount,
-			"AccumDividend":   surrdenq[k].AccumDividend,
-			"AccumDivInt":     surrdenq[k].AccumDivInt,
-			"TotalFundValue":  surrdenq[k].TotalFundValue,
-			"TotalSurrAmount": surrdenq[k].TotalSurrAmount,
+			"SurrAmount":      float64(surrdenq[k].SurrAmount),
+			"RevBonus":        float64(surrdenq[k].RevBonus),
+			"AddlBonus":       float64(surrdenq[k].AddlBonus),
+			"TerminalBonus":   float64(surrdenq[k].TerminalBonus),
+			"InterimBonus":    float64(surrdenq[k].InterimBonus),
+			"LoyaltyBonus":    float64(surrdenq[k].LoyaltyBonus),
+			"OtherAmount":     float64(surrdenq[k].OtherAmount),
+			"AccumDividend":   float64(surrdenq[k].AccumDividend),
+			"AccumDivInt":     float64(surrdenq[k].AccumDivInt),
+			"TotalFundValue":  float64(surrdenq[k].TotalFundValue),
+			"TotalSurrAmount": float64(surrdenq[k].TotalSurrAmount),
 		}
 		surrdarray = append(surrdarray, resultOut)
+		surrdMap["SurrDData"] = surrdarray
 	}
-	surrarray = append(surrarray, surrdarray)
+	surrarray := append(surrharray, surrdarray)
 
 	return surrarray
 }
@@ -3295,14 +3302,69 @@ func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 	return surrarray
 }
 
-func GetMatData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
-	var surrhenq models.MaturityH
-	var surrdenq []models.MaturityD
-	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-	surrarray := make([]interface{}, 0)
+func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+	var mathenq models.MaturityH
 
-	return surrarray
+	initializers.DB.Find(&mathenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	matharray := make([]interface{}, 0)
+
+	resultOut := map[string]interface{}{
+
+		"ID":                   IDtoPrint(mathenq.ID),
+		"PolicyID":             IDtoPrint(mathenq.PolicyID),
+		"ClientID":             IDtoPrint(mathenq.ClientID),
+		"EffectiveDate":        DateConvert(mathenq.EffectiveDate),
+		"MaturityDate":         DateConvert(mathenq.MaturityDate),
+		"Status":               mathenq.Status,
+		"BillDate":             DateConvert(mathenq.BillDate),
+		"PaidToDate":           DateConvert(mathenq.PaidToDate),
+		"Product":              mathenq.Product,
+		"AplAmount":            mathenq.AplAmount,
+		"LoanAmount":           mathenq.LoanAmount,
+		"PolicyDepost":         mathenq.PolicyDepost,
+		"CashDeposit":          mathenq.CashDeposit,
+		"RefundPrem":           mathenq.RefundPrem,
+		"PremTolerance":        mathenq.PremTolerance,
+		"TotalMaturityPayable": mathenq.TotalMaturityPayable,
+		"AdjustedAmount":       mathenq.AdjustedAmount,
+	}
+	matharray = append(matharray, resultOut)
+
+	return matharray
+
+}
+func GetMatDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+
+	var matdenq []models.MaturityD
+
+	initializers.DB.Find(&matdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	matdarray := make([]interface{}, 0)
+
+	for k := 0; k < len(matdenq); k++ {
+		resultOut := map[string]interface{}{
+			"MaturityHID":         IDtoPrint(matdenq[k].MaturityHID),
+			"PolicyID":            matdenq[k].PolicyID,
+			"ClientID":            matdenq[k].ClientID,
+			"BenifitID":           matdenq[k].BenefitID,
+			"BCoverage":           matdenq[k].BCoverage,
+			"BSumAssured":         matdenq[k].BSumAssured,
+			"MaturityAmount":      matdenq[k].MaturityAmount,
+			"RevBonus":            matdenq[k].RevBonus,
+			"AddlBonus":           matdenq[k].AddlBonus,
+			"TerminalBonus":       matdenq[k].TerminalBonus,
+			"InterimBonus":        matdenq[k].InterimBonus,
+			"LoyaltyBonus":        matdenq[k].LoyaltyBonus,
+			"OtherAmount":         matdenq[k].OtherAmount,
+			"AccumDividend":       matdenq[k].AccumDividend,
+			"AccumDivInt":         matdenq[k].AccumDivInt,
+			"TotalFundValue":      matdenq[k].TotalFundValue,
+			"TotalMaturityAmount": matdenq[k].TotalMaturityAmount,
+		}
+		matdarray = append(matdarray, resultOut)
+	}
+
+	return matdarray
+
 }
 
 // SANDHYA
@@ -3549,14 +3611,18 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "11":
-					oData := GetSurrData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurrData"] = oData
+					oData := GetSurrHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SurrHData"] = oData
+					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["SurrDData"] = oData
 				case oLetType == "12":
 					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurrData"] = oData
+					resultMap["DeathData"] = oData
 				case oLetType == "13":
-					oData := GetMatData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurrData"] = oData
+					oData := GetMatHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["MatHData"] = oData
+					oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["MatDData"] = oData
 				case oLetType == "14":
 					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
 					resultMap["SurvbPay"] = oData

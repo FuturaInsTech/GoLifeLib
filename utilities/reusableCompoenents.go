@@ -3230,12 +3230,10 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var surrhenq models.SurrH
-	var surrdenq []models.SurrD
+
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	surrharray := make([]interface{}, 0)
 
-	surrhMap := make(map[string]interface{})
 	resultOut := map[string]interface{}{
 
 		"ID":                IDtoPrint(surrhenq.ID),
@@ -3259,12 +3257,19 @@ func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 		"ReasonDescription": surrhenq.ReasonDescription,
 	}
 	surrharray = append(surrharray, resultOut)
-	surrhMap["SurrHData"] = surrharray
 
+	return surrharray
+
+}
+func GetSurrDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+
+	var surrdenq []models.SurrD
+
+	initializers.DB.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	surrdarray := make([]interface{}, 0)
-	surrdMap := make(map[string]interface{})
+
 	for k := 0; k < len(surrdenq); k++ {
-		resultOut = map[string]interface{}{
+		resultOut := map[string]interface{}{
 			"ID":              IDtoPrint(surrdenq[k].ID),
 			"PolicyID":        IDtoPrint(surrdenq[k].PolicyID),
 			"ClientID":        IDtoPrint(surrdenq[k].ClientID),
@@ -3284,11 +3289,10 @@ func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 			"TotalSurrAmount": float64(surrdenq[k].TotalSurrAmount),
 		}
 		surrdarray = append(surrdarray, resultOut)
-		surrdMap["SurrDData"] = surrdarray
 	}
-	surrarray := append(surrharray, surrdarray)
 
-	return surrarray
+	return surrdarray
+
 }
 
 // Not Required
@@ -3613,8 +3617,8 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "11":
 					oData := GetSurrHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["SurrHData"] = oData
-					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					// resultMap["SurrDData"] = oData
+					oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SurrDData"] = oData
 				case oLetType == "12":
 					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					resultMap["DeathData"] = oData

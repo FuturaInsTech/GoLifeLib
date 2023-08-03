@@ -3294,6 +3294,28 @@ func GetSurrDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 	return surrdarray
 
 }
+func GetNomiData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+
+	var nomenq []models.Nominee
+
+	initializers.DB.Find(&nomenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	nomarray := make([]interface{}, 0)
+
+	for k := 0; k < len(nomenq); k++ {
+		resultOut := map[string]interface{}{
+			"ID":                  IDtoPrint(nomenq[k].ID),
+			"PolicyID":            IDtoPrint(nomenq[k].PolicyID),
+			"ClientID":            IDtoPrint(nomenq[k].ClientID),
+			"NomineeRelationship": nomenq[k].NomineeRelationship,
+			"LongName":            nomenq[k].NomineeLongName,
+			"Percentage":          nomenq[k].NomineePercentage,
+		}
+		nomarray = append(nomarray, resultOut)
+	}
+
+	return nomarray
+
+}
 
 // Not Required
 func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
@@ -3639,6 +3661,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "17":
 					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
 					resultMap["Agency"] = oData
+				case oLetType == "18":
+					oData := GetNomiData(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
+					resultMap["Nominee"] = oData
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:

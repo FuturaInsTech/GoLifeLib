@@ -31,5 +31,6 @@ type QDetail struct {
 	QEmrRating     uint
 	QAgeAdmitted   string `gorm:"type:varchar(01)"`
 	ClientID       uint
+	Interest       float64
 	QBenIllValues  []QBenIllValue
 }

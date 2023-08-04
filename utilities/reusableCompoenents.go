@@ -3174,6 +3174,8 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 
 	sachangearray := make([]interface{}, 0)
 	for k := 0; k < len(sachangeenq); k++ {
+		_, oGender, _ := GetParamDesc(iCompany, "P0001", sachangeenq[k].BGender, 1)
+		_, oFreq, _ := GetParamDesc(iCompany, "P0024", sachangeenq[k].Frequency, 1)
 		resultOut := map[string]interface{}{
 			"PolicyID    ": IDtoPrint(sachangeenq[k].PolicyID),
 			"BenefitID":    IDtoPrint(sachangeenq[k].BenefitID),
@@ -3183,7 +3185,7 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 			"BTerm":        IDtoPrint(sachangeenq[k].BTerm),
 			"BPTerm":       sachangeenq[k].BPTerm,
 			"BPrem":        sachangeenq[k].BPrem,
-			"BGender":      sachangeenq[k].BGender,
+			"BGender":      oGender,
 			"BDOB":         DateConvert(sachangeenq[k].BDOB),
 			"NSumAssured":  sachangeenq[k].NSumAssured,
 			"NTerm":        sachangeenq[k].NTerm,
@@ -3191,7 +3193,7 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 			"NPrem":        sachangeenq[k].NPrem,
 			"NAnnualPrem":  sachangeenq[k].NAnnualPrem,
 			"Method":       sachangeenq[k].Method,
-			"Frequency":    sachangeenq[k].Frequency,
+			"Frequency":    oFreq,
 		}
 		sachangearray = append(sachangearray, resultOut)
 	}
@@ -3205,6 +3207,8 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 	addcomparray := make([]interface{}, 0)
 
 	for k := 0; k < len(addcomp); k++ {
+		_, oFreq, _ := GetParamDesc(iCompany, "P0024", addcomp[k].Frequency, 1)
+		_, oGender, _ := GetParamDesc(iCompany, "P0001", addcomp[k].BGender, 1)
 		resultOut := map[string]interface{}{
 
 			"ID":          IDtoPrint(addcomp[k].ID),
@@ -3218,10 +3222,10 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 			"BPTerm":      addcomp[k].BPTerm,
 			"BPrem":       NumbertoPrint(addcomp[k].BPrem),
 			"BAnnualPrem": NumbertoPrint(addcomp[k].BAnnualPrem),
-			"BGender":     addcomp[k].BGender,
+			"BGender":     oGender,
 			"BDOB":        addcomp[k].BDOB,
 			"Method":      addcomp[k].Method,
-			"Frequency":   addcomp[k].Frequency,
+			"Frequency":   oFreq,
 			"BAge":        addcomp[k].BAge,
 		}
 		addcomparray = append(addcomparray, resultOut)
@@ -3233,7 +3237,7 @@ func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	surrharray := make([]interface{}, 0)
-
+	_, oProduct, _ := GetParamDesc(iCompany, "Q0005", surrhenq.Product, 1)
 	resultOut := map[string]interface{}{
 
 		"ID":                IDtoPrint(surrhenq.ID),
@@ -3245,7 +3249,7 @@ func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 		"Status":            surrhenq.Status,
 		"BillDate":          DateConvert(surrhenq.BillDate),
 		"PaidToDate":        DateConvert(surrhenq.PaidToDate),
-		"Product":           surrhenq.Product,
+		"Product":           oProduct,
 		"AplAmount":         float64(surrhenq.AplAmount),
 		"LoanAmount":        float64(surrhenq.LoanAmount),
 		"PolicyDepost":      float64(surrhenq.PolicyDepost),
@@ -3333,7 +3337,7 @@ func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 
 	initializers.DB.Find(&mathenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	matharray := make([]interface{}, 0)
-
+	_, oProduct, _ := GetParamDesc(iCompany, "Q0005", mathenq.Product, 1)
 	resultOut := map[string]interface{}{
 
 		"ID":                   IDtoPrint(mathenq.ID),
@@ -3344,7 +3348,7 @@ func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 		"Status":               mathenq.Status,
 		"BillDate":             DateConvert(mathenq.BillDate),
 		"PaidToDate":           DateConvert(mathenq.PaidToDate),
-		"Product":              mathenq.Product,
+		"Product":              oProduct,
 		"AplAmount":            mathenq.AplAmount,
 		"LoanAmount":           mathenq.LoanAmount,
 		"PolicyDepost":         mathenq.PolicyDepost,
@@ -3367,12 +3371,13 @@ func GetMatDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	matdarray := make([]interface{}, 0)
 
 	for k := 0; k < len(matdenq); k++ {
+		_, oCoverage, _ := GetParamDesc(iCompany, "Q0005", matdenq[k].BCoverage, 1)
 		resultOut := map[string]interface{}{
 			"MaturityHID":         IDtoPrint(matdenq[k].MaturityHID),
 			"PolicyID":            matdenq[k].PolicyID,
 			"ClientID":            matdenq[k].ClientID,
 			"BenifitID":           matdenq[k].BenefitID,
-			"BCoverage":           matdenq[k].BCoverage,
+			"BCoverage":           oCoverage,
 			"BSumAssured":         matdenq[k].BSumAssured,
 			"MaturityAmount":      matdenq[k].MaturityAmount,
 			"RevBonus":            matdenq[k].RevBonus,
@@ -3393,7 +3398,6 @@ func GetMatDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 
 }
 
-// SANDHYA
 func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 	var survbenq models.SurvB
 	initializers.DB.Find(&survbenq, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)

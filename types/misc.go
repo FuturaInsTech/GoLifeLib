@@ -23,6 +23,8 @@ type ReportData struct {
 	AdditionalData     interface{}
 	FirstPageRecCount  int
 	SubseqPageRecCount int
+	ReportType         string
+	FileName           string
 }
 
 func (r ReportData) ConvertTo2D(d1array []string, count int) [][]string {

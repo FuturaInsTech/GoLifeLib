@@ -3063,7 +3063,7 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 			"BBasAnnualPrem": NumbertoPrint(benefit[k].BBasAnnualPrem),
 			"BLoadPrem":      NumbertoPrint(benefit[k].BLoadPrem),
 			"BCoverage":      oCoverage,
-			"BSumAssured":    NumbertoPrint(float64(benefit[k].BLoadPrem)),
+			"BSumAssured":    NumbertoPrint(float64(benefit[k].BSumAssured)),
 			"BPrem":          NumbertoPrint(benefit[k].BPrem),
 			"BGender":        oGender,
 			"BDOB":           benefit[k].BDOB,

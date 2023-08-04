@@ -3486,6 +3486,7 @@ func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt 
 	expiryarray := make([]interface{}, 0)
 
 	for k := 0; k < len(benefit); k++ {
+		_, oCoverage, _ := GetParamDesc(iCompany, "Q0006", benefit[k].BCoverage, 1)
 		resultOut := map[string]interface{}{
 			"ID":             IDtoPrint(benefit[k].ID),
 			"CompanyID":      IDtoPrint(benefit[k].CompanyID),
@@ -3500,7 +3501,7 @@ func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt 
 			"BPremCessAge":   benefit[k].BPremCessAge,
 			"BBasAnnualPrem": NumbertoPrint(benefit[k].BBasAnnualPrem),
 			"BLoadPrem":      NumbertoPrint(benefit[k].BLoadPrem),
-			"BCoverage":      benefit[k].BCoverage,
+			"BCoverage":      oCoverage,
 			"BSumAssured":    NumbertoPrint(float64(benefit[k].BLoadPrem)),
 			"BPrem":          NumbertoPrint(benefit[k].BPrem),
 			"BGender":        benefit[k].BGender,

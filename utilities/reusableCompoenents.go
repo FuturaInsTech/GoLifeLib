@@ -3294,7 +3294,7 @@ func GetSurrDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 	return surrdarray
 
 }
-func GetNomiData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetNomiData(iCompany uint, iPolicy uint) []interface{} {
 
 	var nomenq []models.Nominee
 
@@ -3662,7 +3662,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
 					resultMap["Agency"] = oData
 				case oLetType == "18":
-					oData := GetNomiData(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
+					oData := GetNomiData(iCompany, iPolicy)
 					resultMap["Nominee"] = oData
 				case oLetType == "99":
 					resultMap["SignData"] = signData

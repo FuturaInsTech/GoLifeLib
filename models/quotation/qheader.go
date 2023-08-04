@@ -31,6 +31,9 @@ type QHeader struct {
 	QDeclaration    string `gorm:"type:varchar(30)"`
 	AddressID       uint
 	AgencyID        uint
+	Freq            string
+	BillingType     string `gorm:"type:varchar(05)"` // P0055
+	BankID          uint
 	QDetails        []QDetail
 	Finalized       string `gorm:"type:varchar(01)"`
 	Policy          uint64

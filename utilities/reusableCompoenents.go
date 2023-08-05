@@ -16,6 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// # 1
 // *********************************************************************************************
 //
 // Find out Difference between two Dates  Date should be in 2029-11-05 00:00:00 +0000 UTC
@@ -72,6 +73,7 @@ func DateDiff(a, b time.Time, m string) (year, month, day, hour, min, sec int) {
 	return
 }
 
+// # 2
 // *********************************************************************************************
 // From Date Generally DOB
 // To Date Generally RCD
@@ -120,6 +122,7 @@ func CalculateAge(fromDate, toDate, imethod string) (year, month, day, hour, min
 	return year1, month1, day1, hour1, min1, sec1
 }
 
+// # 3
 // *********************************************************************************************
 // This Function Take input as YYYYMMDD and Give Result in
 // this format 2023-02-01 00:00:00 +0000 UTC
@@ -139,6 +142,7 @@ func String2Date(iDate string) (oDate time.Time) {
 
 }
 
+// # 4
 // *********************************************************************************************
 // Author Ranga
 //
@@ -159,6 +163,7 @@ func Date2String(iDate time.Time) (odate string) {
 
 }
 
+// # 5
 // *********************************************************************************************
 // This GetNextDue Function Give NextDue Date based on the frequency provided
 //
@@ -244,6 +249,7 @@ func GetNextDue(iDate string, iFrequency string, iReversal string) (a time.Time)
 	return
 }
 
+// # 6
 // Add Month should ended with month
 func AddMonth(t time.Time, m int) time.Time {
 	x := t.AddDate(0, m, 0)
@@ -253,6 +259,7 @@ func AddMonth(t time.Time, m int) time.Time {
 	return x
 }
 
+// # 7
 // *********************************************************************************************
 // To Calculate No of instalments Paid
 //
@@ -305,6 +312,7 @@ func GetNoIstalments(iFromDate, iToDate, iFrequency string) (oInstalments int) {
 	return
 }
 
+// #8
 // *********************************************************************************************
 // Function : GetPremium Paid
 //
@@ -328,6 +336,7 @@ func GetPremiumPaid(iFromDate, iToDate, iFrequency string, iModelPrem float64) (
 
 }
 
+// # 9
 // *********************************************************************************************
 // Function Name : GetPaidUp
 //
@@ -352,17 +361,8 @@ func GetPaidUp(iFromDate, iToDate, iPremCessDate, iFrequency string, iSumAssured
 
 }
 
+// # 10
 // func RoundAmt(iAmount float64, iMethod string) (oAmount float64) {
-
-// 	if iMethod == "D" {
-// 		oAmount = math.Floor(iAmount*100) / 100
-// 	}
-// 	if iMethod == "U" {
-// 		oAmount = math.Ceil(iAmount*100) / 100
-// 	}
-// 	return
-// }
-
 // Function Name : Round Float To Round to 2 or 3 or 4 Decimals
 //
 // # Inputs Amount and Precision which is 2 or 3 or 4
@@ -375,6 +375,7 @@ func RoundFloat(val float64, precision uint) float64 {
 	return math.Round(val*ratio) / ratio
 }
 
+// # 11
 // Function Name : AddLeadDays
 //
 // Inputs Date String YYYYMMDD and Days integer. (days can be -negative as well)
@@ -391,11 +392,20 @@ func AddLeadDays(iDate string, iDays int) (oDate string) {
 
 }
 
+// # 12
+// Function Name : Simple Interest Calculation
+//
+// # Inputs Principal, Interest and No of Days
+//
+// # Output Interest only
+//
+// ©  FuturaInsTech
 func SimpleInterest(iPrincipal, iInterest, iDays float64) (oInterest float64) {
 	oInterest = iPrincipal * (iInterest / 100) * (iDays / 365)
 	return oInterest
 }
 
+// # 13
 // Function : CompoundInterest
 //
 // # Purpose to Calculate Compounding Interest for a Given Days
@@ -414,6 +424,7 @@ func CompoundInterest(iPrincipal, iInterest, iDays float64) (oInterest float64) 
 	return oInterest
 }
 
+// # 14
 func ValidateFields(iFunction string, iFieldName string, iFieldVal string, iUserId uint64, iFieldType string) error {
 	var fieldvalidators models.FieldValidator
 	var getUser models.User
@@ -456,6 +467,8 @@ func ValidateFields(iFunction string, iFieldName string, iFieldVal string, iUser
 	}
 
 }
+
+// # 15
 func ValidateItem(iUserId uint64, iName string, iItem any, iFieldName string, iErros string) error {
 	var getUser models.User
 	results := initializers.DB.First(&getUser, "id = ?", iUserId)
@@ -475,6 +488,7 @@ func ValidateItem(iUserId uint64, iName string, iItem any, iFieldName string, iE
 	return nil
 }
 
+// # 1
 func GetItemD(iCompany int, iTable string, iItem string, iFrom string, data *types.Extradata) error {
 
 	//var sourceMap map[string]interface{}
@@ -3026,6 +3040,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		"CompletedYears":     ocompletedyears,
 		"PolicyRiskTerm":     oRiskTerm,
 		"PolicyPremTerm":     oPremTerm,
+		"GraceDays":          q0005data.LapsedDays,
 		// "PUWDate":DateConvert(policy.PUWDate),
 	}
 	policyarray = append(policyarray, resultOut)
@@ -3037,8 +3052,10 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 // Function # 5
 func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var benefit []models.Benefit
-
+	var clientenq models.Client
+	var addressenq models.Address
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
 	benefitarray := make([]interface{}, 0)
 
 	for k := 0; k < len(benefit); k++ {
@@ -3047,30 +3064,39 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 		_, oCoverage, _ := GetParamDesc(iCompany, "Q0006", benefit[k].BCoverage, 1)
 		_, oStatus, _ := GetParamDesc(iCompany, "P0024", benefit[k].BStatus, 1)
 
+		clientname := GetName(iCompany, benefit[k].ClientID)
+		initializers.DB.Find(&clientenq, "company_id = ? and id = ?", iCompany, benefit[k].ClientID)
+		initializers.DB.Find(&addressenq, "company_id = ? and client_id = ?", iCompany, clientenq.ID)
+		clientdob := clientenq.ClientDob
+		address := addressenq.AddressLine1 + "" + addressenq.AddressLine2 + "" + addressenq.AddressLine3 + "" + addressenq.AddressLine4 + "" + addressenq.AddressLine5 + "" + addressenq.AddressPostCode + "" + addressenq.AddressState
+
 		resultOut := map[string]interface{}{
 
-			"ID":             IDtoPrint(benefit[k].ID),
-			"CompanyID":      IDtoPrint(benefit[k].CompanyID),
-			"ClientID":       IDtoPrint(benefit[k].ClientID),
-			"PolicyID":       IDtoPrint(benefit[k].PolicyID),
-			"BStartDate":     DateConvert(benefit[k].BStartDate),
-			"BRiskCessDate":  DateConvert(benefit[k].BRiskCessDate),
-			"BPremCessDate":  DateConvert(benefit[k].BPremCessDate),
-			"BTerm":          benefit[k].BTerm,
-			"BPTerm":         benefit[k].BPTerm,
-			"BRiskCessAge":   benefit[k].BRiskCessAge,
-			"BPremCessAge":   benefit[k].BPremCessAge,
-			"BBasAnnualPrem": NumbertoPrint(benefit[k].BBasAnnualPrem),
-			"BLoadPrem":      NumbertoPrint(benefit[k].BLoadPrem),
-			"BCoverage":      oCoverage,
-			"BSumAssured":    NumbertoPrint(float64(benefit[k].BSumAssured)),
-			"BPrem":          NumbertoPrint(benefit[k].BPrem),
-			"BGender":        oGender,
-			"BDOB":           benefit[k].BDOB,
-			"BMortality":     benefit[k].BMortality,
-			"BStatus":        oStatus,
-			"BAge":           benefit[k].BAge,
-			"BRerate":        benefit[k].BRerate,
+			"ID":                 IDtoPrint(benefit[k].ID),
+			"CompanyID":          IDtoPrint(benefit[k].CompanyID),
+			"ClientID":           IDtoPrint(benefit[k].ClientID),
+			"PolicyID":           IDtoPrint(benefit[k].PolicyID),
+			"BStartDate":         DateConvert(benefit[k].BStartDate),
+			"BRiskCessDate":      DateConvert(benefit[k].BRiskCessDate),
+			"BPremCessDate":      DateConvert(benefit[k].BPremCessDate),
+			"BTerm":              benefit[k].BTerm,
+			"BPTerm":             benefit[k].BPTerm,
+			"BRiskCessAge":       benefit[k].BRiskCessAge,
+			"BPremCessAge":       benefit[k].BPremCessAge,
+			"BBasAnnualPrem":     NumbertoPrint(benefit[k].BBasAnnualPrem),
+			"BLoadPrem":          NumbertoPrint(benefit[k].BLoadPrem),
+			"BCoverage":          oCoverage,
+			"BSumAssured":        NumbertoPrint(float64(benefit[k].BSumAssured)),
+			"BPrem":              NumbertoPrint(benefit[k].BPrem),
+			"BGender":            oGender,
+			"BDOB":               benefit[k].BDOB,
+			"BMortality":         benefit[k].BMortality,
+			"BStatus":            oStatus,
+			"BAge":               benefit[k].BAge,
+			"BRerate":            benefit[k].BRerate,
+			"LifeAssuredName":    clientname,
+			"LifeAssuredAddress": address,
+			"LifeAssuredDOB":     clientdob,
 		}
 		benefitarray = append(benefitarray, resultOut)
 	}
@@ -3304,8 +3330,14 @@ func GetNomiData(iCompany uint, iPolicy uint) []interface{} {
 
 	initializers.DB.Find(&nomenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	nomarray := make([]interface{}, 0)
+	var clientenq models.Client
+	var policyenq models.Policy
+	initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
 
 	for k := 0; k < len(nomenq); k++ {
+		initializers.DB.Find(&clientenq, "company_id = ? and id = ?", iCompany, nomenq[k].ClientID)
+		rcd := policyenq.PRCD
+		oAge, _, _, _, _, _ := DateDiff(String2Date(clientenq.ClientDob), String2Date(rcd), "")
 		resultOut := map[string]interface{}{
 			"ID":                  IDtoPrint(nomenq[k].ID),
 			"PolicyID":            IDtoPrint(nomenq[k].PolicyID),
@@ -3313,6 +3345,8 @@ func GetNomiData(iCompany uint, iPolicy uint) []interface{} {
 			"NomineeRelationship": nomenq[k].NomineeRelationship,
 			"LongName":            nomenq[k].NomineeLongName,
 			"Percentage":          nomenq[k].NomineePercentage,
+			"Age":                 oAge,
+			"DateofBirth":         DateConvert(clientenq.ClientDob),
 		}
 		nomarray = append(nomarray, resultOut)
 	}

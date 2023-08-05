@@ -3696,3 +3696,24 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 	}
 	return nil
 }
+
+// Get Name
+//
+// # This function, Return Name of the Client in Long Name + Short Name + Sur Name Format
+//
+// #  Input Variables Company Code and Client Code
+// #  Return is Name
+//
+// ©  FuturaInsTech
+
+func GetName(iCompany uint, iClient uint) string {
+	var clientenq models.Client
+	oName := ""
+	result := initializers.DB.Find(&clientenq, "company_id = ? and id = ?", iCompany, iClient)
+
+	if result != nil {
+		return oName
+	}
+	oName = clientenq.ClientLongName + " " + clientenq.ClientShortName + " " + clientenq.ClientSurName
+	return oName
+}

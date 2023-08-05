@@ -3148,18 +3148,19 @@ func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	mrtaarray := make([]interface{}, 0)
 	for k := 0; k < len(mrtaenq); k++ {
 		resultOut := map[string]interface{}{
-			"ID":         IDtoPrint(mrtaenq[k].ID),
-			"CompanyID":  IDtoPrint(mrtaenq[k].CompanyID),
-			"Term":       mrtaenq[k].BTerm,
-			"Ppt":        mrtaenq[k].PremPayingTerm,
-			"ClientID":   IDtoPrint(mrtaenq[k].ClientID),
-			"BenefitID":  IDtoPrint(mrtaenq[k].BenefitID),
-			"PolicyID":   IDtoPrint(mrtaenq[k].PolicyID),
-			"Coverage":   mrtaenq[k].BCoverage,
-			"Product":    mrtaenq[k].Pproduct,
-			"Interest":   mrtaenq[k].Interest,
-			"DecreaseSA": mrtaenq[k].BSumAssured,
-			"StartDate":  DateConvert(mrtaenq[k].BStartDate),
+			"ID":            IDtoPrint(mrtaenq[k].ID),
+			"CompanyID":     IDtoPrint(mrtaenq[k].CompanyID),
+			"Term":          mrtaenq[k].BTerm,
+			"Ppt":           mrtaenq[k].PremPayingTerm,
+			"ClientID":      IDtoPrint(mrtaenq[k].ClientID),
+			"BenefitID":     IDtoPrint(mrtaenq[k].BenefitID),
+			"PolicyID":      IDtoPrint(mrtaenq[k].PolicyID),
+			"Coverage":      mrtaenq[k].BCoverage,
+			"Product":       mrtaenq[k].Pproduct,
+			"Interest":      mrtaenq[k].Interest,
+			"DecreaseSA":    mrtaenq[k].BSumAssured,
+			"InterimPeriod": mrtaenq[k].InterimPeriod,
+			"StartDate":     DateConvert(mrtaenq[k].BStartDate),
 		}
 		mrtaarray = append(mrtaarray, resultOut)
 	}

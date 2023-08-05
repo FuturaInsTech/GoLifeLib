@@ -3496,6 +3496,10 @@ func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceip
 	initializers.DB.Find(&clientenq, "company_id = ? and id = ?", iCompany, agencyenq.ClientID)
 	oAgentName := clientenq.ClientLongName + " " + clientenq.ClientShortName + " " + clientenq.ClientSurName
 
+	var addressenq models.Address
+	initializers.DB.Find(&addressenq, "company_id = ? and client_id = ?", iCompany, clientenq.ID)
+	oAddress := addressenq.AddressLine1 + "" + addressenq.AddressLine2 + "" + addressenq.AddressLine3 + "" + addressenq.AddressLine4 + "" + addressenq.AddressLine5 + "" + addressenq.AddressPostCode + "" + addressenq.AddressState
+
 	resultOut := map[string]interface{}{
 		"ID":              IDtoPrint(iAgency),
 		"AgyChannelSt":    agencyenq.AgencyChannelSt,
@@ -3509,6 +3513,9 @@ func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceip
 		"AgyTermReason":   agencyenq.TerminationReason,
 		"AgyEndDate":      agencyenq.EndDate,
 		"AgentName":       oAgentName,
+		"oAddress":        oAddress,
+		"PhoneNo":         clientenq.ClientMobile,
+		"Email":           clientenq.ClientEmail,
 	}
 	agencyarray = append(agencyarray, resultOut)
 

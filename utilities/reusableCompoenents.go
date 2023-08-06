@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
@@ -3170,7 +3171,7 @@ func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var receiptenq models.Receipt
 	initializers.DB.Find(&receiptenq, "company_id = ? and id = ?", iCompany, iReceipt)
-
+	amtinwords := AmountinWords(receiptenq.AccAmount, receiptenq.AccCurry)
 	receiptarray := make([]interface{}, 0)
 	resultOut := map[string]interface{}{
 		"ID":                IDtoPrint(receiptenq.ID),
@@ -3186,6 +3187,7 @@ func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 		"TypeOfReceipt":     receiptenq.TypeOfReceipt,
 		"InstalmentPremium": receiptenq.InstalmentPremium,
 		"AddressID":         IDtoPrint(receiptenq.AddressID),
+		"AmountInWords":     amtinwords,
 		//		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
 		//		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
 		//		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
@@ -3758,4 +3760,219 @@ func GetName(iCompany uint, iClient uint) string {
 	}
 	oName = clientenq.ClientLongName + " " + clientenq.ClientShortName + " " + clientenq.ClientSurName
 	return oName
+}
+
+// New Function to do Amount in Words in Receipts
+func AmountinWords(amount float64, curr string) (aiw string) {
+
+	// Define currency and their names
+	currcd := []string{"", "INR", "USD", "SGD", "EUR", "GBP"}
+	currnm := []string{"", " Rupees ", " US Dollars ", " Singapore Dollars ", " Euros ", " Pounds "}
+	currcn := []string{"", " Paise ", " Cents ", " Cents ", " Cents ", " Pence "}
+	cid := 0
+
+	for i := 0; i <= len(currcd); i++ {
+		if curr == currcd[i] {
+			cid = i
+			break
+		}
+		continue
+	}
+
+	switch {
+	case currcd[cid] == "INR":
+		aiw = InWordsINR(amount, currnm[cid], currcn[cid])
+		return aiw
+
+	case currcd[cid] == "USD":
+		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
+		return aiw
+
+	case currcd[cid] == "SGD":
+		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
+		return aiw
+
+	case currcd[cid] == "EUR":
+		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
+		return aiw
+
+	case currcd[cid] == "GBP":
+		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
+		return aiw
+
+	default:
+		return "error"
+	}
+}
+
+// Function to convert INR amounts in words
+func InWordsINR(camt float64, cname string, ccoin string) (aiw string) {
+	// Function to convert a number to its corresponding words
+
+	// Define word representations for numbers from 0 to 19
+	ones := []string{"", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"}
+
+	// Define word representations for multiples of 10 from 20 to 90
+	tens := []string{"", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"}
+
+	if camt == 0 {
+		return "zero"
+	}
+
+	if camt < 0 {
+		return "minus " + InWordsINR(-camt, cname, ccoin)
+	}
+
+	num := int(camt)
+	dec := int((camt - float64(num)) * 100)
+
+	// Process the number in crore, lakh, thousand, and units
+
+	crores := num / 10000000
+	num %= 10000000
+
+	lakhs := num / 100000
+	num %= 100000
+
+	thousands := num / 1000
+	num %= 1000
+
+	units := num
+
+	words := ""
+	words += cname
+
+	// Convert crores to words
+	if croreWords := convertGroup(crores, ones, tens); len(croreWords) > 0 {
+		words += croreWords + " Crore "
+	}
+
+	// Convert lakhs to words
+	if lakhWords := convertGroup(lakhs, ones, tens); len(lakhWords) > 0 {
+		words += lakhWords + " Lakh "
+	}
+
+	// Convert thousands to words
+	if thousandWords := convertGroup(thousands, ones, tens); len(thousandWords) > 0 {
+		words += thousandWords + " Thousand "
+	}
+
+	// Convert units to words
+	if unitWords := convertGroup(units, ones, tens); len(unitWords) > 0 {
+		words += unitWords
+	}
+
+	// Convert dec to decwords
+
+	if decWords := convertGroup(dec, ones, tens); len(decWords) > 0 {
+		words += " and "
+		words += decWords
+		words += ccoin
+	}
+
+	return strings.TrimSpace(words)
+}
+
+// Function to convert USD,SGD,EURO,GBP... amounts in words
+func InWordsUSD(camt float64, cname string, ccoin string) (aiw string) {
+	// Define word representations for numbers from 0 to 19
+	ones := []string{"", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"}
+
+	// Define word representations for multiples of 10 from 20 to 90
+	tens := []string{"", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"}
+
+	if camt == 0 {
+		return "zero"
+	}
+
+	if camt < 0 {
+		return "minus " + InWordsUSD(-camt, cname, ccoin)
+	}
+
+	num := int(camt)
+	dec := int((camt - float64(num)) * 100)
+
+	// Process the number in  trillion, billion, million, thousand, and units
+
+	trillions := num / 1000000000000
+	num %= 1000000000000
+
+	billions := num / 1000000000
+	num %= 1000000000
+
+	millions := num / 1000000
+	num %= 1000000
+
+	thousands := num / 1000
+	num %= 1000
+
+	units := num
+
+	words := ""
+
+	// Convert trillions to words
+	if trillionWords := convertGroup(trillions, ones, tens); len(trillionWords) > 0 {
+		words += trillionWords + " Trillion "
+	}
+
+	// Convert billions to words
+	if billionWords := convertGroup(billions, ones, tens); len(billionWords) > 0 {
+		words += billionWords + " Billion "
+	}
+
+	// Convert millions to words
+	if millionWords := convertGroup(millions, ones, tens); len(millionWords) > 0 {
+		words += millionWords + " Million "
+	}
+
+	// Convert thousands to words
+	if thousandWords := convertGroup(thousands, ones, tens); len(thousandWords) > 0 {
+		words += thousandWords + " Thousand "
+	}
+
+	// Convert units to words
+	if unitWords := convertGroup(units, ones, tens); len(unitWords) > 0 {
+		words += unitWords
+	}
+
+	words += cname
+
+	// Convert dec to decwords
+
+	if decWords := convertGroup(dec, ones, tens); len(decWords) > 0 {
+		words += " and "
+		words += decWords
+		words += ccoin
+	}
+
+	return strings.TrimSpace(words)
+}
+
+// Function to convert all digits of given number in words
+func convertGroup(num int, ones, tens []string) (aiw string) {
+	if num == 0 {
+		return ""
+	}
+
+	words := ""
+
+	// Convert hundreds to words
+	if num >= 100 {
+		words += ones[num/100] + " Hundred "
+		num %= 100
+	}
+
+	// Convert tens and ones to words
+	if num > 0 {
+		if num < 20 {
+			words += ones[num]
+		} else {
+			words += tens[num/10]
+			if onesPlace := num % 10; onesPlace > 0 {
+				words += " " + ones[onesPlace]
+			}
+		}
+	}
+
+	return strings.TrimSpace(words)
 }

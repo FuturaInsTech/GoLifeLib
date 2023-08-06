@@ -25,12 +25,14 @@ type PolBill struct {
 	PayeeName         string `gorm:"type:varchar(90)"`
 	CreditBankCode    string `gorm:"type:varchar(50)"`
 	CreditBank        string `gorm:"type:varchar(50)"`
-	ProcessFlag       string `gorm:"type:varchar(05)"` // P0056
+	BankKey           string `gorm:"type:varchar(05)"` // P0056
 	BankIntimatedDate string `gorm:"type:varchar(08)"`
 	Reconciled        string `gorm:"type:varchar(01)"`
 	ReconciledDate    string `gorm:"type:varchar(08)"`
 	ReceiptNo         uint
 	ReceiptDate       string `gorm:"type:varchar(08)"`
 	Remarks           string `gorm:"type:varchar(100)"`
-	ReferenceID       uint
+	ReferenceID       uint   //Dishonour Original Key
+	Seqno             uint
+	ProcessFlag       string `gorm:"type:varchar(05)"`
 }

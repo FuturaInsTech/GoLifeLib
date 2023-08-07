@@ -1391,10 +1391,6 @@ type P0055Data struct {
 	BankAccount  string
 }
 
-type P0055 struct {
-	ExtractionDate string
-}
-
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {
 	jsonStr, err := json.Marshal(datamap)
 
@@ -1419,11 +1415,14 @@ func (m *P0055Data) GetFormattedData(datamap map[string]string) map[string]inter
 type P0056Data struct {
 	NoOfDishours         int     // No of Dishnours Allowed
 	ProcessFlag          string  // Process Flag
-	ExtractionDates      []P0055 // 5, 10,15,25,28, 30,31
+	ExtractionDates      []P0056 // 5, 10,15,25,28, 30,31
 	NetCollection        string  // Net Colleciton/Gross Collection (N/G)
 	CollectionFee        float64 // Flat Fee for Each Collection
 	CollectionPercentage float64 // Collection Fee
 	AccountEntry         string  // Pass Accounting Entries (Y/N)
+}
+type P0056 struct {
+	ExtractionDate string
 }
 
 func (m *P0056Data) ParseData(datamap map[string]interface{}) {

@@ -2973,6 +2973,7 @@ func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // Function # 4
+// Function # 4
 func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
@@ -2990,6 +2991,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	var extradataq0005 types.Extradata = &q0005data
 	GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 	gracedate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
+	premduedates := GetPremDueDates(policy.PRCD, policy.PFreq)
 
 	var benefitenq []models.Benefit
 
@@ -3042,6 +3044,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		"PolicyRiskTerm":     oRiskTerm,
 		"PolicyPremTerm":     oPremTerm,
 		"GraceDays":          q0005data.LapsedDays,
+		"PremiumDueDates":    premduedates,
 		// "PUWDate":DateConvert(policy.PUWDate),
 	}
 	policyarray = append(policyarray, resultOut)

@@ -3785,6 +3785,7 @@ func AmountinWords(amount float64, curr string) (aiw string) {
 		return aiw
 
 	case currcd[cid] == "USD":
+
 		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
 		return aiw
 
@@ -3975,4 +3976,60 @@ func convertGroup(num int, ones, tens []string) (aiw string) {
 	}
 
 	return strings.TrimSpace(words)
+}
+
+// *********************************************************************************************
+// This Function Take a Date in YYYYMMDD format and Freq as Input
+// and return the Premium Due Dates as a String value
+//
+// E.g:  " " for "S", "1 of Mar Jun Sep Dec" for "Q", "1 of Every Month" for "M"
+//
+// ©  FuturaInsTech
+// *********************************************************************************************
+
+func GetPremDueDates(iStartDate string, freq string) string {
+	var months []string
+	var dueDay string
+	var dueDates string
+	x := 0
+	dueDay = iStartDate[6:8]
+
+	freqs := []string{"S", "Y", "H", "Q", "M"}
+	intervalMonths := []int{0, 12, 6, 3, 1}
+
+	for i := 0; i <= len(freqs); i++ {
+		if freq == freqs[i] {
+			x = i
+			break
+		}
+		continue
+	}
+
+	if intervalMonths[x] <= 0 || intervalMonths[x] > 12 {
+		dueDates = " "
+		return dueDates
+	}
+
+	if intervalMonths[x] == 1 {
+		dueDates = dueDay + " of Every Month"
+		return dueDates
+	}
+
+	dueDates = dueDay + " of"
+	months = append(months, dueDates)
+
+	// Get the start year and the last day of that year
+	startDate := String2Date(iStartDate)
+	endDate := AddMonth(startDate, 12)
+
+	// Loop through all the months in the given year
+	intervalDate := startDate
+	for intervalDate.Before(endDate) {
+		months = append(months, intervalDate.Month().String()[:3])
+		intervalDate = intervalDate.AddDate(0, intervalMonths[x], 0)
+	}
+
+	dueDates = strings.Join(months, " ")
+
+	return dueDates
 }

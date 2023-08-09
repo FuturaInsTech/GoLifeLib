@@ -1389,7 +1389,6 @@ type P0055Data struct {
 	BankRequired string // Y or N
 	BankCode     string // Bank Account No AND IFSC
 	BankAccount  string
-	BankGroup    string // P0050
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {

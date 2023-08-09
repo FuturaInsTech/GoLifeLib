@@ -25,7 +25,7 @@ type PolBill struct {
 	PayeeName         string `gorm:"type:varchar(90)"`
 	CreditBankCode    string `gorm:"type:varchar(50)"`
 	CreditBank        string `gorm:"type:varchar(50)"`
-	BankKey           string `gorm:"type:varchar(05)"` // P0056
+	BankGroup         string `gorm:"type:varchar(05)"` // P0056
 	BankIntimatedDate string `gorm:"type:varchar(08)"`
 	Reconciled        string `gorm:"type:varchar(01)"`
 	ReconciledDate    string `gorm:"type:varchar(08)"`

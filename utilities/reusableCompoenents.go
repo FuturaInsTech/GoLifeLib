@@ -2608,6 +2608,9 @@ func CalculateStampDutyByPolicy(iCompanyId uint, iPolicyId uint) float64 {
 		return 0.0
 
 	}
+	if policyenq.PolStatus == "PV" || policyenq.PolStatus == "PC" || policyenq.PolStatus == "UW" {
+		policyenq.PaidToDate = policyenq.PRCD
+	}
 
 	var benefitsenq []models.Benefit
 	results := initializers.DB.Find(&benefitsenq, "company_id = ? and policy_id = ? ", iCompanyId, iPolicyId)

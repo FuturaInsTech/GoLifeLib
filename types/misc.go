@@ -1,5 +1,7 @@
 package types
 
+import "os"
+
 type SearchPagination struct {
 	SearchString   string
 	SearchCriteria string
@@ -25,6 +27,11 @@ type ReportData struct {
 	SubseqPageRecCount int
 	ReportType         string
 	FileName           string
+}
+
+func (r ReportData) GetResourcePath() string {
+	return os.Getenv("REPORT_RESOURCES")
+
 }
 
 func (r ReportData) ConvertTo2D(d1array []string, count int) [][]string {

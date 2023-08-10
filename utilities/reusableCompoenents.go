@@ -4125,17 +4125,30 @@ func GetPremDueDates(iStartDate string, freq string) string {
 // ©  FuturaInsTech
 // ***
 
-func CreateReceipt(iCompany uint, iPolicy uint, iAddress uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string) (oreceipt uint, oerror error) {
+func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string) (oreceipt uint, oerror error) {
 	iBusinssdate := GetBusinessDate(iCompany, 1, "02")
 	var policyenq models.Policy
 	var receiptupd models.Receipt
 	var result *gorm.DB
+	var clientenq models.Client
 
 	result = initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
 
 	if result.Error != nil {
 		return 0, errors.New(result.Error.Error())
 	}
+	iClient := policyenq.ClientID
+
+	result = initializers.DB.Find(&clientenq, "company_id = ? and Id = ?", iCompany, iClient)
+
+	if result.Error != nil {
+		return 0, errors.New(result.Error.Error())
+	}
+
+	if clientenq.ClientStatus == "AC" {
+		return 0, errors.New(result.Error.Error())
+	}
+
 	var p0018data types.P0018Data
 	var extradatap0018 types.Extradata = &p0018data
 	iKey := iCollType
@@ -4147,7 +4160,6 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAddress uint, iAmount float64, 
 
 	var p0027data types.P0027Data
 	var extradata types.Extradata = &p0027data
-	iMethod := "B0108"
 
 	err = GetItemD(int(iCompany), "P0027", iMethod, iBusinssdate, &extradata)
 

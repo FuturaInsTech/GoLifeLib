@@ -4145,7 +4145,7 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 		return 0, errors.New(result.Error.Error())
 	}
 
-	if clientenq.ClientStatus == "AC" {
+	if clientenq.ClientStatus != "AC" {
 		return 0, errors.New(result.Error.Error())
 	}
 

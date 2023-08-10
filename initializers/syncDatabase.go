@@ -53,7 +53,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(models.AccountCode{})
 	// DB.AutoMigrate(&models.GlMove{})
 	// DB.AutoMigrate(&models.GlBal{})
-	// DB.AutoMigrate(&models.Receipt{})
+	DB.AutoMigrate(&models.Receipt{})
 	// DB.AutoMigrate(&models.Tdfh{})
 	// DB.AutoMigrate(&models.TDFPolicy{})
 	//DB.AutoMigrate(&sudmodels.UIMaster{})

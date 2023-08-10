@@ -1444,3 +1444,31 @@ func (m *P0056Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Branch Code
+
+type P0018Data struct {
+	BankIFSC    string
+	BankAccount string
+	ClientID    uint
+}
+
+func (m *P0018Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0018Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

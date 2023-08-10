@@ -16,6 +16,7 @@ type Receipt struct {
 	ClientID          uint
 	DateOfCollection  string `gorm:"type:varchar(08)"`
 	ReconciledDate    string `gorm:"type:varchar(08)"`
+	BankIFSC          string `gorm:"type:varchar(10)"`
 	BankAccountNo     string `gorm:"type:varchar(40)"`
 	BankReferenceNo   string `gorm:"type:varchar(40)"`
 	TypeOfReceipt     string `gorm:"type:varchar(05)"` // P0030

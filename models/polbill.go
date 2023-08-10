@@ -29,7 +29,7 @@ type PolBill struct {
 	BankIntimatedDate string `gorm:"type:varchar(08)"`
 	Reconciled        string `gorm:"type:varchar(01)"`
 	ReconciledDate    string `gorm:"type:varchar(08)"`
-	ColectionDate     string `gorm:"type:varchar(08)"`
+	CollectionDate    string `gorm:"type:varchar(08)"`
 	ReceiptNo         uint
 	ReceiptDate       string `gorm:"type:varchar(08)"`
 	Remarks           string `gorm:"type:varchar(100)"`

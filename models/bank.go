@@ -14,7 +14,7 @@ type Bank struct {
 	EndDate           string `gorm:"type:varchar(08)"`
 	BankType          string `gorm:"type:varchar(05)"` //P0020 Savings/Current Bank A/C
 	BankAccountStatus string `gorm:"type:varchar(05)"` //P0021
-	BankGroup         string `gorm:"type:varchar(05)"` // P0056
+	BankGroup         string `gorm:"type:varchar(05)"` //P0056
 	CompanyID         uint
 	ClientID          uint
 	Payers            []Payer

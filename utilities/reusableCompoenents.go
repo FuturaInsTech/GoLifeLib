@@ -4183,6 +4183,7 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	receiptupd.PaidToDate = policyenq.PaidToDate
 	receiptupd.Tranno = policyenq.Tranno
 	receiptupd.TypeOfReceipt = iCollType
+	receiptupd.CompanyID = iCompany
 
 	var p0030data types.P0030Data
 	var extradatap0030 types.Extradata = &p0030data

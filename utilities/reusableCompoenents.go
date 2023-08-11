@@ -4127,6 +4127,7 @@ func GetPremDueDates(iStartDate string, freq string) string {
 
 func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string) (oreceipt uint, oerror error) {
 	iBusinssdate := GetBusinessDate(iCompany, 1, "02")
+
 	var policyenq models.Policy
 	var receiptupd models.Receipt
 	var result *gorm.DB
@@ -4137,6 +4138,7 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	if result.Error != nil {
 		return 0, errors.New(result.Error.Error())
 	}
+
 	iClient := policyenq.ClientID
 
 	result = initializers.DB.Find(&clientenq, "company_id = ? and Id = ?", iCompany, iClient)

@@ -910,7 +910,7 @@ func (m *P0029Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
-// Collection Bank Account
+// Collection Bank Account  Redundant
 type P0030Data struct {
 	BankAccount string
 	GLAccount   string
@@ -1386,9 +1386,10 @@ func (m *P0054Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Billing Type
 type P0055Data struct {
-	BankRequired string // Y or N
-	BankCode     string // Bank Account No AND IFSC
-	BankAccount  string
+	BankRequired string // Y or N  Client should have bank account Y/N
+	BankCode     string // IFSC No of Insurance Company
+	BankAccount  string // Bank Account No of Insurance Company
+	GLAccount    string // GL Code for Posting for the Billing Type
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {

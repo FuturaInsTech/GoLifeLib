@@ -16,12 +16,12 @@ type Receipt struct {
 	ClientID          uint
 	DateOfCollection  string `gorm:"type:varchar(08)"`
 	ReconciledDate    string `gorm:"type:varchar(08)"`
-	BankIFSC          string `gorm:"type:varchar(10)"` // Client Bank Code
-	BankAccountNo     string `gorm:"type:varchar(40)"` // Client Bank Account
+	BankIFSC          string `gorm:"type:varchar(50)"` // Client Bank Code
+	BankAccountNo     string `gorm:"type:varchar(50)"` // Client Bank Account
 	BankReferenceNo   string `gorm:"type:varchar(40)"`
 	TypeOfReceipt     string `gorm:"type:varchar(05)"` // P0030
-	InsurerBankIFSC   string `gorm:"type:varchar(10)"`
-	InsurerBankAccNo  string `gorm:"type:varchar(40)"`
+	InsurerBankIFSC   string `gorm:"type:varchar(50)"`
+	InsurerBankAccNo  string `gorm:"type:varchar(50)"`
 	InstalmentPremium float64
 	PaidToDate        string `gorm:"type:varchar(08)"`
 	AddressID         uint

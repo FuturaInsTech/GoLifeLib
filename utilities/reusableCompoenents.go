@@ -3923,28 +3923,28 @@ func InWordsINR(camt float64, cname string, ccoin string) (aiw string) {
 	words += cname
 
 	// Convert crores to words
-	if croreWords := convertGroup(crores, ones, tens); len(croreWords) > 0 {
+	if croreWords := HundredsInWords(crores, ones, tens); len(croreWords) > 0 {
 		words += croreWords + " Crore "
 	}
 
 	// Convert lakhs to words
-	if lakhWords := convertGroup(lakhs, ones, tens); len(lakhWords) > 0 {
+	if lakhWords := HundredsInWords(lakhs, ones, tens); len(lakhWords) > 0 {
 		words += lakhWords + " Lakh "
 	}
 
 	// Convert thousands to words
-	if thousandWords := convertGroup(thousands, ones, tens); len(thousandWords) > 0 {
+	if thousandWords := HundredsInWords(thousands, ones, tens); len(thousandWords) > 0 {
 		words += thousandWords + " Thousand "
 	}
 
 	// Convert units to words
-	if unitWords := convertGroup(units, ones, tens); len(unitWords) > 0 {
+	if unitWords := HundredsInWords(units, ones, tens); len(unitWords) > 0 {
 		words += unitWords
 	}
 
 	// Convert dec to decwords
 
-	if decWords := convertGroup(dec, ones, tens); len(decWords) > 0 {
+	if decWords := HundredsInWords(dec, ones, tens); len(decWords) > 0 {
 		words += " and "
 		words += decWords
 		words += ccoin
@@ -3992,27 +3992,27 @@ func InWordsUSD(camt float64, cname string, ccoin string) (aiw string) {
 	words := ""
 
 	// Convert trillions to words
-	if trillionWords := convertGroup(trillions, ones, tens); len(trillionWords) > 0 {
+	if trillionWords := HundredsInWords(trillions, ones, tens); len(trillionWords) > 0 {
 		words += trillionWords + " Trillion "
 	}
 
 	// Convert billions to words
-	if billionWords := convertGroup(billions, ones, tens); len(billionWords) > 0 {
+	if billionWords := HundredsInWords(billions, ones, tens); len(billionWords) > 0 {
 		words += billionWords + " Billion "
 	}
 
 	// Convert millions to words
-	if millionWords := convertGroup(millions, ones, tens); len(millionWords) > 0 {
+	if millionWords := HundredsInWords(millions, ones, tens); len(millionWords) > 0 {
 		words += millionWords + " Million "
 	}
 
 	// Convert thousands to words
-	if thousandWords := convertGroup(thousands, ones, tens); len(thousandWords) > 0 {
+	if thousandWords := HundredsInWords(thousands, ones, tens); len(thousandWords) > 0 {
 		words += thousandWords + " Thousand "
 	}
 
 	// Convert units to words
-	if unitWords := convertGroup(units, ones, tens); len(unitWords) > 0 {
+	if unitWords := HundredsInWords(units, ones, tens); len(unitWords) > 0 {
 		words += unitWords
 	}
 
@@ -4020,7 +4020,7 @@ func InWordsUSD(camt float64, cname string, ccoin string) (aiw string) {
 
 	// Convert dec to decwords
 
-	if decWords := convertGroup(dec, ones, tens); len(decWords) > 0 {
+	if decWords := HundredsInWords(dec, ones, tens); len(decWords) > 0 {
 		words += " and "
 		words += decWords
 		words += ccoin
@@ -4031,7 +4031,7 @@ func InWordsUSD(camt float64, cname string, ccoin string) (aiw string) {
 
 // #109
 // Function to convert all digits of given number in words
-func convertGroup(num int, ones, tens []string) (aiw string) {
+func HundredsInWords(num int, ones, tens []string) (aiw string) {
 	if num == 0 {
 		return ""
 	}

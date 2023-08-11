@@ -4178,7 +4178,6 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	receiptupd.Branch = "HO"
 	receiptupd.ClientID = policyenq.ClientID
 	receiptupd.PolicyID = iPolicy
-	receiptupd.AccAmount = float64(iCompany)
 	receiptupd.InstalmentPremium = policyenq.InstalmentPrem
 	receiptupd.PaidToDate = policyenq.PaidToDate
 	receiptupd.Tranno = policyenq.Tranno
@@ -4205,7 +4204,7 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	var iSequenceno uint64
 	iSequenceno++
 	iAccountCodeID := acccode.ID
-	iAccAmount := iAmount
+	iAccAmount := receiptupd.AccAmount
 	iAccountCode := glcode + receiptupd.Branch + p0030data.GLAccount
 	iEffectiveDate := receiptupd.DateOfCollection
 	iGlAmount := receiptupd.AccAmount

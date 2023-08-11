@@ -4186,13 +4186,6 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	receiptupd.TypeOfReceipt = iCollType
 	receiptupd.CompanyID = iCompany
 
-	var p0030data types.P0030Data
-	var extradatap0030 types.Extradata = &p0030data
-
-	err = GetItemD(int(iCompany), "P0030", receiptupd.TypeOfReceipt, iBusinssdate, &extradatap0030)
-	if err != nil {
-		return 0, errors.New(err.Error())
-	}
 	// Save Receipt
 	result = initializers.DB.Create(&receiptupd)
 
@@ -4207,7 +4200,7 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	iSequenceno++
 	iAccountCodeID := acccode.ID
 	iAccAmount := receiptupd.AccAmount
-	iAccountCode := glcode + receiptupd.Branch + p0030data.GLAccount
+	iAccountCode := glcode + receiptupd.Branch + p0055data.GLAccount
 	iEffectiveDate := receiptupd.DateOfCollection
 	iGlAmount := receiptupd.AccAmount
 

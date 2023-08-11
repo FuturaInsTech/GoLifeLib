@@ -4268,3 +4268,49 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	return receiptupd.ID, nil
 }
+
+// # 112
+// CalBonus - Calculate Bonus due on Anniversary Date
+//
+// NOTE: THIS IS CLONED FROM GetBonusByYear not to impact to other functions. //
+//
+// # Input:  Company, Coverage , Bonus Method, Coverage Start Date, Anniversary Date, Policy Status, SA, Term, Premium Term
+// # Output: Calculted Bonus Amount as float64
+//
+// # Date in YYYYMMDD as a string
+//
+// ©  FuturaInsTech
+func CalcBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate string, iAnnivDate string, iStatus string, iSA uint, iTerm uint, iPTerm uint) float64 {
+	//	fmt.Println("inside Bonus ", iCoverage, iCompany, iBonusMethod, iDate, iYear, iStatus, iSA, iTerm)
+
+	var iKey string
+	var oBonus float64
+
+	if iBonusMethod == "" {
+		// No Bonus Method exists hence return bonus as zero and exit
+		oBonus = 0
+		return oBonus
+	}
+
+	var q0014data types.Q0014Data
+	var extradata1 types.Extradata = &q0014data
+
+	iKey = iBonusMethod + iStatus + strconv.Itoa(int(iTerm)) + strconv.Itoa(int(iPTerm))
+	err := GetItemD(int(iCompany), "Q0014", iKey, iAnnivDate, &extradata1)
+	if err != nil {
+		oBonus = 0
+		return oBonus
+	}
+
+	iYear, _, _, _, _, _, _, _ := NoOfDays(iAnnivDate, iDate)
+
+	for i := 0; i < len(q0014data.BRates); i++ {
+		if iYear <= int64(q0014data.BRates[i].Term) {
+			oBonus = float64(iSA) * (q0014data.BRates[i].Percentage) / 100
+			return oBonus
+		}
+	}
+	return 0
+}
+
+//

@@ -4149,10 +4149,10 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 		return 0, errors.New(result.Error.Error())
 	}
 
-	var p0018data types.P0018Data
-	var extradatap0018 types.Extradata = &p0018data
+	var p0055data types.P0055Data
+	var extradatap0055 types.Extradata = &p0055data
 	iKey := iCollType
-	err := GetItemD(int(iCompany), "P0018", iKey, iBusinssdate, &extradatap0018)
+	err := GetItemD(int(iCompany), "P0055", iKey, iBusinssdate, &extradatap0055)
 
 	if err != nil {
 		return 0, errors.New(err.Error())
@@ -4170,12 +4170,12 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	receiptupd.AccAmount = iAmount
 	receiptupd.AccCurry = iCollCurr
 	receiptupd.AddressID = policyenq.AddressID
-	receiptupd.BankAccountNo = p0018data.BankAccount
-	receiptupd.BankIFSC = p0018data.BankIFSC
+	receiptupd.BankAccountNo = p0055data.BankAccount
+	receiptupd.BankIFSC = p0055data.BankCode
 	receiptupd.CurrentDate = iBusinssdate
 	receiptupd.DateOfCollection = iCollDate
 	receiptupd.BankReferenceNo = iRef
-	receiptupd.Branch = ""
+	receiptupd.Branch = "HO"
 	receiptupd.ClientID = policyenq.ClientID
 	receiptupd.PolicyID = iPolicy
 	receiptupd.AccAmount = float64(iCompany)

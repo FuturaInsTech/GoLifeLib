@@ -4125,7 +4125,7 @@ func GetPremDueDates(iStartDate string, freq string) string {
 // ©  FuturaInsTech
 // ***
 
-func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string) (oreceipt uint, oerror error) {
+func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string, iIFSC string, iBankAc string) (oreceipt uint, oerror error) {
 	iBusinssdate := GetBusinessDate(iCompany, 1, "02")
 
 	var policyenq models.Policy
@@ -4172,8 +4172,10 @@ func CreateReceipt(iCompany uint, iPolicy uint, iAmount float64, iCollDate strin
 	receiptupd.AccAmount = iAmount
 	receiptupd.AccCurry = iCollCurr
 	receiptupd.AddressID = policyenq.AddressID
-	receiptupd.BankAccountNo = p0055data.BankAccount
-	receiptupd.BankIFSC = p0055data.BankCode
+	receiptupd.BankAccountNo = iBankAc
+	receiptupd.BankIFSC = iIFSC
+	receiptupd.InsurerBankAccNo = p0055data.BankAccount
+	receiptupd.InsurerBankIFSC = p0055data.BankCode
 	receiptupd.CurrentDate = iBusinssdate
 	receiptupd.DateOfCollection = iCollDate
 	receiptupd.BankReferenceNo = iRef

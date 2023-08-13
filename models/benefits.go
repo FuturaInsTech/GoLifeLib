@@ -28,6 +28,7 @@ type Benefit struct {
 	BStatus        string  `gorm:"type:varchar(02)"`
 	BAge           uint
 	BRerate        string `gorm:"type:varchar(08)"`
+	BonusDate      string `gorm:"type:varchar(08)"`
 	Extras         []Extra
 	SurvBs         []SurvB
 	MedReqs        []MedReq

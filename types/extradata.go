@@ -1473,3 +1473,33 @@ func (m *P0018Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Critical Illness Rules
+type P0057Data struct {
+	Rules []P0057
+}
+
+type P0057 struct {
+	YrsInforce float64
+	Percentage float64
+}
+
+func (m *P0057Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0057Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

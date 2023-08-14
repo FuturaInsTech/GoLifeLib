@@ -48,7 +48,7 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.Policy{})
 	DB.AutoMigrate(&models.Benefit{})
 	// DB.AutoMigrate(&models.Extra{})
-	// DB.AutoMigrate(&models.PHistory{})
+	DB.AutoMigrate(&models.PHistory{})
 	// DB.AutoMigrate(models.GlType{})
 	// DB.AutoMigrate(models.AccountCode{})
 	// DB.AutoMigrate(&models.GlMove{})

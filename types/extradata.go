@@ -1480,7 +1480,7 @@ type P0057Data struct {
 }
 
 type P0057 struct {
-	YrsInforce float64
+	Months     uint
 	Percentage float64
 }
 

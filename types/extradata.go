@@ -155,6 +155,7 @@ type Q0006Data struct {
 	ULFundRules        string    // UL Fund Rules
 	MrtaMethod         string    // MRTA Method
 	MrtaInterest       []float64 // MRTA Interest - Array
+	BenefitType        string    // Health,CI,Waiver,Pension etc., P0050
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {

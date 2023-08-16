@@ -4313,4 +4313,56 @@ func CalcBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate strin
 	return 0
 }
 
+// # 113
+// CalcInterimBonus - Calculate Interim Bonus using Interim Bonus Rates
 //
+// # Input:  Company, Coverage, BonusMethod, StartDate, EffectiveDate, Bonus Date, Coverage Status, Sum Assured, Term, Premium Term
+// # Output: Calculted Interim Bonus Amount as float64
+//
+// # Date in YYYYMMDD as a string
+//
+// ©  FuturaInsTech
+func CalcIBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate string, iEffectiveDate string, iBonusDate string, iStatus string, iSA uint, iTerm uint, iPTerm uint) float64 {
+	//	fmt.Println("inside Bonus ", iCompany, iCoverage, iBonusMethod, iDate, iEffectiveDate, iBonusDate, iStatus, iSA, iTerm, iPterm)
+
+	var iKey string
+	var oBonus float64 = 0
+	var rateYear int64 = 0
+	var prorateDays int64 = 0
+
+	if iBonusMethod == "" {
+		// No Interim Bonus Method exists hence return bonus as zero and exit
+		oBonus = 0
+		return oBonus
+	}
+
+	var q0014data types.Q0014Data
+	var extradata1 types.Extradata = &q0014data
+
+	iKey = iBonusMethod + iStatus + strconv.Itoa(int(iTerm)) + strconv.Itoa(int(iPTerm))
+	err := GetItemD(int(iCompany), "Q0014", iKey, iEffectiveDate, &extradata1)
+	if err != nil {
+		oBonus = 0
+		return oBonus
+	}
+
+	iYear, _, iDays, _, _, _, _, _ := NoOfDays(iEffectiveDate, iDate)
+	iyearsindays := iYear * 365
+	if iDays > iyearsindays {
+		rateYear = iYear + 1
+	}
+
+	iYear, _, iDays, _, _, _, _, _ = NoOfDays(iEffectiveDate, iBonusDate)
+	iyearsindays = iYear * 365
+	if iDays > 0 {
+		prorateDays = iDays
+	}
+
+	for i := 0; i < len(q0014data.BRates); i++ {
+		if rateYear <= int64(q0014data.BRates[i].Term) {
+			oBonus = float64(iSA) * (q0014data.BRates[i].Percentage) / 100 * float64(prorateDays/365)
+			return oBonus
+		}
+	}
+	return 0
+}

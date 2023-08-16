@@ -4325,6 +4325,10 @@ func CalcBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate strin
 func CalcIBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate string, iEffectiveDate string, iBonusDate string, iStatus string, iSA uint, iTerm uint, iPTerm uint) float64 {
 	//	fmt.Println("inside Bonus ", iCompany, iCoverage, iBonusMethod, iDate, iEffectiveDate, iBonusDate, iStatus, iSA, iTerm, iPterm)
 
+	if iBonusDate == "" {
+		iBonusDate = iDate
+	}
+
 	var iKey string
 	var oBonus float64 = 0
 	var rateYear int64 = 0

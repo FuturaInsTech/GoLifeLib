@@ -155,6 +155,7 @@ type Q0006Data struct {
 	ULFundRules        string    // UL Fund Rules
 	MrtaMethod         string    // MRTA Method
 	MrtaInterest       []float64 // MRTA Interest - Array
+	BenefitType        string    // Health,CI,Waiver,Pension etc., P0050
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {
@@ -910,7 +911,7 @@ func (m *P0029Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
-// Collection Bank Account
+// Collection Bank Account  Redundant
 type P0030Data struct {
 	BankAccount string
 	GLAccount   string
@@ -1386,9 +1387,10 @@ func (m *P0054Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Billing Type
 type P0055Data struct {
-	BankRequired string // Y or N
-	BankCode     string // Bank Account No AND IFSC
-	BankAccount  string
+	BankRequired string // Y or N  Client should have bank account Y/N
+	BankCode     string // IFSC No of Insurance Company
+	BankAccount  string // Bank Account No of Insurance Company
+	GLAccount    string // GL Code for Posting for the Billing Type
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {
@@ -1440,6 +1442,64 @@ func (m *P0056Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0056Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// Branch Code
+
+type P0018Data struct {
+	BankIFSC    string
+	BankAccount string
+	ClientID    uint
+}
+
+func (m *P0018Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0018Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// Critical Illness Rules
+type P0057Data struct {
+	Rules []P0057
+}
+
+type P0057 struct {
+	Months     uint
+	Percentage float64
+}
+
+func (m *P0057Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0057Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
 	return nil
 

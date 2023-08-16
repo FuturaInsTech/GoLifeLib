@@ -20,4 +20,5 @@ type CriticalIllness struct {
 	BStatusCode   string `gorm:"type:varchar(2)"`
 	ApprovalFlag  string `gorm:"type:varchar(2)"`
 	ClaimAmount   uint64
+	Percentage    float64
 }

@@ -1504,3 +1504,33 @@ func (m *P0057Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Income Benefit Rules
+
+type P0058Data struct {
+	Percentage                     float64
+	NoOfYears                      uint
+	LiabilityPosting               string
+	CertificateOfExistanceRequired string // Y OR N
+	CertficiateOfExistanceLeadDays uint
+}
+
+func (m *P0058Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0058Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

@@ -1508,11 +1508,12 @@ func (m *P0057Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Income Benefit Rules
 
 type P0058Data struct {
-	Percentage                     float64
-	NoOfYears                      uint
+	Percentage                     float64 // 100.. IT CAN BE 200 300
+	NoOfYears                      int
+	PremiumTermLessThanYear        string // Y OR N
 	LiabilityPosting               string
 	CertificateOfExistanceRequired string // Y OR N
-	CertficiateOfExistanceLeadDays uint
+	CertficiateOfExistanceLeadDays int    // DAYS IN ADVANCE
 }
 
 func (m *P0058Data) ParseData(datamap map[string]interface{}) {

@@ -51,4 +51,5 @@ type Policy struct {
 	MaturityDs       []MaturityD
 	PolBills         []PolBill
 	CriticalIllnesss []CriticalIllness
+	IBenefits        []IBenefit
 }

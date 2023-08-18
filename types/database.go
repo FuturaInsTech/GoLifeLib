@@ -8,6 +8,12 @@ import (
 
 type BitBool bool
 type ExtraData map[string]interface{}
+type LockedType uint8
+
+const (
+	Contract LockedType = iota
+	Client
+)
 
 func (bb BitBool) Value() (driver.Value, error) {
 	return bool(bb), nil
@@ -52,3 +58,6 @@ func (ed *ExtraData) Scan(src interface{}) error {
 
 	return json.Unmarshal(bs, ed)
 }
+
+func (u *LockedType) Scan(value interface{}) error { *u = LockedType(value.(int64)); return nil }
+func (u LockedType) Value() (driver.Value, error)  { return int64(u), nil }

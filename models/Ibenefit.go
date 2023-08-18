@@ -26,4 +26,5 @@ type IBenefit struct {
 	CertificateExistranceRevDate string  `gorm:"type:varchar(8)"` // 20250131
 	NextPayDate                  string  `gorm:"type:varchar(8)"`
 	ClaimAmount                  float64 //  20000
+	BStartDate                   string  `gorm:"type:varchar(8)"`
 }

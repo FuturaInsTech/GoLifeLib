@@ -1510,10 +1510,11 @@ func (m *P0057Data) GetFormattedData(datamap map[string]string) map[string]inter
 type P0058Data struct {
 	Percentage                     float64 // 100.. IT CAN BE 200 300
 	NoOfYears                      int
-	PremiumTermLessThanYear        string // Y OR N
+	AdjustPayTerm                  string // Y OR N
 	LiabilityPosting               string
 	CertificateOfExistanceRequired string // Y OR N
 	CertficiateOfExistanceLeadDays int    // DAYS IN ADVANCE
+	FollowBenefitRCD               string `gorm:"type:varchar(1)"` // Y means Benefit RCD N Menas Incident RCD
 }
 
 func (m *P0058Data) ParseData(datamap map[string]interface{}) {

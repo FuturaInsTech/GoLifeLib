@@ -36,4 +36,5 @@ type Benefit struct {
 	SaChanges        []SaChange
 	Mrtas            []Mrta
 	CriticalIllnesss []CriticalIllness
+	IBenefits        []IBenefit
 }

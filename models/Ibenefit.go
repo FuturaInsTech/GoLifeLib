@@ -28,4 +28,5 @@ type IBenefit struct {
 	ClaimAmount                  float64 //  20000
 	BStartDate                   string  `gorm:"type:varchar(8)"`
 	TotalAmount                  float64
+	PaidDate                     string `gorm:"type:varchar(8)"`
 }

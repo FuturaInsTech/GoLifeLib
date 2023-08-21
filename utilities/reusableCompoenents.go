@@ -4370,3 +4370,49 @@ func CalcIBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate stri
 	}
 	return 0
 }
+
+// # 114
+// TDFIBD - Time Driven Function - Income Benefit Date Updation
+//
+// Inputs: Company, Policy, Function IBEN, Transaction No.
+//
+// # Outputs  Old Record is Soft Deleted and New Record is Created
+//
+// ©  FuturaInsTech
+func TDFIBD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string, error) {
+	var incomeb models.IBenefit
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+
+	results := initializers.DB.First(&incomeb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
+
+	if results.Error != nil {
+		return "", results.Error
+	}
+	result := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+
+	if result.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = incomeb.NextPayDate
+		tdfpolicy.Tranno = iTranno
+		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	} else {
+		initializers.DB.Delete(&tdfpolicy)
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = incomeb.NextPayDate
+		tdfpolicy.Tranno = iTranno
+		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	}
+}

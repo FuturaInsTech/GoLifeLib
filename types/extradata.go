@@ -30,7 +30,7 @@ type Q0005Data struct {
 	LapsedDays            int
 	BillingLeadDays       int
 	LapseInterest         float64
-	AgencyChannel         []string
+	AgencyChannel         []string //P0050
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {

@@ -21,4 +21,5 @@ type CriticalIllness struct {
 	ApprovalFlag  string `gorm:"type:varchar(2)"`
 	ClaimAmount   uint64
 	Percentage    float64
+	ClientID      uint // Any one of the Nominee meant for Funeral Expenses
 }

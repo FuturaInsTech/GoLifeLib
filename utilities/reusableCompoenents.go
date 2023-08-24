@@ -4416,3 +4416,110 @@ func TDFIBD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string
 		return "", nil
 	}
 }
+
+// /////////////////////////////////////////////////////////////////
+// # 115
+// CalRBonus - Calculate Bonus due on Annniversary Date OR Bonus Date
+//
+// # Input:  Company, Coverage , Bonus Method, Coverage Start Date, Anniversary Date OR Bonus Date, Policy Status, Coverage SA, Coverage Term, Coverage Premium Term
+// # Output: Calculted Bonus Amount as float64
+//
+// # Date in YYYYMMDD as a string
+//
+// ©  FuturaInsTech
+func CalcRBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate string, iBonusDate string, iEffectiveDate string, iStatus string, iSA uint, iTerm uint, iPTerm uint) (oBonus float64) {
+
+	var iKey string
+	var rateYear int64 = 0
+
+	var q0014data types.Q0014Data
+	var extradataq0014 types.Extradata = &q0014data
+	iKey = iBonusMethod + iStatus + strconv.Itoa(int(iTerm)) + strconv.Itoa(int(iPTerm))
+	err := GetItemD(int(iCompany), "Q0014", iKey, iEffectiveDate, &extradataq0014)
+	if err != nil {
+		oBonus := 0.0
+		return oBonus
+	}
+
+	iYear, iMonth, iDay, _, _, _ := StringDateDiff(iEffectiveDate, iDate, "")
+	rateYear = int64(iYear)
+
+	if iMonth > 0 || iDay > 0 {
+		rateYear++
+	}
+
+	if rateYear == 0 {
+		oBonus := 0.0
+		return oBonus
+	}
+
+	for i := 0; i < len(q0014data.BRates); i++ {
+		if rateYear <= int64(q0014data.BRates[i].Term) {
+			oBonus := float64(iSA) * (q0014data.BRates[i].Percentage) / 100
+			return oBonus
+		}
+	}
+	return 0
+}
+
+// # 116
+// StringDateDiff - Calculate Bonus due on Annniversary Date OR Bonus Date
+//
+// # Input:
+// # Output:
+//
+// #
+//
+// ©  FuturaInsTech
+func StringDateDiff(as, bs string, m string) (year, month, day, hour, min, sec int) {
+	// method = N means age nearer birthday
+	var a time.Time
+	var b time.Time
+	a = String2Date(as)
+	b = String2Date(bs)
+
+	if a.Location() != b.Location() {
+		b = b.In(a.Location())
+	}
+	if a.After(b) {
+		a, b = b, a
+	}
+	y1, M1, d1 := a.Date()
+	y2, M2, d2 := b.Date()
+
+	h1, m1, s1 := a.Clock()
+	h2, m2, s2 := b.Clock()
+
+	year = int(y2 - y1)
+	month = int(M2 - M1)
+	day = int(d2 - d1)
+	hour = int(h2 - h1)
+	min = int(m2 - m1)
+	sec = int(s2 - s1)
+
+	// Normalize negative values
+	if sec < 0 {
+		sec += 60
+		min--
+	}
+	if min < 0 {
+		min += 60
+		hour--
+	}
+	if hour < 0 {
+		hour += 24
+		day--
+	}
+	if day < 0 {
+		// days in month:
+		t := time.Date(y1, M1, 32, 0, 0, 0, 0, time.UTC)
+		day += 32 - t.Day()
+		month--
+	}
+	if month < 0 {
+		month += 12
+		year--
+	}
+
+	return
+}

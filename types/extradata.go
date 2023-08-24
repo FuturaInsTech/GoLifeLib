@@ -30,6 +30,7 @@ type Q0005Data struct {
 	LapsedDays            int
 	BillingLeadDays       int
 	LapseInterest         float64
+	AgencyChannel         []string //P0050
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {
@@ -102,7 +103,7 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 // /
 type Q0006Data struct {
 	AgeCalcMethod      string // T or P
-	AnnMethod          string // Anniversary Method
+	AnnMethod          string // Bonus Method
 	AnnuityMethod      string //Annuity Method
 	CommMethod         string // Commission
 	DeathType          string // 1 SA 2 FV 3 GT(SA/FV) 4. SA + FV

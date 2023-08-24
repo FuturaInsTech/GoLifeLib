@@ -3577,7 +3577,7 @@ func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceip
 
 	resultOut := map[string]interface{}{
 		"ID":              IDtoPrint(iAgency),
-		"AgyChannelSt":    agencyenq.AgencyChannelSt,
+		"AgyChannelSt":    agencyenq.AgencyChannel,
 		"AgyStatus":       agencyenq.AgencySt,
 		"AgyBankId":       agencyenq.BankID,
 		"AgyClientNo":     agencyenq.ClientID,

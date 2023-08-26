@@ -11,6 +11,7 @@ type CriticalIllness struct {
 
 	PolicyID      uint
 	BenefitID     uint
+	BCoverage     string `gorm:"type:varchar(05)"` //Q0006
 	CriticalType  string `gorm:"type:varchar(10)"`
 	BSumAssured   uint64
 	EffectiveDate string `gorm:"type:varchar(8)"`

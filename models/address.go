@@ -22,8 +22,9 @@ type Address struct {
 	AddressEndDate   string `gorm:"type:varchar(8)"`
 	ClientID         uint
 	QHeaders         []quotation.QHeader
+	Policies         []Policy
+	MedProviders     []MedProvider
+	Receipts         []Receipt
+	Payments         []Payment
 	// Agencies         []Agency
-	Policies     []Policy
-	MedProviders []MedProvider
-	Receipts     []Receipt
 }

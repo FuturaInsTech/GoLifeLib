@@ -102,7 +102,7 @@ func UploadParamDataItems(file multipart.File) error {
 
 			}
 
-			if result.RowsAffected != int64(seqNo) {
+			if result.RowsAffected < int64(seqNo) {
 
 				return errors.New("sequence number not valid for param:" + headerFieldMap["Param Name"])
 
@@ -251,14 +251,14 @@ func UploadParamDataItems(file multipart.File) error {
 			if err == nil {
 				param.StartDate = date.Format("20060102")
 			} else {
-				return errors.New("incorrect start date :" + headerFieldMap["Start Date"] + " " + result.Error.Error())
+				return errors.New("incorrect start date :" + headerFieldMap["Start Date"] + " " + err.Error())
 			}
 
 			date, err = time.Parse("02-01-2006", headerFieldMap["End Date"])
 			if err == nil {
 				param.EndDate = date.Format("20060102")
 			} else {
-				return errors.New("incorrect end date :" + headerFieldMap["End Date"] + " " + result.Error.Error())
+				return errors.New("incorrect end date :" + headerFieldMap["End Date"] + " " + err.Error())
 			}
 
 		}

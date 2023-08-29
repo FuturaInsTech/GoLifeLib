@@ -29,7 +29,7 @@ func UploadParamDataItems(file multipart.File) error {
 	//fmt.Printf("'%s' is first sheet of %d sheets.\n", firstSheet, f.SheetCount)
 
 	headerFieldMap := make(map[string]string)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 6; i++ {
 		k := i / 3
 		j := i % 3
 
@@ -72,11 +72,11 @@ func UploadParamDataItems(file multipart.File) error {
 	if paramType == "0" {
 		return errors.New("invalid param type - does not have extradata")
 	}
-	totalHeaderElem := 5
+	totalHeaderElem := 6
 	seqNo := 0
 	if paramType == "D" {
-		totalHeaderElem = 8
-		for i := 5; i < 8; i++ {
+		totalHeaderElem = 9
+		for i := 6; i < 9; i++ {
 			k := i / 3
 			j := i % 3
 
@@ -247,14 +247,14 @@ func UploadParamDataItems(file multipart.File) error {
 			param.StartDate = "0"
 		} else {
 
-			date, err := time.Parse("02/01/2006", headerFieldMap["Start Date"])
+			date, err := time.Parse("02-01-2006", headerFieldMap["Start Date"])
 			if err == nil {
 				param.StartDate = date.Format("20060102")
 			} else {
 				return errors.New("incorrect start date :" + headerFieldMap["Start Date"] + " " + result.Error.Error())
 			}
 
-			date, err = time.Parse("02/01/2006", headerFieldMap["End Date"])
+			date, err = time.Parse("02-01-2006", headerFieldMap["End Date"])
 			if err == nil {
 				param.EndDate = date.Format("20060102")
 			} else {
@@ -282,14 +282,14 @@ func UploadParamDataItems(file multipart.File) error {
 		param.LastModUser = 1
 		if paramType == "D" {
 
-			date, err := time.Parse("02/01/2006", headerFieldMap["Start Date"])
+			date, err := time.Parse("02-01-2006", headerFieldMap["Start Date"])
 			if err == nil {
 				param.StartDate = date.Format("20060102")
 			} else {
 				return errors.New("incorrect start date :" + headerFieldMap["Start Date"] + " " + err.Error())
 			}
 
-			date, err = time.Parse("02/01/2006", headerFieldMap["End Date"])
+			date, err = time.Parse("02-01-2006", headerFieldMap["End Date"])
 			if err == nil {
 				param.EndDate = date.Format("20060102")
 			} else {
@@ -313,11 +313,20 @@ func UploadParamDataItems(file multipart.File) error {
 
 			var paramdesc models.ParamDesc
 			paramdesc.CreatedAt = time.Now()
-			val, _ := strconv.Atoi(headerFieldMap["Company"])
+			val, err := strconv.Atoi(headerFieldMap["Company"])
+			if err != nil {
+				return errors.New("incorrect Company Id:" + headerFieldMap["Param Name"] + "-" + headerFieldMap["Item Name"] + "error:" + err.Error())
+			}
 			paramdesc.CompanyId = uint16(val)
 			paramdesc.Name = headerFieldMap["Param Name"]
 			paramdesc.Item = headerFieldMap["Item Name"]
-			paramdesc.LanguageId = 1
+			val, err = strconv.Atoi(headerFieldMap["Language Id"])
+			if err != nil {
+
+				return errors.New("incorrect Language Id:" + headerFieldMap["Param Name"] + "-" + headerFieldMap["Item Name"] + "error:" + err.Error())
+
+			}
+			paramdesc.LanguageId = uint8(val)
 			paramdesc.RecType = "IT"
 			paramdesc.Longdesc = headerFieldMap["Long Description"]
 			paramdesc.Shortdesc = headerFieldMap["Short Description"]
@@ -335,7 +344,7 @@ func UploadParamDataItems(file multipart.File) error {
 
 			var paramdesc models.ParamDesc
 
-			result = initializers.DB.First(&paramdesc, "company_id  = ? AND  name = ?  AND  rec_type = ?  AND item = ?  and language_id =?", headerFieldMap["Company"], headerFieldMap["Param Name"], "IT", headerFieldMap["Item Name"], 1)
+			result = initializers.DB.First(&paramdesc, "company_id  = ? AND  name = ?  AND  rec_type = ?  AND item = ?  and language_id =?", headerFieldMap["Company"], headerFieldMap["Param Name"], "IT", headerFieldMap["Item Name"], headerFieldMap["Language Id"])
 
 			if result.Error != nil {
 

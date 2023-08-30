@@ -405,6 +405,10 @@ func GetParamExtraDataFields(paramName string) ([]reflect.StructField, []reflect
 		data = types.Q0010Data{}
 		subfield = types.Q0010{}
 
+	case "P0028":
+		data = types.P0028Data{}
+		subfield = types.P0028{}
+
 	default:
 		return nil, nil, fmt.Errorf("unable to find extradata struct for the param:" + paramName)
 

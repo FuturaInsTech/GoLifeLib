@@ -721,10 +721,10 @@ func ValidateQ0012(iCompany uint, iCoverage string, iDate string) error {
 
 	}
 
-	for i := 0; i < len(q0012data.SBRates); i++ {
+	for i := 0; i < len(q0012data.SbRates); i++ {
 		fmt.Println("Survival Benefits .......")
-		fmt.Println(q0012data.SBRates[i].Term)
-		fmt.Println(q0012data.SBRates[i].Percentage)
+		fmt.Println(q0012data.SbRates[i].Term)
+		fmt.Println(q0012data.SbRates[i].Percentage)
 	}
 	return nil
 }
@@ -747,11 +747,11 @@ func ValidateQ0013(iCompany uint, iCoverage string, iDate string) error {
 		return err
 
 	}
-	fmt.Println(q0013data.SBRates[0].Percentage)
-	for i := 0; i < len(q0013data.SBRates); i++ {
+	fmt.Println(q0013data.SbRates[0].Percentage)
+	for i := 0; i < len(q0013data.SbRates); i++ {
 		fmt.Println("Survival Benefits .......")
-		fmt.Println(q0013data.SBRates[i].Age)
-		fmt.Println(q0013data.SBRates[i].Percentage)
+		fmt.Println(q0013data.SbRates[i].Age)
+		fmt.Println(q0013data.SbRates[i].Percentage)
 	}
 	return nil
 }
@@ -777,9 +777,9 @@ func GetSBByYear(iCompany uint, iCoverage string, iDate string, iSA float64, iTy
 
 		}
 		// fmt.Println(q0012data.SBRates[0].Percentage)
-		for i := 0; i < len(q0012data.SBRates); i++ {
-			if iYear == int(q0012data.SBRates[i].Term) {
-				oSB := q0012data.SBRates[i].Percentage * iSA
+		for i := 0; i < len(q0012data.SbRates); i++ {
+			if iYear == int(q0012data.SbRates[i].Term) {
+				oSB := q0012data.SbRates[i].Percentage * iSA
 				return oSB
 			}
 		}
@@ -795,10 +795,10 @@ func GetSBByYear(iCompany uint, iCoverage string, iDate string, iSA float64, iTy
 			return 0
 
 		}
-		fmt.Println(q0013data.SBRates[0].Percentage)
-		for i := 0; i < len(q0013data.SBRates); i++ {
-			if iAge == int(q0013data.SBRates[i].Age) {
-				oSB := q0013data.SBRates[i].Percentage * iSA
+		fmt.Println(q0013data.SbRates[0].Percentage)
+		for i := 0; i < len(q0013data.SbRates); i++ {
+			if iAge == int(q0013data.SbRates[i].Age) {
+				oSB := q0013data.SbRates[i].Percentage * iSA
 				return oSB
 			}
 		}
@@ -999,9 +999,9 @@ func CalcSaPremDiscount(iCompany uint, iDiscType string, iDiscMethod string, iAn
 
 		}
 
-		for i := 0; i < len(q0017data.SABand); i++ {
-			if int(iSA) <= int(q0017data.SABand[i].SA) {
-				oDiscount := uint(q0017data.SABand[i].Discount) * uint(iAnnPrem) / 100
+		for i := 0; i < len(q0017data.SaBand); i++ {
+			if int(iSA) <= int(q0017data.SaBand[i].Sa) {
+				oDiscount := uint(q0017data.SaBand[i].Discount) * uint(iAnnPrem) / 100
 				return float64(oDiscount)
 			}
 		}
@@ -1112,9 +1112,9 @@ func GetULAllocRates(iCompany uint, iDate string, iAllMethod string, iFrequency 
 	noofdues := GetNoIstalments(iFromDate, iToDate, "M")
 	fmt.Println("Inside Allocation", iCompany, iDate, iAllMethod, iFrequency, iFromDate, iToDate)
 
-	for i := 0; i < len(q0021data.ALBand); i++ {
-		if uint(noofdues) <= uint(q0021data.ALBand[i].Months) {
-			iRate := q0021data.ALBand[i].Percentage
+	for i := 0; i < len(q0021data.AlBand); i++ {
+		if uint(noofdues) <= uint(q0021data.AlBand[i].Months) {
+			iRate := q0021data.AlBand[i].Percentage
 			return iRate
 		}
 	}
@@ -1196,9 +1196,9 @@ func GetGSTAmount(iCompany uint, iDate string, iKey string, iMonths uint64, iAmo
 		return 0
 	}
 
-	for i := 0; i < len(q0023data.GST); i++ {
-		if uint(iMonths) <= q0023data.GST[i].Month {
-			oAmount := iAmount * q0023data.GST[i].Rate
+	for i := 0; i < len(q0023data.Gst); i++ {
+		if uint(iMonths) <= q0023data.Gst[i].Month {
+			oAmount := iAmount * q0023data.Gst[i].Rate
 			oAmount = RoundFloat(oAmount, 2)
 			return oAmount
 		}
@@ -1913,17 +1913,17 @@ func SBCreate(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iD
 		// fmt.Println(q0012data.SBRates[0].Percentage)
 		for x1 := 0; x1 <= iYear; x1++ {
 			fmt.Println("X1Values are ", x1)
-			for i := 0; i < len(q0012data.SBRates); i++ {
+			for i := 0; i < len(q0012data.SbRates); i++ {
 				fmt.Println("i Values are ", x1, i)
-				if x1 == int(q0012data.SBRates[i].Term) {
-					oSB := q0012data.SBRates[i].Percentage * iSA / 100
+				if x1 == int(q0012data.SbRates[i].Term) {
+					oSB := q0012data.SbRates[i].Percentage * iSA / 100
 					// Write it in SB Table
 					fmt.Println("Values of X and I", x1, i, iYear)
 					survb.CompanyID = iCompany
 					survb.PolicyID = iPolicy
 					survb.PaidDate = ""
 					survb.EffectiveDate = AddYears2Date(iDate, x1, 0, 0)
-					survb.SBPercentage = q0012data.SBRates[i].Percentage
+					survb.SBPercentage = q0012data.SbRates[i].Percentage
 					survb.Amount = oSB
 					survb.Tranno = uint(iTranno)
 					survb.Sequence++
@@ -1952,17 +1952,17 @@ func SBCreate(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iD
 			return err
 
 		}
-		fmt.Println(q0013data.SBRates[0].Percentage)
+		fmt.Println(q0013data.SbRates[0].Percentage)
 		for x := 0; x <= iAge; x++ {
-			for i := 0; i < len(q0013data.SBRates); i++ {
-				if x == int(q0013data.SBRates[i].Age) {
-					oSB := q0013data.SBRates[i].Percentage * iSA / 100
+			for i := 0; i < len(q0013data.SbRates); i++ {
+				if x == int(q0013data.SbRates[i].Age) {
+					oSB := q0013data.SbRates[i].Percentage * iSA / 100
 					// Write it in SB Table
 					survb.CompanyID = iCompany
 					survb.PolicyID = iPolicy
 					survb.PaidDate = ""
 					survb.EffectiveDate = AddYears2Date(iDate, x, 0, 0)
-					survb.SBPercentage = q0013data.SBRates[i].Percentage
+					survb.SBPercentage = q0013data.SbRates[i].Percentage
 					survb.Amount = oSB
 					survb.Tranno = uint(iTranno)
 					survb.Sequence++
@@ -2415,9 +2415,9 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 			FromDate = Date2String(date)
 			b = FromDate
 			iMonths := NewNoOfInstalments(iRCD, FromDate)
-			for i := 0; i < len(q0023data.GST); i++ {
-				if uint(iMonths) <= q0023data.GST[i].Month {
-					oAmount = float64(iAmount)*q0023data.GST[i].Rate + oAmount
+			for i := 0; i < len(q0023data.Gst); i++ {
+				if uint(iMonths) <= q0023data.Gst[i].Month {
+					oAmount = float64(iAmount)*q0023data.Gst[i].Rate + oAmount
 					oAmount = RoundFloat(oAmount, 2)
 					break
 
@@ -4202,7 +4202,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	iSequenceno++
 	iAccountCodeID := acccode.ID
 	iAccAmount := receiptupd.AccAmount
-	iAccountCode := glcode + receiptupd.Branch + p0055data.GLAccount
+	iAccountCode := glcode + receiptupd.Branch + p0055data.GlAccount
 	iEffectiveDate := receiptupd.DateOfCollection
 	iGlAmount := receiptupd.AccAmount
 

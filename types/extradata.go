@@ -970,7 +970,7 @@ func (m *P0031Data) GetFormattedData(datamap map[string]string) map[string]inter
 // UW Rules
 
 type P0032Data struct {
-	UWRules []P0032
+	UwRules []P0032
 }
 
 type P0032 struct {
@@ -1156,7 +1156,7 @@ func (m *P0040Data) GetFormattedData(datamap map[string]string) map[string]inter
 // P0041 SA Band for Medical Requirements
 
 type P0041Data struct {
-	SABands []P0041
+	SaBands []P0041
 }
 
 type P0041 struct {
@@ -1303,7 +1303,7 @@ func (m *P0049Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Benefit Illsutration Interval Years by Coverage
 
 type Q0025Data struct {
-	BIYrInterval uint
+	BiYrInterval uint
 }
 
 func (m *Q0025Data) ParseData(datamap map[string]interface{}) {
@@ -1391,7 +1391,7 @@ type P0055Data struct {
 	BankRequired string // Y or N  Client should have bank account Y/N
 	BankCode     string // IFSC No of Insurance Company
 	BankAccount  string // Bank Account No of Insurance Company
-	GLAccount    string // GL Code for Posting for the Billing Type
+	GlAccount    string // GL Code for Posting for the Billing Type
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {
@@ -1451,7 +1451,7 @@ func (m *P0056Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Branch Code
 
 type P0018Data struct {
-	BankIFSC    string
+	BankIfsc    string
 	BankAccount string
 	ClientID    uint
 }

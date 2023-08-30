@@ -4202,7 +4202,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	iSequenceno++
 	iAccountCodeID := acccode.ID
 	iAccAmount := receiptupd.AccAmount
-	iAccountCode := glcode + receiptupd.Branch + p0055data.GLAccount
+	iAccountCode := glcode + receiptupd.Branch + p0055data.GlAccount
 	iEffectiveDate := receiptupd.DateOfCollection
 	iGlAmount := receiptupd.AccAmount
 

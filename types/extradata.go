@@ -358,7 +358,7 @@ func (m *Q0011Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // /
 type Q0012Data struct {
-	SBRates []Q0012
+	SbRates []Q0012
 }
 
 type Q0012 struct {
@@ -390,7 +390,7 @@ func (m *Q0012Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Survival Benefits
 type Q0013Data struct {
-	SBRates []Q0013
+	SbRates []Q0013
 }
 
 type Q0013 struct {
@@ -591,10 +591,10 @@ func (m *Q0016Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // SA Discount
 type Q0017Data struct {
-	SABand []Q0017
+	SaBand []Q0017
 }
 type Q0017 struct {
-	SA       uint
+	Sa       uint
 	Discount float64
 }
 
@@ -707,7 +707,7 @@ func (m *Q0020Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Allocation Method
 
 type Q0021Data struct {
-	ALBand []Q0021
+	AlBand []Q0021
 }
 
 type Q0021 struct {
@@ -765,7 +765,7 @@ func (m *Q0022Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type Q0023Data struct {
-	GST []Q0023
+	Gst []Q0023
 }
 type Q0023 struct {
 	Month uint
@@ -793,10 +793,10 @@ func (m *Q0023Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type Q0024Data struct {
-	BIRates []Q0024
+	BiRates []Q0024
 }
 type Q0024 struct {
-	BIType string
+	BiType string
 	Rate   float64
 }
 
@@ -915,7 +915,7 @@ func (m *P0029Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Collection Bank Account  Redundant
 type P0030Data struct {
 	BankAccount string
-	GLAccount   string
+	GlAccount   string
 }
 
 func (m *P0030Data) ParseData(datamap map[string]interface{}) {

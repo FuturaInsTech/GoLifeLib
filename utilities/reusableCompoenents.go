@@ -1354,8 +1354,8 @@ func GetCommissionRates(iCompany uint, iCoverage string, iNofInstalemnts uint, i
 	}
 
 	for i := 0; i < len(p0028data.Commissions); i++ {
-		if uint(iNofInstalemnts) <= p0028data.Commissions[i].PPT {
-			fmt.Println("Iam inside the array", p0028data.Commissions[i].PPT)
+		if uint(iNofInstalemnts) <= p0028data.Commissions[i].Ppt {
+			fmt.Println("Iam inside the array", p0028data.Commissions[i].Ppt)
 			oRate := p0028data.Commissions[i].Rate
 			fmt.Println("i am getting in ", p0028data.Commissions[i].Rate)
 			return oRate

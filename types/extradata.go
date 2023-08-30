@@ -858,7 +858,7 @@ type P0028Data struct {
 	Commissions []P0028
 }
 type P0028 struct {
-	PPT  uint
+	Ppt  uint
 	Rate float64
 }
 

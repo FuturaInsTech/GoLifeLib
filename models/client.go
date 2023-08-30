@@ -45,4 +45,5 @@ type Client struct {
 	Mrtas           []Mrta
 	SurrHs          []SurrH
 	SurrDs          []SurrD
+	Payments        []Payment
 }

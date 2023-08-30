@@ -33,7 +33,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.UinMaster{})
 	// DB.AutoMigrate(&models.Error{})
 	// DB.AutoMigrate(&models.Bank{})
-	// DB.AutoMigrate(&models.Agency{})
+	DB.AutoMigrate(&models.Agency{})
 	// DB.AutoMigrate(models.LeadDetail{})
 	// DB.AutoMigrate(models.LeadFollowup{})
 	// DB.AutoMigrate(&models.Quotation{})
@@ -47,7 +47,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.Level{})
 	DB.AutoMigrate(&models.Policy{})
 	DB.AutoMigrate(&models.Benefit{})
-	// DB.AutoMigrate(&models.Extra{})
+	DB.AutoMigrate(&models.Extra{})
 	// DB.AutoMigrate(&models.PHistory{})
 	// DB.AutoMigrate(models.GlType{})
 	// DB.AutoMigrate(models.AccountCode{})
@@ -81,4 +81,5 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.CriticalIllness{})
 	DB.AutoMigrate(&models.TransactionLock{})
 	DB.AutoMigrate(&models.IBenefit{})
+	DB.AutoMigrate(&models.Payment{})
 }

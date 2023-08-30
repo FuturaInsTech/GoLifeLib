@@ -20,4 +20,6 @@ type Extra struct {
 	BCoverage   string `gorm:"type:varchar(05)"`
 	FromDate    string `gorm:"type:varchar(08)"`
 	ToDate      string `gorm:"type:varchar(08)"`
+	EMillie     float64
+	EEmr        string `gorm:"type:varchar(02)"`
 }

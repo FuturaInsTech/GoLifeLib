@@ -166,13 +166,16 @@ func UploadParamDataItems(file multipart.File) error {
 
 				cellName, _ := excelize.CoordinatesToCellName(j+1, i+k+5)
 				cellVal, _ := f.GetCellValue(firstSheet, cellName)
-
-				if subFieldMap[keyArray[j]].Type.Kind() == reflect.String {
+				subfld, ok := subFieldMap[keyArray[j]]
+				if !ok {
+					return errors.New("field corresponding to column " + keyArray[j] + " does not exist in struct for " + headerFieldMap["Param Name"])
+				}
+				if subfld.Type.Kind() == reflect.String {
 					valMap[keyArray[j]] = cellVal
 
 				} else {
 
-					value, err := GetFormattedField(cellVal, subFieldMap[keyArray[j]])
+					value, err := GetFormattedField(cellVal, subfld)
 					if err != nil {
 						return errors.New(err.Error() + " field:" + keyArray[j])
 					} else {

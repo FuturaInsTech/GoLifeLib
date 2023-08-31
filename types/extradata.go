@@ -708,7 +708,9 @@ func (m *Q0020Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Allocation Method
 
 type Q0021Data struct {
-	AlBand []Q0021
+	AlBand          []Q0021
+	CurrentOrFuture string // C or N  Through P0050
+
 }
 
 type Q0021 struct {

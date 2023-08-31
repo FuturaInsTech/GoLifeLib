@@ -1585,69 +1585,70 @@ func TDFAnniD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 // # Outputs  Old Record is Soft Deleted and New Record is Created
 //
 // ©  FuturaInsTech
+// It is commented now.. It will be uncommented after Premium Increase Logic is added
 func TDFReraD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string, error) {
-	var benefits []models.Benefit
-	var tdfpolicy models.TDFPolicy
-	var tdfrule models.TDFRule
-	var extraenq []models.Extra
+	// var benefits []models.Benefit
+	// var tdfpolicy models.TDFPolicy
+	// var tdfrule models.TDFRule
+	// var extraenq []models.Extra
 
-	oDate := ""
+	// oDate := ""
 
-	results := initializers.DB.Find(&extraenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-	if results.Error == nil {
-		if results.RowsAffected > 1 {
-			for i := 0; i < len(extraenq); i++ {
-				if oDate == "" {
-					oDate = extraenq[i].ToDate
-				}
-			}
-		}
+	// results := initializers.DB.Find(&extraenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	// if results.Error == nil {
+	// 	if results.RowsAffected > 1 {
+	// 		for i := 0; i < len(extraenq); i++ {
+	// 			if oDate == "" {
+	// 				oDate = extraenq[i].ToDate
+	// 			}
+	// 		}
+	// 	}
 
-	}
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
-	if result.Error != nil {
-		return "", result.Error
-	}
+	// }
+	// initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	// result := initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
+	// if result.Error != nil {
+	// 	return "", result.Error
+	// }
 
-	for i := 0; i < len(benefits); i++ {
-		if benefits[i].BPremCessDate > benefits[i].BRerate {
-			if oDate == "" {
-				oDate = benefits[i].BRerate
-			}
+	// for i := 0; i < len(benefits); i++ {
+	// 	if benefits[i].BPremCessDate > benefits[i].BRerate {
+	// 		if oDate == "" {
+	// 			oDate = benefits[i].BRerate
+	// 		}
 
-			if benefits[i].BRerate < oDate {
-				oDate = benefits[i].BRerate
-			}
-		}
+	// 		if benefits[i].BRerate < oDate {
+	// 			oDate = benefits[i].BRerate
+	// 		}
+	// 	}
 
-	}
-	if oDate != "" {
-		results = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-		if results.Error != nil {
-			tdfpolicy.CompanyID = iCompany
-			tdfpolicy.PolicyID = iPolicy
-			tdfpolicy.Seqno = tdfrule.Seqno
-			tdfpolicy.TDFType = iFunction
-			tdfpolicy.EffectiveDate = oDate
-			tdfpolicy.Tranno = iTranno
-			initializers.DB.Create(&tdfpolicy)
-			return "", nil
-		} else {
-			initializers.DB.Delete(&tdfpolicy)
-			var tdfpolicy models.TDFPolicy
-			tdfpolicy.CompanyID = iCompany
-			tdfpolicy.PolicyID = iPolicy
-			tdfpolicy.Seqno = tdfrule.Seqno
-			tdfpolicy.TDFType = iFunction
-			tdfpolicy.ID = 0
-			tdfpolicy.EffectiveDate = oDate
-			tdfpolicy.Tranno = iTranno
+	// }
+	// if oDate != "" {
+	// 	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	// 	if results.Error != nil {
+	// 		tdfpolicy.CompanyID = iCompany
+	// 		tdfpolicy.PolicyID = iPolicy
+	// 		tdfpolicy.Seqno = tdfrule.Seqno
+	// 		tdfpolicy.TDFType = iFunction
+	// 		tdfpolicy.EffectiveDate = oDate
+	// 		tdfpolicy.Tranno = iTranno
+	// 		initializers.DB.Create(&tdfpolicy)
+	// 		return "", nil
+	// 	} else {
+	// 		initializers.DB.Delete(&tdfpolicy)
+	// 		var tdfpolicy models.TDFPolicy
+	// 		tdfpolicy.CompanyID = iCompany
+	// 		tdfpolicy.PolicyID = iPolicy
+	// 		tdfpolicy.Seqno = tdfrule.Seqno
+	// 		tdfpolicy.TDFType = iFunction
+	// 		tdfpolicy.ID = 0
+	// 		tdfpolicy.EffectiveDate = oDate
+	// 		tdfpolicy.Tranno = iTranno
 
-			initializers.DB.Create(&tdfpolicy)
-			return "", nil
-		}
-	}
+	// 		initializers.DB.Create(&tdfpolicy)
+	// 		return "", nil
+	// 	}
+	// }
 	return "", nil
 }
 

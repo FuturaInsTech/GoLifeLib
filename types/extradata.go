@@ -146,17 +146,18 @@ type Q0006Data struct {
 	FrqMethod          string   // Frequency Factor
 	WaivMethod         string   // Waiver Method Q0020
 	// Unit Linked Components
-	ULALMethod         string    // UL Prem Allocation Method  Q0021
-	ULMortFreq         string    // UL Mortality Deduction Frequency
-	ULMortCalcType     string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
-	ULMortDeductMethod string    // UL Mortality Deudction Method Q0022 Attained Age
-	ULFeeFreq          string    // UL Charges Deduction Frequency
-	ULFeeType          string    // 1 SA Based 2 Annualised Premium 3 Fund Value
-	ULFeeMethod        string    // UL Fee Method
-	ULFundRules        string    // UL Fund Rules
-	MrtaMethod         string    // MRTA Method
-	MrtaInterest       []float64 // MRTA Interest - Array
-	BenefitType        string    // Health,CI,Waiver,Pension etc., P0050
+	ULALMethod          string    // UL Prem Allocation Method  Q0021
+	ULMortFreq          string    // UL Mortality Deduction Frequency
+	ULMortCalcType      string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
+	ULMortDeductMethod  string    // UL Mortality Deudction Method Q0022 Attained Age
+	ULFeeFreq           string    // UL Charges Deduction Frequency
+	ULFeeType           string    // 1 SA Based 2 Annualised Premium 3 Fund Value
+	ULFeeMethod         string    // UL Fee Method
+	ULFundRules         string    // UL Fund Rules
+	MrtaMethod          string    // MRTA Method
+	MrtaInterest        []float64 // MRTA Interest - Array
+	BenefitType         string    // Health,CI,Waiver,Pension etc., P0050
+	CommissionOnExtrInd string    //P0050 Yes/No
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {

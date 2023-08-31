@@ -4561,7 +4561,9 @@ func TDFExtrD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	if err != nil {
 		return "", err
 	}
-	oDate = AddLeadDays(oDate, (-1 * q0005data.BillingLeadDays))
+	if oDate != "" {
+		oDate = AddLeadDays(oDate, (-1 * q0005data.BillingLeadDays))
+	}
 
 	if oDate != "" {
 		results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)

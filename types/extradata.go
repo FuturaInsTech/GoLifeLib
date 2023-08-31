@@ -146,17 +146,18 @@ type Q0006Data struct {
 	FrqMethod          string   // Frequency Factor
 	WaivMethod         string   // Waiver Method Q0020
 	// Unit Linked Components
-	ULALMethod         string    // UL Prem Allocation Method  Q0021
-	ULMortFreq         string    // UL Mortality Deduction Frequency
-	ULMortCalcType     string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
-	ULMortDeductMethod string    // UL Mortality Deudction Method Q0022 Attained Age
-	ULFeeFreq          string    // UL Charges Deduction Frequency
-	ULFeeType          string    // 1 SA Based 2 Annualised Premium 3 Fund Value
-	ULFeeMethod        string    // UL Fee Method
-	ULFundRules        string    // UL Fund Rules
-	MrtaMethod         string    // MRTA Method
-	MrtaInterest       []float64 // MRTA Interest - Array
-	BenefitType        string    // Health,CI,Waiver,Pension etc., P0050
+	ULALMethod           string    // UL Prem Allocation Method  Q0021
+	ULMortFreq           string    // UL Mortality Deduction Frequency
+	ULMortCalcType       string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
+	ULMortDeductMethod   string    // UL Mortality Deudction Method Q0022 Attained Age
+	ULFeeFreq            string    // UL Charges Deduction Frequency
+	ULFeeType            string    // 1 SA Based 2 Annualised Premium 3 Fund Value
+	ULFeeMethod          string    // UL Fee Method
+	ULFundRules          string    // UL Fund Rules
+	MrtaMethod           string    // MRTA Method
+	MrtaInterest         []float64 // MRTA Interest - Array
+	BenefitType          string    // Health,CI,Waiver,Pension etc., P0050
+	CommissionOnExtraInd string    //P0050 Yes/No
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {
@@ -358,7 +359,7 @@ func (m *Q0011Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // /
 type Q0012Data struct {
-	SBRates []Q0012
+	SbRates []Q0012
 }
 
 type Q0012 struct {
@@ -390,7 +391,7 @@ func (m *Q0012Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Survival Benefits
 type Q0013Data struct {
-	SBRates []Q0013
+	SbRates []Q0013
 }
 
 type Q0013 struct {
@@ -591,10 +592,10 @@ func (m *Q0016Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // SA Discount
 type Q0017Data struct {
-	SABand []Q0017
+	SaBand []Q0017
 }
 type Q0017 struct {
-	SA       uint
+	Sa       uint
 	Discount float64
 }
 
@@ -707,7 +708,7 @@ func (m *Q0020Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Allocation Method
 
 type Q0021Data struct {
-	ALBand []Q0021
+	AlBand []Q0021
 }
 
 type Q0021 struct {
@@ -765,7 +766,7 @@ func (m *Q0022Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type Q0023Data struct {
-	GST []Q0023
+	Gst []Q0023
 }
 type Q0023 struct {
 	Month uint
@@ -793,10 +794,10 @@ func (m *Q0023Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type Q0024Data struct {
-	BIRates []Q0024
+	BiRates []Q0024
 }
 type Q0024 struct {
-	BIType string
+	BiType string
 	Rate   float64
 }
 
@@ -915,7 +916,7 @@ func (m *P0029Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Collection Bank Account  Redundant
 type P0030Data struct {
 	BankAccount string
-	GLAccount   string
+	GlAccount   string
 }
 
 func (m *P0030Data) ParseData(datamap map[string]interface{}) {
@@ -970,7 +971,7 @@ func (m *P0031Data) GetFormattedData(datamap map[string]string) map[string]inter
 // UW Rules
 
 type P0032Data struct {
-	UWRules []P0032
+	UwRules []P0032
 }
 
 type P0032 struct {
@@ -1156,7 +1157,7 @@ func (m *P0040Data) GetFormattedData(datamap map[string]string) map[string]inter
 // P0041 SA Band for Medical Requirements
 
 type P0041Data struct {
-	SABands []P0041
+	SaBands []P0041
 }
 
 type P0041 struct {
@@ -1303,7 +1304,7 @@ func (m *P0049Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Benefit Illsutration Interval Years by Coverage
 
 type Q0025Data struct {
-	BIYrInterval uint
+	BiYrInterval uint
 }
 
 func (m *Q0025Data) ParseData(datamap map[string]interface{}) {
@@ -1391,7 +1392,7 @@ type P0055Data struct {
 	BankRequired string // Y or N  Client should have bank account Y/N
 	BankCode     string // IFSC No of Insurance Company
 	BankAccount  string // Bank Account No of Insurance Company
-	GLAccount    string // GL Code for Posting for the Billing Type
+	GlAccount    string // GL Code for Posting for the Billing Type
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {
@@ -1451,7 +1452,7 @@ func (m *P0056Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Branch Code
 
 type P0018Data struct {
-	BankIFSC    string
+	BankIfsc    string
 	BankAccount string
 	ClientID    uint
 }

@@ -4544,7 +4544,9 @@ func TDFExtrD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 	oDate := ""
 	for i := 0; i < len(extraenq); i++ {
-		oDate := ""
+		if oDate == "" {
+			oDate = extraenq[i].ToDate
+		}
 		if extraenq[i].ToDate < oDate {
 			oDate = extraenq[i].ToDate
 		}

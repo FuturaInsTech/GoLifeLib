@@ -4540,7 +4540,9 @@ func TDFExtrD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	result := initializers.DB.Find(&extraenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
 	if result.Error != nil {
-		return "", result.Error
+		if result.RowsAffected == 0 {
+			return "", result.Error
+		}
 	}
 	oDate := ""
 	for i := 0; i < len(extraenq); i++ {

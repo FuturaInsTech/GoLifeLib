@@ -2,6 +2,7 @@ package utilities
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
@@ -14,18 +15,31 @@ import (
 func GetVersionId(iCompany uint, lockedType types.LockedType, lockedTypeKey string) (string, error) {
 	var tranLock models.TransactionLock
 	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
-	if result.Error != nil {
+
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if !recordNotFound && result.Error != nil {
 		return "", result.Error
 	}
 
-	if !tranLock.IsValid {
-		return "", errors.New("entity does not exist")
+	if recordNotFound {
+		fmt.Println("creating the entity as it does not exist:" + lockedTypeKey + ":" + lockedTypeKey)
+		versionid, err := CreateTheEntity(iCompany, lockedType, lockedTypeKey)
+		if err != nil {
+			return "", errors.New("entity did not exist,error while trying to create :" + err.Error())
+		} else {
+			return versionid, nil
+		}
 	}
 
-	if tranLock.IsLocked {
+	if !tranLock.IsValid {
+		return "", errors.New("entity is not valid")
+	}
+
+	/*if tranLock.IsLocked {
 		return "", errors.New("entity is locked")
 
-	}
+	} */
 	return tranLock.VersionId, nil
 
 }
@@ -73,7 +87,7 @@ func LockTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey str
 
 }
 
-func CreateTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey string) error {
+func CreateTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey string) (string, error) {
 
 	var tranLock models.TransactionLock
 	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
@@ -81,11 +95,11 @@ func CreateTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey s
 	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
 
 	if !recordNotFound && result.Error != nil {
-		return result.Error
+		return "", result.Error
 	}
 
 	if !recordNotFound {
-		return errors.New("entity already exists")
+		return "", errors.New("entity already exists")
 	}
 
 	tranLock.CompanyID = iCompany
@@ -99,10 +113,10 @@ func CreateTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey s
 	result = initializers.DB.Create(&tranLock)
 
 	if result.Error != nil {
-		return result.Error
+		return "", result.Error
 	}
 
-	return nil
+	return tranLock.VersionId, nil
 
 }
 

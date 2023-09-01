@@ -889,11 +889,11 @@ func GetBonusByYear(iCompany uint, iCoverage string, iBonusMethod string, iDate 
 	} else if iBonusMethod == "LB" {
 		key1 = q0006data.LoyaltyBonus
 	} else if iBonusMethod == "SSV" {
-		key1 = q0006data.SSVMethod
+		key1 = q0006data.SsvMethod
 	} else if iBonusMethod == "GSV" {
-		key1 = q0006data.GSVMethod
+		key1 = q0006data.GsvMethod
 	} else if iBonusMethod == "BSV" {
-		key1 = q0006data.BSVMethod
+		key1 = q0006data.BsvMethod
 	} else if iBonusMethod == "GA" {
 		key1 = q0006data.GBonus
 	} else if iBonusMethod == "DV" {
@@ -1141,17 +1141,17 @@ func GetULMortPrem(iCompany uint, iCoverage string, iDate string, iSA uint64, iF
 	}
 	// Check Basis  1 = SAR  2 = SA  3 = SA + Fund
 	var oSA uint64
-	if q0006data.ULMortCalcType == "1" {
+	if q0006data.UlMortCalcType == "1" {
 		oSA = iSA - iFund
-	} else if q0006data.ULMortCalcType == "2" {
+	} else if q0006data.UlMortCalcType == "2" {
 		oSA = iSA
-	} else if q0006data.ULMortCalcType == "1" {
+	} else if q0006data.UlMortCalcType == "1" {
 		oSA = iSA + iFund
 	}
 
 	var q0022data types.Q0022Data
 	var extradataq0022 types.Extradata = &q0022data
-	key := q0006data.ULMortDeductMethod + iGender
+	key := q0006data.UlMortDeductMethod + iGender
 	// Get Premium Rate
 	err = GetItemD(int(iCompany), "Q0022", key, iDate, &extradataq0022)
 	if err != nil {
@@ -1165,11 +1165,11 @@ func GetULMortPrem(iCompany uint, iCoverage string, iDate string, iSA uint64, iF
 		}
 	}
 	// Apply Model Factor
-	if q0006data.ULMortFreq == "M" {
+	if q0006data.UlMortFreq == "M" {
 		aPrem = aPrem * 0.0833
-	} else if q0006data.ULMortFreq == "Q" {
+	} else if q0006data.UlMortFreq == "Q" {
 		aPrem = aPrem * 0.25
-	} else if q0006data.ULMortFreq == "H" {
+	} else if q0006data.UlMortFreq == "H" {
 		aPrem = aPrem * 0.5
 	}
 
@@ -3110,7 +3110,7 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	var extradataq0006 types.Extradata = &q0006data
 
 	GetItemD(int(iCompany), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
-	if q0006data.SBType == "A" {
+	if q0006data.SbType == "A" {
 		basis = "Age Based Survival Benefit"
 	} else {
 		basis = "Term Based Survival Benefit"

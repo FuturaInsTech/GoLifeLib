@@ -82,4 +82,7 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.TransactionLock{})
 	DB.AutoMigrate(&models.IBenefit{})
 	DB.AutoMigrate(&models.Payment{})
+	DB.AutoMigrate(&models.IlpPrice{})
+	DB.AutoMigrate(&models.IlpSummary{})
+	DB.AutoMigrate(&models.IlpTransaction{})
 }

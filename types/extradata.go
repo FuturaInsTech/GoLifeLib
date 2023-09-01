@@ -123,20 +123,19 @@ type Q0006Data struct {
 	MinPremCessAge     uint
 	MaxPremCessAge     uint
 	MaxTermBeyongCover uint   // ETI
-	NFOMethod          string // NFO Method
+	NofMethod          string // NFO Method
 	PartSurrMethod     string // Part Surrender Method
 	PremInc            string // Premium Increase Allowed
 	PremIncYrs         uint   // No of Yrs in Number
 	PremiumMethod      string // Premium Method
 	RevBonus           string // Reversionary Bonus Method
-	SBType             string // Either Age Based or Term Based
-	SBMethod           string // Q00012 OR Q0013
+	SbType             string // Either Age Based or Term Based
+	SbMethod           string // Q00012 OR Q0013
 	SurrMethod         string
 	TBonus             string
-	ULDeductFrequency  string
-	GSVMethod          string
-	SSVMethod          string
-	BSVMethod          string
+	GsvMethod          string
+	SsvMethod          string
+	BsvMethod          string
 	DivMethod          string
 	DivIMethod         string
 	Mortalities        []Q0006M // Smoker/Non Smoker/Combined - Array
@@ -146,18 +145,20 @@ type Q0006Data struct {
 	FrqMethod          string   // Frequency Factor
 	WaivMethod         string   // Waiver Method Q0020
 	// Unit Linked Components
-	ULALMethod           string    // UL Prem Allocation Method  Q0021
-	ULMortFreq           string    // UL Mortality Deduction Frequency
-	ULMortCalcType       string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
-	ULMortDeductMethod   string    // UL Mortality Deudction Method Q0022 Attained Age
-	ULFeeFreq            string    // UL Charges Deduction Frequency
-	ULFeeType            string    // 1 SA Based 2 Annualised Premium 3 Fund Value
-	ULFeeMethod          string    // UL Fee Method
-	ULFundRules          string    // UL Fund Rules
+	UlDeductFrequency    string
+	UlAlMethod           string    // UL Prem Allocation Method  Q0021
+	UlMortFreq           string    // UL Mortality Deduction Frequency
+	UlMortCalcType       string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
+	UlMortDeductMethod   string    // UL Mortality Deudction Method Q0022 Attained Age
+	UlFeeFreq            string    // UL Charges Deduction Frequency
+	UlFeeType            string    // 1 SA Based 2 Annualised Premium 3 Fund Value
+	UlFeeMethod          string    // UL Fee Method
+	UlFundRules          string    // UL Fund Rules
 	MrtaMethod           string    // MRTA Method
 	MrtaInterest         []float64 // MRTA Interest - Array
 	BenefitType          string    // Health,CI,Waiver,Pension etc., P0050
 	CommissionOnExtraInd string    //P0050 Yes/No
+	IlpFunds             []string  //P0050
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {
@@ -706,10 +707,14 @@ func (m *Q0020Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 // Allocation Method
+// Key AL001 + Transaction
+// AL01H0007
+// AL01B0102
+// 5000 REGULAR PREMIUM 10000 REGULAR TOP UP FOR 5 YEARS
 
 type Q0021Data struct {
 	AlBand          []Q0021
-	CurrentOrFuture string // C or N  Through P0050
+	CurrentOrFuture string // C or F  Through P0050
 
 }
 

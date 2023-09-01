@@ -37,4 +37,6 @@ type Benefit struct {
 	Mrtas            []Mrta
 	CriticalIllnesss []CriticalIllness
 	IBenefits        []IBenefit
+	IlpTransactions  []IlpTransaction
+	IlpSummaries     []IlpSummary
 }

@@ -1100,10 +1100,10 @@ func GetWaiverSA(iCompany uint, iCoverage string, iMethod string, iDate string, 
 // ©  FuturaInsTech
 func GetULAllocRates(iCompany uint, iDate string, iAllMethod string, iFrequency string, iFromDate string, iToDate string) float64 {
 
-	var q0021data types.Q0021Data
+	var q0021data types.P0060Data
 	var extradataq0021 types.Extradata = &q0021data
 
-	err := GetItemD(int(iCompany), "Q0021", iAllMethod, iDate, &extradataq0021)
+	err := GetItemD(int(iCompany), "P0060", iAllMethod, iDate, &extradataq0021)
 	if err != nil {
 		return 0
 

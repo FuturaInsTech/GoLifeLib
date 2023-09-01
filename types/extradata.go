@@ -713,9 +713,7 @@ func (m *Q0020Data) GetFormattedData(datamap map[string]string) map[string]inter
 // 5000 REGULAR PREMIUM 10000 REGULAR TOP UP FOR 5 YEARS
 
 type Q0021Data struct {
-	AlBand          []Q0021
-	CurrentOrFuture string // C or F  Through P0050
-
+	AlBand []Q0021
 }
 
 type Q0021 struct {
@@ -1541,6 +1539,33 @@ func (m *P0058Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0058Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// ILP Rules
+// Transaction Code + Coverage Code
+type P0059Data struct {
+	CurrentOrFuture string `gorm:"type:varchar(1)"` // P0050
+	SeqNo           int
+}
+
+func (m *P0059Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0059Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
 	return nil
 

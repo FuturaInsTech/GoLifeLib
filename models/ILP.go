@@ -44,4 +44,5 @@ type IlpTransaction struct {
 	CurrentOrFuture  string `gorm:"type:varchar(1)"` //P0050
 	OriginalAmount   float64
 	OriginalCurrency string `gorm:"type:varchar(3)"`
+	HistoryCode      string `gorm:"type:varchar(5)"`
 }

@@ -146,7 +146,7 @@ type Q0006Data struct {
 	WaivMethod         string   // Waiver Method Q0020
 	// Unit Linked Components
 	UlDeductFrequency    string
-	UlAlMethod           string    // UL Prem Allocation Method  Q0021
+	UlAlMethod           string    // UL Prem Allocation Method  P0060
 	UlMortFreq           string    // UL Mortality Deduction Frequency
 	UlMortCalcType       string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
 	UlMortDeductMethod   string    // UL Mortality Deudction Method Q0022 Attained Age
@@ -712,16 +712,16 @@ func (m *Q0020Data) GetFormattedData(datamap map[string]string) map[string]inter
 // AL01B0102
 // 5000 REGULAR PREMIUM 10000 REGULAR TOP UP FOR 5 YEARS
 
-type Q0021Data struct {
-	AlBand []Q0021
+type P0060Data struct {
+	AlBand []P0060
 }
 
-type Q0021 struct {
+type P0060 struct {
 	Months     uint
 	Percentage float64
 }
 
-func (m *Q0021Data) ParseData(datamap map[string]interface{}) {
+func (m *P0060Data) ParseData(datamap map[string]interface{}) {
 	jsonStr, err := json.Marshal(datamap)
 
 	if err != nil {
@@ -735,7 +735,7 @@ func (m *Q0021Data) ParseData(datamap map[string]interface{}) {
 
 }
 
-func (m *Q0021Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+func (m *P0060Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
 	return nil
 

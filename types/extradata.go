@@ -152,11 +152,13 @@ type Q0006Data struct {
 	UlMorttMethod string // UL Mortality Deduction Method Q0022 Attained Age // premium rates
 	UlFeeFreq     string // UL Charges Deduction Frequency //P0050
 	// UlFeeType            string    // 1 SA Based 2 Annualised Premium 3 Fund Value  //P0050
-	UlFeeMethod          string   // UL Fee Method  //P0050
-	UlFundMethod         string   // UL Fund Rules  //P0050
-	UlpFunds             []string //P0050
-	UlTopUpMethod        string
-	UlWithdrawMethod     string
+	UlFeeMethod          string // UL Fee Method  //P0050
+	UlFundMethod         string // UL Fund Rules  //P0050
+	UlMinPrem            float64
+	UlMaxPrem            float64
+	UlpFunds             []string  //P0050
+	UlTopUpMethod        string    //P0050
+	UlWithdrawMethod     string    //P0050
 	MrtaMethod           string    // MRTA Method
 	MrtaInterest         []float64 // MRTA Interest - Array
 	BenefitType          string    // Health,CI,Waiver,Pension etc., P0050

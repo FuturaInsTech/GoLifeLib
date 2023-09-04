@@ -1141,17 +1141,17 @@ func GetULMortPrem(iCompany uint, iCoverage string, iDate string, iSA uint64, iF
 	}
 	// Check Basis  1 = SAR  2 = SA  3 = SA + Fund
 	var oSA uint64
-	if q0006data.UlMortCalcType == "1" {
+	if q0006data.UlMorttMethod == "UM001" {
 		oSA = iSA - iFund
-	} else if q0006data.UlMortCalcType == "2" {
+	} else if q0006data.UlMorttMethod == "UM002" {
 		oSA = iSA
-	} else if q0006data.UlMortCalcType == "1" {
+	} else if q0006data.UlMorttMethod == "UM003" {
 		oSA = iSA + iFund
 	}
 
 	var q0022data types.Q0022Data
 	var extradataq0022 types.Extradata = &q0022data
-	key := q0006data.UlMortDeductMethod + iGender
+	key := q0006data.UlMorttMethod + iGender
 	// Get Premium Rate
 	err = GetItemD(int(iCompany), "Q0022", key, iDate, &extradataq0022)
 	if err != nil {

@@ -102,12 +102,12 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // /
 type Q0006Data struct {
-	AgeCalcMethod      string // T or P
-	AnnMethod          string // Bonus Method
-	AnnuityMethod      string //Annuity Method
-	CommMethod         string // Commission
-	DeathType          string // 1 SA 2 FV 3 GT(SA/FV) 4. SA + FV
-	DeathMethod        string // DC****
+	AgeCalcMethod string //N/L/X  P0050
+	AnnMethod     string //Bonus Method  P/D P0050 (later)
+	AnnuityMethod string //Annuity Method
+	CommMethod    string //Commission
+	//DeathType          string // 1 SA 2 FV 3 GT(SA/FV) 4. SA + FV
+	DeathMethod        string // DC****   P0050
 	GBonus             string
 	IBonus             string
 	LoanMethod         string
@@ -129,7 +129,7 @@ type Q0006Data struct {
 	PremIncYrs         uint   // No of Yrs in Number
 	PremiumMethod      string // Premium Method
 	RevBonus           string // Reversionary Bonus Method
-	SbType             string // Either Age Based or Term Based
+	SbType             string // Either Age Based or Term Based (later)
 	SbMethod           string // Q00012 OR Q0013
 	SurrMethod         string
 	TBonus             string
@@ -138,27 +138,30 @@ type Q0006Data struct {
 	BsvMethod          string
 	DivMethod          string
 	DivIMethod         string
-	Mortalities        []Q0006M // Smoker/Non Smoker/Combined - Array
+	Mortalities        []Q0006M // Smoker/Non Smoker/Combined - Array  //P0050
 	PremCalcType       string   // Either Age Based / PPT Based
-	DiscType           string   // S for SA P for Pemium
+	DiscType           string   // S for SA P for Pemium  ?? Do we need?  (later)
 	DiscMethod         string   // DM001 or DM002
 	FrqMethod          string   // Frequency Factor
 	WaivMethod         string   // Waiver Method Q0020
 	// Unit Linked Components
-	UlDeductFrequency    string
-	UlAlMethod           string    // UL Prem Allocation Method  P0060
-	UlMortFreq           string    // UL Mortality Deduction Frequency
-	UlMortCalcType       string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022
-	UlMortDeductMethod   string    // UL Mortality Deudction Method Q0022 Attained Age
-	UlFeeFreq            string    // UL Charges Deduction Frequency
-	UlFeeType            string    // 1 SA Based 2 Annualised Premium 3 Fund Value
-	UlFeeMethod          string    // UL Fee Method
-	UlFundRules          string    // UL Fund Rules
+	//UlDeductFrequency    string    // UL Fee Deduction Frequency
+	UlAlMethod string // UL Prem Allocation Method  //P0050   P0060
+	UlMortFreq string // UL Mortality Deduction Frequency //P0050
+	// UlMortCalcType       string    // 1 - SAR 2 - SA, 3 - Fund + SA  Q0022  //P0050
+	UlMorttMethod string // UL Mortality Deduction Method Q0022 Attained Age // premium rates
+	UlFeeFreq     string // UL Charges Deduction Frequency //P0050
+	// UlFeeType            string    // 1 SA Based 2 Annualised Premium 3 Fund Value  //P0050
+	UlFeeMethod          string   // UL Fee Method  //P0050
+	UlFundMethod         string   // UL Fund Rules  //P0050
+	UlpFunds             []string //P0050
+	UlTopUpMethod        string
+	UlWithdrawMethod     string
 	MrtaMethod           string    // MRTA Method
 	MrtaInterest         []float64 // MRTA Interest - Array
 	BenefitType          string    // Health,CI,Waiver,Pension etc., P0050
 	CommissionOnExtraInd string    //P0050 Yes/No
-	IlpFunds             []string  //P0050
+
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {

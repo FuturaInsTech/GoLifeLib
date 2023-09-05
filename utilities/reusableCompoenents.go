@@ -4594,3 +4594,21 @@ func TDFExtrD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 	return "", nil
 }
+
+func GetErrorDesc(iCompany uint, iLanguage uint, iShortCode string) (oDescription string) {
+	var result *gorm.DB
+
+	var errorenq models.Error
+
+	result = initializers.DB.Find(&errorenq, "company_id = ? and language_id = ? and short_code = ?", iCompany, iLanguage, iShortCode)
+
+	if result.Error != nil {
+		oDescription = ""
+		return
+
+	} else {
+		oDescription = errorenq.LongCode
+		return
+	}
+
+}

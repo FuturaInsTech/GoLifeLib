@@ -198,7 +198,8 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 	} else if datamap["function"] == "UlAlMethod" {
 		resp := make(map[string]interface{})
-		UlAlMethod := make([]string, 0)
+		// UlAlMethod := make([]string, 0)
+		UlAlMethod := m.UlAlMethod
 		// for i := 0; i < len(m.UlAlMethod); i++ {
 		// 	if m.UlAlMethod[i] == "" {
 		// 		break
@@ -207,7 +208,7 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 		// 	UlAlMethod = append(UlAlMethod, m.UlAlMethod[i])
 
 		// }
-		resp["AllowedFrequencies"] = UlAlMethod
+		resp["AllowedUlAlMethod"] = UlAlMethod
 		return resp
 	} else if datamap["function"] == "AgeRange" {
 		resp := make(map[string]interface{})

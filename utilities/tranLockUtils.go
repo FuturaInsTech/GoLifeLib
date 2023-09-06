@@ -77,7 +77,8 @@ func LockTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey str
 	tranLock.UpdatedID = iUserId
 	tranLock.UpdatedAt = time.Now()
 
-	result = initializers.DB.Save(&tranLock)
+	//result = initializers.DB.Save(&tranLock)
+	result = initializers.DB.Model(&tranLock).Updates(tranLock)
 
 	if result.Error != nil {
 		return result.Error
@@ -150,7 +151,8 @@ func UnLockTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey s
 		tranLock.VersionId = uuid.New().String()
 	}
 
-	result = initializers.DB.Save(&tranLock)
+	//result = initializers.DB.Save(&tranLock)
+	result = initializers.DB.Model(&tranLock).Updates(tranLock)
 
 	if result.Error != nil {
 		return result.Error

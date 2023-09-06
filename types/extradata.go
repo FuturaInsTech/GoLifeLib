@@ -156,7 +156,7 @@ type Q0006Data struct {
 	UlFundMethod         string // UL Fund Rules  //P0050
 	UlMinPrem            float64
 	UlMaxPrem            float64
-	UlpFunds             []string  //P0050
+	FUNDCODE             []string  //P0050  vengadesan previous it was UlpFunds
 	UlTopUpMethod        string    //P0050
 	UlWithdrawMethod     string    //P0050
 	MrtaMethod           string    // MRTA Method
@@ -1586,6 +1586,37 @@ func (m *P0059Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0059Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// Fund Information
+type P0061Data struct {
+	FundCode         string // P0050  FUNDCODE
+	FundType         string // P0050  FUNDTYPE
+	FundCategory     string // P0050  FUNDCATEGORY
+	FundCurr         string // P0050  FUNDCURR
+	FundMinUnits     string
+	FundMaxUnits     string
+	FundChargeMethod string //P0050   FUNDCHARGEMETHOD
+}
+
+func (m *P0061Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0061Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
 	return nil
 

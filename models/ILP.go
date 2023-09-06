@@ -54,3 +54,14 @@ type IlpTransaction struct {
 	MortalityIndicator  string `gorm:"type:varchar(1)"`
 	SurrenderPercentage float64
 }
+
+type IlpFund struct {
+	gorm.Model
+	types.CModel
+	PolicyID       uint
+	BenefitID      uint
+	EffectiveDate  string `gorm:"type:varchar(8)"`
+	FundCode       string `gorm:"type:varchar(5)"` //P0050
+	FundType       string `gorm:"type:varchar(2)"` //ACcummulated/INinitial/BOus P0050
+	FundPercentage float64
+}

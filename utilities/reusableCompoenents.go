@@ -4595,20 +4595,22 @@ func TDFExtrD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	return "", nil
 }
 
-func GetErrorDesc(iCompany uint, iLanguage uint, iShortCode string) (oDescription string) {
-	var result *gorm.DB
-
+// # 119
+// GetErrorDesc - Get Error Description
+//
+// Inputs: Company, Language, Short Code
+//
+// # Long Description, Error
+//
+// ©  FuturaInsTech
+func GetErrorDesc(iCompany uint, iLanguage uint, iShortCode string) (string, error) {
 	var errorenq models.Error
 
-	result = initializers.DB.Find(&errorenq, "company_id = ? and language_id = ? and short_code = ?", iCompany, iLanguage, iShortCode)
+	result := initializers.DB.Find(&errorenq, "company_id = ? and language_id = ? and short_code = ?", iCompany, iLanguage, iShortCode)
 
-	if result.Error != nil {
-		oDescription = ""
-		return
-
-	} else {
-		oDescription = errorenq.LongCode
-		return
+	if result.Error != nil || result.RowsAffected == 0 {
+		return "", errors.New(" -" + strconv.FormatUint(uint64(iCompany), 10) + "-" + "-" + strconv.FormatUint(uint64(iLanguage), 10) + "-" + " is missing")
 	}
 
+	return errorenq.LongCode, nil
 }

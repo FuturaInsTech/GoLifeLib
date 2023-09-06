@@ -53,6 +53,7 @@ type Policy struct {
 	CriticalIllnesss []CriticalIllness
 	IBenefits        []IBenefit
 	Payments         []Payment
+	IlpFunds         []IlpFund
 	IlpTransactions  []IlpTransaction
 	IlpSummaries     []IlpSummary
 }

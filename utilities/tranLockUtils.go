@@ -144,15 +144,15 @@ func UnLockTheEntity(iCompany uint, lockedType types.LockedType, lockedTypeKey s
 
 	}
 
-	tranLock.IsLocked = false
-	tranLock.UpdatedID = iUserId
-	tranLock.UpdatedAt = time.Now()
+	dataMap := make(map[string]interface{})
+
+	dataMap["is_locked"] = false
+	dataMap["updated_id"] = iUserId
 	if changeVersion {
-		tranLock.VersionId = uuid.New().String()
+		dataMap["version_id"] = uuid.New().String()
 	}
 
-	//result = initializers.DB.Save(&tranLock)
-	result = initializers.DB.Model(&tranLock).Updates(tranLock)
+	result = initializers.DB.Model(&tranLock).Updates(dataMap)
 
 	if result.Error != nil {
 		return result.Error

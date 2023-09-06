@@ -53,6 +53,7 @@ type IlpTransaction struct {
 	CurrencyRate        float64
 	MortalityIndicator  string `gorm:"type:varchar(1)"`
 	SurrenderPercentage float64
+	Seqno               uint
 }
 
 type IlpFund struct {

@@ -63,5 +63,6 @@ type IlpFund struct {
 	EffectiveDate  string `gorm:"type:varchar(8)"`
 	FundCode       string `gorm:"type:varchar(5)"` //P0050
 	FundType       string `gorm:"type:varchar(2)"` //ACcummulated/INinitial/BOus P0050
+	FundCurr       string `gorm:"type:varchar(3)"` // INR / USD/ SGD
 	FundPercentage float64
 }

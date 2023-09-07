@@ -231,9 +231,7 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.FUNDCODE[i] == "" {
 				break
 			}
-
 			funds = append(funds, m.FUNDCODE[i])
-
 		}
 		resp["Funds"] = funds
 		return resp

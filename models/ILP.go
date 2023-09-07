@@ -54,6 +54,7 @@ type IlpTransaction struct {
 	MortalityIndicator  string `gorm:"type:varchar(1)"`
 	SurrenderPercentage float64
 	Seqno               uint
+	UlProcessFlag       string `gorm:"type:varchar(01)"` //P0050
 }
 
 type IlpFund struct {

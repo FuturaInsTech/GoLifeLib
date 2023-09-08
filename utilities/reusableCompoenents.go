@@ -4785,7 +4785,7 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	}
 
 	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-	if odate != "" {
+	if odate != "00000000" {
 		if results.Error != nil {
 			tdfpolicy.CompanyID = iCompany
 			tdfpolicy.PolicyID = iPolicy

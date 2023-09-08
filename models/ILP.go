@@ -55,6 +55,7 @@ type IlpTransaction struct {
 	SurrenderPercentage float64
 	Seqno               uint
 	UlProcessFlag       string `gorm:"type:varchar(01)"` //P0050
+	UlpPriceDate        string `gorm:"type:varchar(08)"`
 }
 
 type IlpFund struct {

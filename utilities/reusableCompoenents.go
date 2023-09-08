@@ -4709,7 +4709,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.SurrenderPercentage = 0
 		ilptrancrt.Tranno = iTranno
 		ilptrancrt.Seqno = uint(p0059data.SeqNo)
-		ilptrancrt.UlProcessFlag = "PN"
+		ilptrancrt.UlProcessFlag = "P"
 		result = initializers.DB.Create(&ilptrancrt)
 	}
 	// Non Invested Amount Updation
@@ -4746,7 +4746,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	ilptrancrt.MortalityIndicator = ""
 	ilptrancrt.SurrenderPercentage = 0
 	ilptrancrt.Seqno = uint(p0059data.SeqNo)
-	ilptrancrt.UlProcessFlag = "CO"
+	ilptrancrt.UlProcessFlag = "C"
 	result = initializers.DB.Create(&ilptrancrt)
 	return nil
 }

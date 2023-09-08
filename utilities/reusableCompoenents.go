@@ -2401,30 +2401,40 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 	for a := 0; a < len(benefitenq1); a++ {
 		FromDate := iFromDate
 		ToDate := iToDate
-		var q0023data types.Q0023Data
-		var extradataq0023 types.Extradata = &q0023data
+
 		iKey := benefitenq1[a].BCoverage
-		iAmount := benefitenq1[a].BPrem
-		for b := FromDate; b < ToDate; {
-			// Get Premium Rate
-			err := GetItemD(int(iCompany), "Q0023", iKey, FromDate, &extradataq0023)
-			if err != nil {
-				return 0
-			}
+		var q0006data types.Q0006Data
+		var extradataq0006 types.Extradata = &q0006data
 
-			date := GetNextDue(FromDate, iFrequency, "")
-			FromDate = Date2String(date)
-			b = FromDate
-			iMonths := NewNoOfInstalments(iRCD, FromDate)
-			for i := 0; i < len(q0023data.Gst); i++ {
-				if uint(iMonths) <= q0023data.Gst[i].Month {
-					oAmount = float64(iAmount)*q0023data.Gst[i].Rate + oAmount
-					oAmount = RoundFloat(oAmount, 2)
-					break
+		err := GetItemD(int(iCompany), "Q0006", iKey, FromDate, &extradataq0006)
+		if err != nil {
+			return 0
+		}
+		if q0006data.PremCalcType != "U" {
+			var q0023data types.Q0023Data
+			var extradataq0023 types.Extradata = &q0023data
 
+			iAmount := benefitenq1[a].BPrem
+			for b := FromDate; b < ToDate; {
+				// Get Premium Rate
+				err := GetItemD(int(iCompany), "Q0023", iKey, FromDate, &extradataq0023)
+				if err != nil {
+					return 0
+				}
+
+				date := GetNextDue(FromDate, iFrequency, "")
+				FromDate = Date2String(date)
+				b = FromDate
+				iMonths := NewNoOfInstalments(iRCD, FromDate)
+				for i := 0; i < len(q0023data.Gst); i++ {
+					if uint(iMonths) <= q0023data.Gst[i].Month {
+						oAmount = float64(iAmount)*q0023data.Gst[i].Rate + oAmount
+						oAmount = RoundFloat(oAmount, 2)
+						break
+
+					}
 				}
 			}
-
 		}
 
 	}
@@ -2603,13 +2613,26 @@ func CalculateStampDutyByPolicy(iCompanyId uint, iPolicyId uint) float64 {
 
 	for i := 0; i < len(benefitsenq); i++ {
 		iCoverage := benefitsenq[i].BCoverage
-		iSA := benefitsenq[i].BSumAssured
-		iInstalmentPaid := GetNoIstalments(benefitsenq[i].BStartDate, policyenq.PaidToDate, policyenq.PFreq)
+		FromDate := benefitsenq[i].BStartDate
+		iCompany := benefitsenq[i].CompanyID
 
-		iStampDuty := CalculateStampDuty(iCompanyId, iCoverage, iInstalmentPaid, iDate, float64(iSA))
+		var q0006data types.Q0006Data
+		var extradataq0006 types.Extradata = &q0006data
 
-		tStampDuty = tStampDuty + iStampDuty
+		err := GetItemD(int(iCompany), "Q0006", iCoverage, FromDate, &extradataq0006)
+		if err != nil {
+			return 0
+		}
+		if q0006data.PremCalcType != "U" {
 
+			iSA := benefitsenq[i].BSumAssured
+			iInstalmentPaid := GetNoIstalments(benefitsenq[i].BStartDate, policyenq.PaidToDate, policyenq.PFreq)
+
+			iStampDuty := CalculateStampDuty(iCompanyId, iCoverage, iInstalmentPaid, iDate, float64(iSA))
+
+			tStampDuty = tStampDuty + iStampDuty
+
+		}
 	}
 
 	return tStampDuty

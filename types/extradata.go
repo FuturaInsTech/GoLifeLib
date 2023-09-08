@@ -156,7 +156,7 @@ type Q0006Data struct {
 	UlFundMethod         string // UL Fund Rules  //P0050
 	UlMinPrem            float64
 	UlMaxPrem            float64
-	FUNDCODE             []string  //P0050  vengadesan previous it was UlpFunds
+	FUNDCODE             []string  //P0050
 	UlTopUpMethod        string    //P0050
 	UlWithdrawMethod     string    //P0050
 	MrtaMethod           string    // MRTA Method
@@ -222,6 +222,18 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 		}
 		resp["AllowedAgeRange"] = allowedagerange
+		return resp
+
+	} else if datamap["function"] == "FundCode" {
+		resp := make(map[string]interface{})
+		funds := make([]string, 0)
+		for i := 0; i < len(m.FUNDCODE); i++ {
+			if m.FUNDCODE[i] == "" {
+				break
+			}
+			funds = append(funds, m.FUNDCODE[i])
+		}
+		resp["Funds"] = funds
 		return resp
 	} else if datamap["function"] == "PptRange" {
 		resp := make(map[string]interface{})

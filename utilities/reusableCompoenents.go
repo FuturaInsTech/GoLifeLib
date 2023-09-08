@@ -4750,3 +4750,65 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	result = initializers.DB.Create(&ilptrancrt)
 	return nil
 }
+
+// # 121
+// TDFFUNDP - Time Driven Function - Update Fund Price
+//
+// Inputs: Company, Policy, Function FUNDP, Transaction No.
+//
+// # Outputs  Old Record is Soft Deleted and New Record is Created
+//
+// ©  FuturaInsTech
+func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevFlag string) (string, error) {
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var ilptransenq []models.IlpTransaction
+	odate := "00000000"
+
+	result := initializers.DB.Where("company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P").Order("fund_eff_date").Find(&ilptransenq)
+	for i := 0; i < len(ilptransenq); i++ {
+		if ilptransenq[i].FundEffDate > odate {
+			odate = ilptransenq[i].FundEffDate
+		}
+	}
+
+	result = initializers.DB.Find(&policy, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return "", result.Error
+	}
+
+	result = initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+
+	if result.Error != nil {
+		return "", result.Error
+	}
+
+	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if odate != "" {
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+			tdfpolicy.Seqno = tdfrule.Seqno
+			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		} else {
+			initializers.DB.Delete(&tdfpolicy)
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+
+			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}

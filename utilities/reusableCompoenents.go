@@ -4773,7 +4773,7 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 		}
 	}
 
-	result = initializers.DB.Find(&policy, "company_id = ? and policy = ?", iCompany, iPolicy)
+	result = initializers.DB.Find(&policy, "company_id = ? and id  = ?", iCompany, iPolicy)
 	if result.Error != nil {
 		return "", result.Error
 	}

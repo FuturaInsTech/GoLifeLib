@@ -6,7 +6,8 @@ import (
 
 type TDFRule struct {
 	types.CModel
-	CompanyID uint
-	Seqno     uint16 `gorm:"primaryKey;"`
-	TDFType   string `gorm:"type:varchar(20)"`
+	CompanyID      uint
+	Seqno          uint16 `gorm:"primaryKey;"`
+	TDFType        string `gorm:"type:varchar(20)"`
+	TDFDescription string `gorm:"type:varchar(50)"`
 }

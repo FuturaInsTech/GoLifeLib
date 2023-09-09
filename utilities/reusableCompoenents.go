@@ -4685,8 +4685,8 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 			break
 		}
 	}
-	iInvested := iAmount * (iAllocPercentage / 100)
-	iNonInvested := iAmount * ((100 - iAllocPercentage) / 100)
+	iInvested := RoundFloat(iAmount*(iAllocPercentage/100), 2)
+	iNonInvested := RoundFloat(iAmount*((100-iAllocPercentage)/100), 2)
 	var ilpfundenq []models.IlpFund
 
 	result = initializers.DB.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
@@ -4710,12 +4710,12 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.FundType = ilpfundenq[j].FundType
 		ilptrancrt.TransactionDate = iEffDate
 		ilptrancrt.FundEffDate = iBusinessDate
-		ilptrancrt.FundAmount = ((iInvested * ilpfundenq[j].FundPercentage) / 100)
+		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
 		ilptrancrt.FundUnits = 0
 		ilptrancrt.FundPrice = 0
 		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
-		ilptrancrt.OriginalAmount = ((iInvested * ilpfundenq[j].FundPercentage) / 100)
+		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.ContractCurry = policyenq.PContractCurr
 		ilptrancrt.HistoryCode = iHistoryCode
 		ilptrancrt.InvNonInvFlag = ilpfundenq[j].FundType

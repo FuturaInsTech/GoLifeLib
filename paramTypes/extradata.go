@@ -69,7 +69,7 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			}
 			//a := m.BillingCurr[i]
 			//_, c, _ := initializers.GetParamDesc(1, "P0023", a, 1)
-			_, curr, _ := GetParamDesc(1, "Q0023", m.BillingCurr[i], 1)
+			_, curr, _ := GetParamDesc(1, "P0023", m.BillingCurr[i], 1)
 			allowedbilling = append(allowedbilling, curr)
 
 		}
@@ -82,7 +82,7 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.ContractCurr[i] == "" {
 				break
 			}
-			_, curr, _ := GetParamDesc(1, "Q0023", m.ContractCurr[i], 1)
+			_, curr, _ := GetParamDesc(1, "P0023", m.ContractCurr[i], 1)
 			contractcurr = append(contractcurr, curr)
 
 		}

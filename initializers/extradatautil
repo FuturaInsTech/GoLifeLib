@@ -1,0 +1,29 @@
+package initializers
+
+import (
+	"errors"
+	"strconv"
+
+	"github.com/FuturaInsTech/GoLifeLib/models"
+)
+
+// # 43
+// GetParamDesc - Get Long and Short Description of an item
+//
+// Inputs: Company, Param , Param ITem and Language
+//
+// # Outputs  Short Description, Long Description and Error
+//
+// ©  FuturaInsTech
+func GetParamDesc(iCompany uint, iParam string, iItem string, iLanguage uint) (string, string, error) {
+
+	var paramdesc models.ParamDesc
+
+	results := DB.Where("company_id = ? AND name = ? and item = ? and language_id = ?", iCompany, iParam, iItem, iLanguage).Find(&paramdesc)
+	if results.Error != nil || results.RowsAffected == 0 {
+
+		return "", "", errors.New(" -" + strconv.FormatUint(uint64(iCompany), 10) + "-" + iParam + "-" + "-" + iItem + "-" + strconv.FormatUint(uint64(iLanguage), 10) + "-" + " is missing")
+		//return errors.New(results.Error.Error())
+	}
+	return paramdesc.Shortdesc, paramdesc.Longdesc, nil
+}

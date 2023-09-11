@@ -62,7 +62,8 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.BillingCurr[i] == "" {
 				break
 			}
-
+			//a := m.BillingCurr[i]
+			//_, c, _ := initializers.GetParamDesc(1, "P0023", a, 1)
 			allowedbilling = append(allowedbilling, m.BillingCurr[i])
 
 		}
@@ -152,10 +153,8 @@ type Q0006Data struct {
 	UlMorttMethod string // UL Mortality Deduction Method Q0022 Attained Age // premium rates
 	UlFeeFreq     string // UL Charges Deduction Frequency //P0050
 	// UlFeeType            string    // 1 SA Based 2 Annualised Premium 3 Fund Value  //P0050
-	UlFeeMethod          string // UL Fee Method  //P0050
-	UlFundMethod         string // UL Fund Rules  //P0050
-	UlMinPrem            float64
-	UlMaxPrem            float64
+	UlFeeMethod          string    // UL Fee Method  //P0050
+	UlFundMethod         string    // UL Fund Rules  //P0050
 	FUNDCODE             []string  //P0050
 	UlTopUpMethod        string    //P0050
 	UlWithdrawMethod     string    //P0050
@@ -1629,6 +1628,37 @@ func (m *P0061Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0061Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// Minimum and Maximum Premium Limit
+// Coverage Level + Currency
+
+type P0062Data struct {
+	MinMaxRule []P0062
+}
+type P0062 struct {
+	Frequency string // FREQ  P0050
+	Premium   float64
+}
+
+func (m *P0062Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0062Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
 	return nil
 

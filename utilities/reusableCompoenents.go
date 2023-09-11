@@ -4836,3 +4836,104 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	}
 	return "", nil
 }
+func GetAllFundValueByPol(iCompany uint, iPolicy uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, "")
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpv, opv, _ := GetaFundValue(iCompany, iPolicy, iFundCode, iDate)
+		bpfv = bpfv + bpv
+		opfv = opfv + opv
+	}
+	return bpfv, opfv, iDate
+}
+
+func GetaFundValue(iCompany uint, iPolicy uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and fund_code = ?", iCompany, iPolicy, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = initializers.DB.Where("company_id = ? and fund_code = ?, approval_flag = ?, fund_effective_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+
+	bpfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundBidPrice
+	opfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundOfferPrice
+
+	return bpfundvalue, opfundvalue, iPriceDateUsed
+
+}
+
+func GetAllFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, "")
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpv, opv, _ := GetaFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iDate)
+		bpfv = bpfv + bpv
+		opfv = opfv + opv
+	}
+	return bpfv, opfv, iDate
+}
+
+func GetaFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = initializers.DB.Where("company_id = ? and fund_code = ?, approval_flag = ?, fund_effective_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+
+	bpfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundBidPrice
+	opfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundOfferPrice
+
+	return bpfundvalue, opfundvalue, iPriceDateUsed
+
+}

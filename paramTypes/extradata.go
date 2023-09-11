@@ -69,8 +69,6 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.BillingCurr[i] == "" {
 				break
 			}
-			//a := m.BillingCurr[i]
-			//_, c, _ := initializers.GetParamDesc(1, "P0023", a, 1)
 			_, curr, _ := GetParamDesc(uint(coy), "P0023", m.BillingCurr[i], uint(langid))
 			allowedbilling = append(allowedbilling, curr)
 
@@ -98,7 +96,8 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 				break
 			}
 
-			allowedfreq = append(allowedfreq, m.Frequencies[i])
+			_, freq, _ := GetParamDesc(uint(coy), "Q0009", m.Frequencies[i], uint(langid))
+			allowedfreq = append(allowedfreq, freq)
 
 		}
 		resp["AllowedFrequencies"] = allowedfreq
@@ -188,6 +187,8 @@ func (m *Q0006Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	coy, _ := strconv.Atoi(datamap["company_id"])
+	langid, _ := strconv.Atoi(datamap["LanguageId"])
 
 	if datamap["function"] == "MrtaInterest" {
 		resp := make(map[string]interface{})
@@ -238,7 +239,8 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.FUNDCODE[i] == "" {
 				break
 			}
-			funds = append(funds, m.FUNDCODE[i])
+			_, fund, _ := GetParamDesc(uint(coy), "P0061", m.FUNDCODE[i], uint(langid))
+			funds = append(funds, fund)
 		}
 		resp["Funds"] = funds
 		return resp

@@ -1,8 +1,13 @@
-package types
+package paramTypes
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
+
+	"github.com/FuturaInsTech/GoLifeLib/initializers"
+	"github.com/FuturaInsTech/GoLifeLib/models"
 )
 
 type Extradata interface {
@@ -64,7 +69,8 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			}
 			//a := m.BillingCurr[i]
 			//_, c, _ := initializers.GetParamDesc(1, "P0023", a, 1)
-			allowedbilling = append(allowedbilling, m.BillingCurr[i])
+			_, curr, _ := GetParamDesc(1, "Q0023", m.BillingCurr[i], 1)
+			allowedbilling = append(allowedbilling, curr)
 
 		}
 		resp["AllowedBillingCurriencies"] = allowedbilling
@@ -76,8 +82,8 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.ContractCurr[i] == "" {
 				break
 			}
-
-			contractcurr = append(contractcurr, m.ContractCurr[i])
+			_, curr, _ := GetParamDesc(1, "Q0023", m.ContractCurr[i], 1)
+			contractcurr = append(contractcurr, curr)
 
 		}
 		resp["AllowedContractCurriencies"] = contractcurr
@@ -1662,4 +1668,35 @@ func (m *P0062Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 	return nil
 
+}
+
+/*func GetParamDesc(iCompany uint, iParam string, iItem string, iLanguage uint) (string, string, error) {
+	type Descs struct {
+		Longdesc  string
+		Shortdesc string
+	}
+
+	var descs Descs
+
+	results := initializers.DB.Table("param_descs").Select("longdesc", "shortdesc").Where("company_id = ? AND name = ? and item = ? and language_id = ?", iCompany, iParam, iItem, iLanguage).Scan(&descs)
+	if results.Error != nil || results.RowsAffected == 0 {
+
+		return "", "", errors.New(" -" + strconv.FormatUint(uint64(iCompany), 10) + "-" + iParam + "-" + "-" + iItem + "-" + strconv.FormatUint(uint64(iLanguage), 10) + "-" + " is missing")
+		//return errors.New(results.Error.Error())
+	}
+
+	return descs.Shortdesc, descs.Longdesc, nil
+}
+*/
+
+func GetParamDesc(iCompany uint, iParam string, iItem string, iLanguage uint) (string, string, error) {
+	var paramdesc models.ParamDesc
+
+	results := initializers.DB.Where("company_id = ? AND name = ? and item = ? and language_id = ?", iCompany, iParam, iItem, iLanguage).Find(&paramdesc)
+	if results.Error != nil || results.RowsAffected == 0 {
+
+		return "", "", errors.New(" -" + strconv.FormatUint(uint64(iCompany), 10) + "-" + iParam + "-" + "-" + iItem + "-" + strconv.FormatUint(uint64(iLanguage), 10) + "-" + " is missing")
+		//return errors.New(results.Error.Error())
+	}
+	return paramdesc.Shortdesc, paramdesc.Longdesc, nil
 }

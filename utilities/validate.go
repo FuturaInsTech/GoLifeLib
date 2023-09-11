@@ -9,7 +9,7 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
-	"github.com/FuturaInsTech/GoLifeLib/types"
+	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 )
 
 func CompareDate(fromdate, todate string, language uint) error {
@@ -254,8 +254,8 @@ func validateQDetail(dbdata map[string]interface{}) (error, DbValError) {
 	iCoverage := qdetail.QCoverage
 	iDate := qdetail.QDate
 
-	var q0006data types.Q0006Data
-	var extradataq0006 types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
 	err = GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
 	if err != nil {
 		dbvalerror.DbErrors = fieldvalerrors

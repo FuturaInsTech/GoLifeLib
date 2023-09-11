@@ -82,8 +82,8 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.ContractCurr[i] == "" {
 				break
 			}
-
-			contractcurr = append(contractcurr, m.ContractCurr[i])
+			_, curr, _ := GetParamDesc(1, "Q0005", m.ContractCurr[i], 1)
+			contractcurr = append(contractcurr, curr)
 
 		}
 		resp["AllowedContractCurriencies"] = contractcurr

@@ -59,6 +59,8 @@ func (m *Q0005Data) ParseData(datamap map[string]interface{}) {
 // }
 
 func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	coy, _ := strconv.Atoi(datamap["company_id"])
+	langid, _ := strconv.Atoi(datamap["LanguageId"])
 
 	if datamap["function"] == "BillingCurr" {
 		resp := make(map[string]interface{})
@@ -69,7 +71,7 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			}
 			//a := m.BillingCurr[i]
 			//_, c, _ := initializers.GetParamDesc(1, "P0023", a, 1)
-			_, curr, _ := GetParamDesc(1, "P0023", m.BillingCurr[i], 1)
+			_, curr, _ := GetParamDesc(uint(coy), "P0023", m.BillingCurr[i], uint(langid))
 			allowedbilling = append(allowedbilling, curr)
 
 		}
@@ -82,7 +84,7 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.ContractCurr[i] == "" {
 				break
 			}
-			_, curr, _ := GetParamDesc(1, "P0023", m.ContractCurr[i], 1)
+			_, curr, _ := GetParamDesc(uint(coy), "P0023", m.ContractCurr[i], uint(langid))
 			contractcurr = append(contractcurr, curr)
 
 		}

@@ -2401,30 +2401,40 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 	for a := 0; a < len(benefitenq1); a++ {
 		FromDate := iFromDate
 		ToDate := iToDate
-		var q0023data types.Q0023Data
-		var extradataq0023 types.Extradata = &q0023data
+
 		iKey := benefitenq1[a].BCoverage
-		iAmount := benefitenq1[a].BPrem
-		for b := FromDate; b < ToDate; {
-			// Get Premium Rate
-			err := GetItemD(int(iCompany), "Q0023", iKey, FromDate, &extradataq0023)
-			if err != nil {
-				return 0
-			}
+		var q0006data types.Q0006Data
+		var extradataq0006 types.Extradata = &q0006data
 
-			date := GetNextDue(FromDate, iFrequency, "")
-			FromDate = Date2String(date)
-			b = FromDate
-			iMonths := NewNoOfInstalments(iRCD, FromDate)
-			for i := 0; i < len(q0023data.Gst); i++ {
-				if uint(iMonths) <= q0023data.Gst[i].Month {
-					oAmount = float64(iAmount)*q0023data.Gst[i].Rate + oAmount
-					oAmount = RoundFloat(oAmount, 2)
-					break
+		err := GetItemD(int(iCompany), "Q0006", iKey, FromDate, &extradataq0006)
+		if err != nil {
+			return 0
+		}
+		if q0006data.PremCalcType != "U" {
+			var q0023data types.Q0023Data
+			var extradataq0023 types.Extradata = &q0023data
 
+			iAmount := benefitenq1[a].BPrem
+			for b := FromDate; b < ToDate; {
+				// Get Premium Rate
+				err := GetItemD(int(iCompany), "Q0023", iKey, FromDate, &extradataq0023)
+				if err != nil {
+					return 0
+				}
+
+				date := GetNextDue(FromDate, iFrequency, "")
+				FromDate = Date2String(date)
+				b = FromDate
+				iMonths := NewNoOfInstalments(iRCD, FromDate)
+				for i := 0; i < len(q0023data.Gst); i++ {
+					if uint(iMonths) <= q0023data.Gst[i].Month {
+						oAmount = float64(iAmount)*q0023data.Gst[i].Rate + oAmount
+						oAmount = RoundFloat(oAmount, 2)
+						break
+
+					}
 				}
 			}
-
 		}
 
 	}
@@ -2603,13 +2613,26 @@ func CalculateStampDutyByPolicy(iCompanyId uint, iPolicyId uint) float64 {
 
 	for i := 0; i < len(benefitsenq); i++ {
 		iCoverage := benefitsenq[i].BCoverage
-		iSA := benefitsenq[i].BSumAssured
-		iInstalmentPaid := GetNoIstalments(benefitsenq[i].BStartDate, policyenq.PaidToDate, policyenq.PFreq)
+		FromDate := benefitsenq[i].BStartDate
+		iCompany := benefitsenq[i].CompanyID
 
-		iStampDuty := CalculateStampDuty(iCompanyId, iCoverage, iInstalmentPaid, iDate, float64(iSA))
+		var q0006data types.Q0006Data
+		var extradataq0006 types.Extradata = &q0006data
 
-		tStampDuty = tStampDuty + iStampDuty
+		err := GetItemD(int(iCompany), "Q0006", iCoverage, FromDate, &extradataq0006)
+		if err != nil {
+			return 0
+		}
+		if q0006data.PremCalcType != "U" {
 
+			iSA := benefitsenq[i].BSumAssured
+			iInstalmentPaid := GetNoIstalments(benefitsenq[i].BStartDate, policyenq.PaidToDate, policyenq.PFreq)
+
+			iStampDuty := CalculateStampDuty(iCompanyId, iCoverage, iInstalmentPaid, iDate, float64(iSA))
+
+			tStampDuty = tStampDuty + iStampDuty
+
+		}
 	}
 
 	return tStampDuty
@@ -4662,8 +4685,8 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 			break
 		}
 	}
-	iInvested := iAmount * (iAllocPercentage / 100)
-	iNonInvested := iAmount * ((100 - iAllocPercentage) / 100)
+	iInvested := RoundFloat(iAmount*(iAllocPercentage/100), 2)
+	iNonInvested := RoundFloat(iAmount*((100-iAllocPercentage)/100), 2)
 	var ilpfundenq []models.IlpFund
 
 	result = initializers.DB.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
@@ -4687,12 +4710,12 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.FundType = ilpfundenq[j].FundType
 		ilptrancrt.TransactionDate = iEffDate
 		ilptrancrt.FundEffDate = iBusinessDate
-		ilptrancrt.FundAmount = ((iInvested * ilpfundenq[j].FundPercentage) / 100)
+		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
 		ilptrancrt.FundUnits = 0
 		ilptrancrt.FundPrice = 0
 		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
-		ilptrancrt.OriginalAmount = ((iInvested * ilpfundenq[j].FundPercentage) / 100)
+		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.ContractCurry = policyenq.PContractCurr
 		ilptrancrt.HistoryCode = iHistoryCode
 		ilptrancrt.InvNonInvFlag = ilpfundenq[j].FundType
@@ -4773,7 +4796,7 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 		}
 	}
 
-	result = initializers.DB.Find(&policy, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	result = initializers.DB.Find(&policy, "company_id = ? and id  = ?", iCompany, iPolicy)
 	if result.Error != nil {
 		return "", result.Error
 	}
@@ -4785,7 +4808,7 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	}
 
 	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-	if odate != "" {
+	if odate != "00000000" {
 		if results.Error != nil {
 			tdfpolicy.CompanyID = iCompany
 			tdfpolicy.PolicyID = iPolicy

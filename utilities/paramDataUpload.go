@@ -11,7 +11,7 @@ import (
 
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
-	"github.com/FuturaInsTech/GoLifeLib/types"
+	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 	"github.com/xuri/excelize/v2"
 
 	"gorm.io/gorm"
@@ -384,33 +384,33 @@ func GetParamExtraDataFields(paramName string) ([]reflect.StructField, []reflect
 	switch paramName {
 
 	case "Q0011":
-		data = types.Q0011Data{}
+		data = paramTypes.Q0011Data{}
 	case "Q0017":
-		data = types.Q0017Data{}
+		data = paramTypes.Q0017Data{}
 	case "Q0016":
-		data = types.Q0016Data{}
+		data = paramTypes.Q0016Data{}
 	case "Q0015":
-		data = types.Q0015Data{}
+		data = paramTypes.Q0015Data{}
 
 	case "Q0014":
-		data = types.Q0014Data{}
+		data = paramTypes.Q0014Data{}
 
 	case "Q0005":
-		data = types.Q0005Data{}
+		data = paramTypes.Q0005Data{}
 
 	case "Q0006":
-		data = types.Q0006Data{}
+		data = paramTypes.Q0006Data{}
 
 	case "P0044":
-		data = types.P0044Data{}
+		data = paramTypes.P0044Data{}
 
 	case "Q0010":
-		data = types.Q0010Data{}
-		subfield = types.Q0010{}
+		data = paramTypes.Q0010Data{}
+		subfield = paramTypes.Q0010{}
 
 	case "P0028":
-		data = types.P0028Data{}
-		subfield = types.P0028{}
+		data = paramTypes.P0028Data{}
+		subfield = paramTypes.P0028{}
 
 	default:
 		return nil, nil, fmt.Errorf("unable to find extradata struct for the param:" + paramName)

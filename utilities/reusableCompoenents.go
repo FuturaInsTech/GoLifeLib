@@ -11,7 +11,8 @@ import (
 
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
-	"github.com/FuturaInsTech/GoLifeLib/types"
+	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"gorm.io/gorm"
@@ -485,7 +486,7 @@ func ValidateItem(iUserId uint64, iName string, iItem any, iFieldName string, iE
 // # Outputs Error
 //
 // ©  FuturaInsTech
-func GetItemD(iCompany int, iTable string, iItem string, iFrom string, data *types.Extradata) error {
+func GetItemD(iCompany int, iTable string, iItem string, iFrom string, data *paramTypes.Extradata) error {
 
 	//var sourceMap map[string]interface{}
 	var itemparam models.Param
@@ -629,12 +630,12 @@ func ConvertMapToStruct(m map[string]interface{}, s interface{}) error {
 
 func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
 
-	var q0006data types.Q0006Data
-	var extradata types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
 	GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
 
-	var q0010data types.Q0010Data
-	var extradataq0010 types.Extradata = &q0010data
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
 	var q0010key string
 	var prem float64
 	term := strconv.FormatUint(uint64(iTerm), 10)
@@ -678,8 +679,8 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 func ValidateCoverageQ0011(iCompany uint, iProduct, iCoverage, iDate string) string {
 
 	fmt.Println("Coverages Q0011", iCompany, iProduct, iCoverage, iDate)
-	var q0011data types.Q0011Data
-	var extradataq0011 types.Extradata = &q0011data
+	var q0011data paramTypes.Q0011Data
+	var extradataq0011 paramTypes.Extradata = &q0011data
 	productFound := "N"
 	err := GetItemD(int(iCompany), "Q0011", iProduct, iDate, &extradataq0011)
 	if err != nil {
@@ -711,8 +712,8 @@ func CustomizedPreload(d *gorm.DB) *gorm.DB {
 //
 // ©  FuturaInsTech
 func ValidateQ0012(iCompany uint, iCoverage string, iDate string) error {
-	var q0012data types.Q0012Data
-	var extradataq0012 types.Extradata = &q0012data
+	var q0012data paramTypes.Q0012Data
+	var extradataq0012 paramTypes.Extradata = &q0012data
 
 	err := GetItemD(int(iCompany), "Q0012", "AED1", iDate, &extradataq0012)
 
@@ -738,8 +739,8 @@ func ValidateQ0012(iCompany uint, iCoverage string, iDate string) error {
 //
 // ©  FuturaInsTech
 func ValidateQ0013(iCompany uint, iCoverage string, iDate string) error {
-	var q0013data types.Q0013Data
-	var extradataq0013 types.Extradata = &q0013data
+	var q0013data paramTypes.Q0013Data
+	var extradataq0013 paramTypes.Extradata = &q0013data
 
 	err := GetItemD(int(iCompany), "Q0013", "AEDR", iDate, &extradataq0013)
 
@@ -767,8 +768,8 @@ func ValidateQ0013(iCompany uint, iCoverage string, iDate string) error {
 func GetSBByYear(iCompany uint, iCoverage string, iDate string, iSA float64, iType string, iMethod string, iYear int, iAge int) float64 {
 
 	if iType == "T" {
-		var q0012data types.Q0012Data
-		var extradataq0012 types.Extradata = &q0012data
+		var q0012data paramTypes.Q0012Data
+		var extradataq0012 paramTypes.Extradata = &q0012data
 		// fmt.Println("SB Parameters", iCompany, iType, iMethod, iYear, iCoverage, iDate)
 		err := GetItemD(int(iCompany), "Q0012", iMethod, iDate, &extradataq0012)
 
@@ -785,8 +786,8 @@ func GetSBByYear(iCompany uint, iCoverage string, iDate string, iSA float64, iTy
 		}
 	}
 	if iType == "A" {
-		var q0013data types.Q0013Data
-		var extradataq0013 types.Extradata = &q0013data
+		var q0013data paramTypes.Q0013Data
+		var extradataq0013 paramTypes.Extradata = &q0013data
 		fmt.Println("SB Parameters", iCompany, iType, iMethod, iAge, iCoverage, iDate)
 		err := GetItemD(int(iCompany), "Q0013", iMethod, iDate, &extradataq0013)
 		fmt.Println("SB Parameters", iCompany, iCoverage, iDate)
@@ -819,8 +820,8 @@ func GetSBByYear(iCompany uint, iCoverage string, iDate string, iSA float64, iTy
 
 func GetBonus(iCompany uint, iCoverage string, iStartDate string, iEndDate string, iStatus string, iTerm uint, iSA uint) uint {
 
-	var q0006data types.Q0006Data
-	var extradata types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
 	GetItemD(int(iCompany), "Q0006", iCoverage, iStartDate, &extradata)
 
 	iRBMethod := q0006data.RevBonus
@@ -830,8 +831,8 @@ func GetBonus(iCompany uint, iCoverage string, iStartDate string, iEndDate strin
 	// iSSVMethod := q0006data.SSVMethod
 	// iGSVMethod := q0006data.GSVMethod
 	// iBSVMethod := q0006data.BSVMethod
-	var q0014data types.Q0014Data
-	var extradata1 types.Extradata = &q0014data
+	var q0014data paramTypes.Q0014Data
+	var extradata1 paramTypes.Extradata = &q0014data
 
 	iKey := iRBMethod + iStatus
 
@@ -875,8 +876,8 @@ func GetBonus(iCompany uint, iCoverage string, iStartDate string, iEndDate strin
 // ©  FuturaInsTech
 func GetBonusByYear(iCompany uint, iCoverage string, iBonusMethod string, iDate string, iYear uint, iStatus string, iSA uint) uint64 {
 	//	fmt.Println("inside Bonus ", iCoverage, iCompany, iBonusMethod, iDate, iYear, iStatus, iSA)
-	var q0006data types.Q0006Data
-	var extradata types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
 	GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
 
 	var key1 string
@@ -907,8 +908,8 @@ func GetBonusByYear(iCompany uint, iCoverage string, iBonusMethod string, iDate 
 		oBonus := 0
 		return uint64(oBonus)
 	}
-	var q0014data types.Q0014Data
-	var extradata1 types.Extradata = &q0014data
+	var q0014data paramTypes.Q0014Data
+	var extradata1 paramTypes.Extradata = &q0014data
 	iKey := key1 + iStatus
 
 	GetItemD(int(iCompany), "Q0014", iKey, iDate, &extradata1)
@@ -933,8 +934,8 @@ func GetBonusByYear(iCompany uint, iCoverage string, iBonusMethod string, iDate 
 // ©  FuturaInsTech
 
 func GetTerm(iCompany uint, iCoverage string, iDate string) {
-	var q0015data types.Q0015Data
-	var extradata types.Extradata = &q0015data
+	var q0015data paramTypes.Q0015Data
+	var extradata paramTypes.Extradata = &q0015data
 	iKey := iCoverage
 	fmt.Println(iKey)
 
@@ -949,8 +950,8 @@ func GetTerm(iCompany uint, iCoverage string, iDate string) {
 
 // # 31 Redundant
 func GetPTerm(iCompany uint, iCoverage string, iDate string) {
-	var q0016data types.Q0016Data
-	var extradata types.Extradata = &q0016data
+	var q0016data paramTypes.Q0016Data
+	var extradata paramTypes.Extradata = &q0016data
 	iKey := iCoverage
 	fmt.Println(iKey)
 
@@ -990,8 +991,8 @@ func CalcSaPremDiscount(iCompany uint, iDiscType string, iDiscMethod string, iAn
 	// SA Discount
 
 	if iDiscType == "S" {
-		var q0017data types.Q0017Data
-		var extradataq0017 types.Extradata = &q0017data
+		var q0017data paramTypes.Q0017Data
+		var extradataq0017 paramTypes.Extradata = &q0017data
 		err := GetItemD(int(iCompany), "Q0017", iDiscMethod, iDate, &extradataq0017)
 
 		if err != nil {
@@ -1008,8 +1009,8 @@ func CalcSaPremDiscount(iCompany uint, iDiscType string, iDiscMethod string, iAn
 	}
 	// Premium Discount
 	if iDiscType == "P" {
-		var q0018data types.Q0018Data
-		var extradataq0018 types.Extradata = &q0018data
+		var q0018data paramTypes.Q0018Data
+		var extradataq0018 paramTypes.Extradata = &q0018data
 
 		err := GetItemD(int(iCompany), "Q0018", iDiscMethod, iDate, &extradataq0018)
 
@@ -1037,8 +1038,8 @@ func CalcSaPremDiscount(iCompany uint, iDiscType string, iDiscMethod string, iAn
 //
 // ©  FuturaInsTech
 func CalcFrequencyPrem(iCompany uint, iDate, iFreqMethod string, iFreq string, iAnnPrem float64) float64 {
-	var q0019data types.Q0019Data
-	var extradataq0019 types.Extradata = &q0019data
+	var q0019data paramTypes.Q0019Data
+	var extradataq0019 paramTypes.Extradata = &q0019data
 	err := GetItemD(int(iCompany), "Q0019", iFreqMethod, iDate, &extradataq0019)
 
 	if err != nil {
@@ -1071,8 +1072,8 @@ func CalcFrequencyPrem(iCompany uint, iDate, iFreqMethod string, iFreq string, i
 // ©  FuturaInsTech
 func GetWaiverSA(iCompany uint, iCoverage string, iMethod string, iDate string, iPrem float64) float64 {
 
-	var q0020data types.Q0020Data
-	var extradataq0020 types.Extradata = &q0020data
+	var q0020data paramTypes.Q0020Data
+	var extradataq0020 paramTypes.Extradata = &q0020data
 	err := GetItemD(int(iCompany), "Q0020", iMethod, iDate, &extradataq0020)
 
 	if err != nil {
@@ -1100,8 +1101,8 @@ func GetWaiverSA(iCompany uint, iCoverage string, iMethod string, iDate string, 
 // ©  FuturaInsTech
 func GetULAllocRates(iCompany uint, iDate string, iAllMethod string, iFrequency string, iFromDate string, iToDate string) float64 {
 
-	var q0021data types.P0060Data
-	var extradataq0021 types.Extradata = &q0021data
+	var q0021data paramTypes.P0060Data
+	var extradataq0021 paramTypes.Extradata = &q0021data
 
 	err := GetItemD(int(iCompany), "P0060", iAllMethod, iDate, &extradataq0021)
 	if err != nil {
@@ -1131,8 +1132,8 @@ func GetULAllocRates(iCompany uint, iDate string, iAllMethod string, iFrequency 
 // ©  FuturaInsTech
 func GetULMortPrem(iCompany uint, iCoverage string, iDate string, iSA uint64, iFund uint64, iAge uint, iGender string) float64 {
 
-	var q0006data types.Q0006Data
-	var extradataq0006 types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
 	// Get Coverage Rules
 	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
 	if err != nil {
@@ -1149,8 +1150,8 @@ func GetULMortPrem(iCompany uint, iCoverage string, iDate string, iSA uint64, iF
 		oSA = iSA + iFund
 	}
 
-	var q0022data types.Q0022Data
-	var extradataq0022 types.Extradata = &q0022data
+	var q0022data paramTypes.Q0022Data
+	var extradataq0022 paramTypes.Extradata = &q0022data
 	key := q0006data.UlMorttMethod + iGender
 	// Get Premium Rate
 	err = GetItemD(int(iCompany), "Q0022", key, iDate, &extradataq0022)
@@ -1187,8 +1188,8 @@ func GetULMortPrem(iCompany uint, iCoverage string, iDate string, iSA uint64, iF
 // ©  FuturaInsTech
 func GetGSTAmount(iCompany uint, iDate string, iKey string, iMonths uint64, iAmount float64) float64 {
 
-	var q0023data types.Q0023Data
-	var extradataq0023 types.Extradata = &q0023data
+	var q0023data paramTypes.Q0023Data
+	var extradataq0023 paramTypes.Extradata = &q0023data
 
 	// Get Premium Rate
 	err := GetItemD(int(iCompany), "Q0023", iKey, iDate, &extradataq0023)
@@ -1289,8 +1290,8 @@ func PostGlMove(iCompany uint, iContractCurry string, iEffectiveDate string,
 	iGlCurry := currency.CurrencyShortName
 	glmove.CurrencyRate = 1
 	if glmove.GlCurry != glmove.ContractCurry {
-		var p0031data types.P0031Data
-		var extradata types.Extradata = &p0031data
+		var p0031data paramTypes.P0031Data
+		var extradata paramTypes.Extradata = &p0031data
 		iKey := iContractCurry + "2" + iGlCurry
 		// fmt.Println("i key ", iKey)
 		err := GetItemD(int(iCompany), "P0031", iKey, iEffectiveDate, &extradata)
@@ -1343,8 +1344,8 @@ func PostGlMove(iCompany uint, iContractCurry string, iEffectiveDate string,
 // ©  FuturaInsTech
 func GetCommissionRates(iCompany uint, iCoverage string, iNofInstalemnts uint, iDate string) float64 {
 
-	var p0028data types.P0028Data
-	var extradatap0028 types.Extradata = &p0028data
+	var p0028data paramTypes.P0028Data
+	var extradatap0028 paramTypes.Extradata = &p0028data
 	iKey := iCoverage
 	fmt.Println("commission Rates **********", iCompany, iCoverage, iDate, iNofInstalemnts, iKey)
 	// Get Premium Rate
@@ -1422,8 +1423,8 @@ func ValidateStatus(iCompany uint, iMethod string, iDate string, iStatus string)
 
 	iHistoryCD := transaction.Method
 	oHistory = iHistoryCD
-	var p0029data types.P0029Data
-	var extradata types.Extradata = &p0029data
+	var p0029data paramTypes.P0029Data
+	var extradata paramTypes.Extradata = &p0029data
 	fmt.Println("Transaction Foound !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", iHistoryCode)
 	err := GetItemD(int(iCompany), "P0029", iHistoryCD, iDate, &extradata)
 
@@ -1487,8 +1488,8 @@ func TDFBillD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	result := initializers.DB.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 	if iRevFlag == "R" {
-		var q0005data types.Q0005Data
-		var extradataq0005 types.Extradata = &q0005data
+		var q0005data paramTypes.Q0005Data
+		var extradataq0005 paramTypes.Extradata = &q0005data
 		err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 		if err != nil {
 			return "", err
@@ -1674,8 +1675,8 @@ func TDFExpiD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 		if benefits[i].BStatus != "EX" {
 			iCoverage := benefits[i].BCoverage
 			iDate := benefits[i].BStartDate
-			var q0006data types.Q0006Data
-			var extradataq0006 types.Extradata = &q0006data
+			var q0006data paramTypes.Q0006Data
+			var extradataq0006 paramTypes.Extradata = &q0006data
 			GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
 			if q0006data.MatMethod == "" {
 				if oDate == "" {
@@ -1739,8 +1740,8 @@ func TDFExpiDS(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 		if benefits[i].BStatus != "EX" {
 			iCoverage := benefits[i].BCoverage
 			iDate := benefits[i].BStartDate
-			var q0006data types.Q0006Data
-			var extradataq0006 types.Extradata = &q0006data
+			var q0006data paramTypes.Q0006Data
+			var extradataq0006 paramTypes.Extradata = &q0006data
 			GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
 			if q0006data.MatMethod == "" {
 				if oDate == "" {
@@ -1802,8 +1803,8 @@ func TDFMatD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (strin
 	for i := 0; i < len(benefits); i++ {
 		iCoverage := benefits[i].BCoverage
 		iDate := benefits[i].BStartDate
-		var q0006data types.Q0006Data
-		var extradataq0006 types.Extradata = &q0006data
+		var q0006data paramTypes.Q0006Data
+		var extradataq0006 paramTypes.Extradata = &q0006data
 		GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
 		if q0006data.MatMethod != "" {
 			if oDate == "" {
@@ -1902,8 +1903,8 @@ func SBCreate(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iD
 	var survb models.SurvB
 	fmt.Println("Values", iCompany, iPolicy, iBenefitID, iCoverage, iDate, iSA, iType, iMethod, iYear, iAge, iTranno)
 	if iType == "T" {
-		var q0012data types.Q0012Data
-		var extradataq0012 types.Extradata = &q0012data
+		var q0012data paramTypes.Q0012Data
+		var extradataq0012 paramTypes.Extradata = &q0012data
 		// fmt.Println("SB Parameters", iCompany, iType, iMethod, iYear, iCoverage, iDate)
 		err := GetItemD(int(iCompany), "Q0012", iMethod, iDate, &extradataq0012)
 		fmt.Println("I am inside Term Based ")
@@ -1943,8 +1944,8 @@ func SBCreate(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iD
 		}
 	}
 	if iType == "A" {
-		var q0013data types.Q0013Data
-		var extradataq0013 types.Extradata = &q0013data
+		var q0013data paramTypes.Q0013Data
+		var extradataq0013 paramTypes.Extradata = &q0013data
 		fmt.Println("SB Parameters", iCompany, iType, iMethod, iAge, iCoverage, iDate)
 		err := GetItemD(int(iCompany), "Q0013", iMethod, iDate, &extradataq0013)
 		fmt.Println("SB Parameters", iCompany, iCoverage, iDate)
@@ -1995,11 +1996,11 @@ func SBCreate(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iD
 // ©  FuturaInsTech
 func LetterCreate(iCompany int, iPolicy uint, iTransaction string, iDate string, idata map[string]interface{}) {
 	var policy models.Policy
-	var p0034data types.P0034Data
-	var extradatap0034 types.Extradata = &p0034data
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
 
-	var p0033data types.P0033Data
-	var extradatap0033 types.Extradata = &p0033data
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
 
 	results := initializers.DB.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 	if results.Error != nil {
@@ -2069,8 +2070,8 @@ func LetterCreate(iCompany int, iPolicy uint, iTransaction string, iDate string,
 //
 // ©  FuturaInsTech
 func CalculateStampDuty(iCompany uint, iCoverage string, iInstalment int, iDate string, iSA float64) float64 {
-	var p0036data types.P0036Data
-	var extradata types.Extradata = &p0036data
+	var p0036data paramTypes.P0036Data
+	var extradata paramTypes.Extradata = &p0036data
 	iKey := iCoverage
 	// fmt.Println("i key ", iKey)
 	err := GetItemD(int(iCompany), "P0036", iKey, iDate, &extradata)
@@ -2118,8 +2119,8 @@ func GetGlBal(iCompany uint, iPolicy uint, iGlaccount string) float64 {
 //
 // ©  FuturaInsTech
 func GetTolerance(iCompany uint, iTransaction string, iCurrency string, iProduct string, iFrequency string, iDate string) float64 {
-	var p0043data types.P0043Data
-	var extradata types.Extradata = &p0043data
+	var p0043data paramTypes.P0043Data
+	var extradata paramTypes.Extradata = &p0043data
 	iKey := iTransaction + iCurrency + iProduct
 	// fmt.Println("i key ", iKey)
 	err := GetItemD(int(iCompany), "P0043", iKey, iDate, &extradata)
@@ -2160,8 +2161,8 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 	iFund := float64(70000.00)
 	iSA := float64(benefit.BSumAssured)
 	iStartDate := benefit.BStartDate
-	var q0006data types.Q0006Data
-	var extradata types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
 	iDate := benefit.BStartDate
 
 	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
@@ -2172,8 +2173,8 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 
 	ideathMethod := q0006data.DeathMethod //DC001
 	oAmount = 0
-	var p0049data types.P0049Data
-	var extradata1 types.Extradata = &p0049data
+	var p0049data paramTypes.P0049Data
+	var extradata1 paramTypes.Extradata = &p0049data
 	iKey := iCause + iCoverage
 
 	err = GetItemD(int(iCompany), "P0049", iKey, iDate, &extradata1)
@@ -2403,16 +2404,16 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 		ToDate := iToDate
 
 		iKey := benefitenq1[a].BCoverage
-		var q0006data types.Q0006Data
-		var extradataq0006 types.Extradata = &q0006data
+		var q0006data paramTypes.Q0006Data
+		var extradataq0006 paramTypes.Extradata = &q0006data
 
 		err := GetItemD(int(iCompany), "Q0006", iKey, FromDate, &extradataq0006)
 		if err != nil {
 			return 0
 		}
 		if q0006data.PremCalcType != "U" {
-			var q0023data types.Q0023Data
-			var extradataq0023 types.Extradata = &q0023data
+			var q0023data paramTypes.Q0023Data
+			var extradataq0023 paramTypes.Extradata = &q0023data
 
 			iAmount := benefitenq1[a].BPrem
 			for b := FromDate; b < ToDate; {
@@ -2454,12 +2455,12 @@ func GetMRTABen(iSA float64, iInterest float64, iPolYear float64, iInterimPeriod
 // #66
 func GetMrtaPrem(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
 
-	var q0006data types.Q0006Data
-	var extradata types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
 	GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
 
-	var q0010data types.Q0010Data
-	var extradataq0010 types.Extradata = &q0010data
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
 	var q0010key string
 	var prem float64
 	prem = 0
@@ -2549,8 +2550,8 @@ func RevGlMove(tranno, userco, ipolicy float64) error {
 func GetSurrenderAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDate string, iTerm uint, iPremTerm uint, iStatus string, iSumAssured float64, iPaidTerm int, iStartDate string, iSurrMethod string, iInstallments int) (oAmount float64) {
 
 	oAmount = 0
-	var p0053data types.P0053Data
-	var extradatap0053 types.Extradata = &p0053data
+	var p0053data paramTypes.P0053Data
+	var extradatap0053 paramTypes.Extradata = &p0053data
 
 	iKey := iCoverage + iStatus + strconv.Itoa(int(iTerm)) + strconv.Itoa(int(iPremTerm))
 
@@ -2616,8 +2617,8 @@ func CalculateStampDutyByPolicy(iCompanyId uint, iPolicyId uint) float64 {
 		FromDate := benefitsenq[i].BStartDate
 		iCompany := benefitsenq[i].CompanyID
 
-		var q0006data types.Q0006Data
-		var extradataq0006 types.Extradata = &q0006data
+		var q0006data paramTypes.Q0006Data
+		var extradataq0006 paramTypes.Extradata = &q0006data
 
 		err := GetItemD(int(iCompany), "Q0006", iCoverage, FromDate, &extradataq0006)
 		if err != nil {
@@ -2708,8 +2709,8 @@ func TDFLapsD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 		return "", result.Error
 	}
 
-	var q0005data types.Q0005Data
-	var extradataq0005 types.Extradata = &q0005data
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
 	err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 
 	if err != nil {
@@ -2866,8 +2867,8 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 	// iFund := float64(70000.00)
 	iSA := float64(benefit.BSumAssured)
 	// iStartDate := benefit.BStartDate
-	var q0006data types.Q0006Data
-	var extradata types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
 	iDate := benefit.BStartDate
 
 	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
@@ -3001,8 +3002,8 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	_, oBillCurr, _ := GetParamDesc(policy.CompanyID, "P0023", policy.PBillCurr, 1)
 	_, oContCurr, _ := GetParamDesc(policy.CompanyID, "P0023", policy.PContractCurr, 1)
 
-	var q0005data types.Q0005Data
-	var extradataq0005 types.Extradata = &q0005data
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
 	GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 	gracedate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
 	premduedates := GetPremDueDates(policy.PRCD, policy.PFreq)
@@ -3129,8 +3130,8 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 	var benefitenq models.Benefit
 	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id =? and id = ?", iCompany, iPolicy, survb[0].BenefitID)
 	basis := ""
-	var q0006data types.Q0006Data
-	var extradataq0006 types.Extradata = &q0006data
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
 
 	GetItemD(int(iCompany), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
 	if q0006data.SbType == "A" {
@@ -3667,8 +3668,8 @@ func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt 
 //
 // ©  FuturaInsTech
 func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string) (status bool, oStatus string) {
-	var p0029data types.P0029Data
-	var extradata types.Extradata = &p0029data
+	var p0029data paramTypes.P0029Data
+	var extradata paramTypes.Extradata = &p0029data
 
 	err := GetItemD(int(iCompany), "P0029", iHistoryCD, iDate, &extradata)
 	if err != nil {
@@ -3692,11 +3693,11 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // ©  FuturaInsTech
 func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint) error {
 
-	var p0034data types.P0034Data
-	var extradatap0034 types.Extradata = &p0034data
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
 
-	var p0033data types.P0033Data
-	var extradatap0033 types.Extradata = &p0033data
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
 	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
 	iTransaction := iHistoryCode
 	var policy models.Policy
@@ -4175,8 +4176,8 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 		return 0, errors.New(result.Error.Error())
 	}
 
-	var p0055data types.P0055Data
-	var extradatap0055 types.Extradata = &p0055data
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
 	iKey := iCollType
 	err := GetItemD(int(iCompany), "P0055", iKey, iBusinssdate, &extradatap0055)
 
@@ -4184,8 +4185,8 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 		return 0, errors.New(err.Error())
 	}
 
-	var p0027data types.P0027Data
-	var extradata types.Extradata = &p0027data
+	var p0027data paramTypes.P0027Data
+	var extradata paramTypes.Extradata = &p0027data
 
 	err = GetItemD(int(iCompany), "P0027", iMethod, iBusinssdate, &extradata)
 
@@ -4316,8 +4317,8 @@ func CalcBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate strin
 		return oBonus
 	}
 
-	var q0014data types.Q0014Data
-	var extradata1 types.Extradata = &q0014data
+	var q0014data paramTypes.Q0014Data
+	var extradata1 paramTypes.Extradata = &q0014data
 
 	iKey = iBonusMethod + iStatus + strconv.Itoa(int(iTerm)) + strconv.Itoa(int(iPTerm))
 	err := GetItemD(int(iCompany), "Q0014", iKey, iAnnivDate, &extradata1)
@@ -4364,8 +4365,8 @@ func CalcIBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate stri
 		return oBonus
 	}
 
-	var q0014data types.Q0014Data
-	var extradata1 types.Extradata = &q0014data
+	var q0014data paramTypes.Q0014Data
+	var extradata1 paramTypes.Extradata = &q0014data
 
 	iKey = iBonusMethod + iStatus + strconv.Itoa(int(iTerm)) + strconv.Itoa(int(iPTerm))
 	err := GetItemD(int(iCompany), "Q0014", iKey, iEffectiveDate, &extradata1)
@@ -4456,8 +4457,8 @@ func CalcRBonus(iCompany uint, iCoverage string, iBonusMethod string, iDate stri
 	var iKey string
 	var rateYear int64 = 0
 
-	var q0014data types.Q0014Data
-	var extradataq0014 types.Extradata = &q0014data
+	var q0014data paramTypes.Q0014Data
+	var extradataq0014 paramTypes.Extradata = &q0014data
 	iKey = iBonusMethod + iStatus + strconv.Itoa(int(iTerm)) + strconv.Itoa(int(iPTerm))
 	err := GetItemD(int(iCompany), "Q0014", iKey, iEffectiveDate, &extradataq0014)
 	if err != nil {
@@ -4579,8 +4580,8 @@ func TDFExtrD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 	// Subtract Billing Lead Days as well
 	result = initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
-	var q0005data types.Q0005Data
-	var extradataq0005 types.Extradata = &q0005data
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
 	err := GetItemD(int(iCompany), "Q0005", policyenq.PProduct, policyenq.PRCD, &extradataq0005)
 	if err != nil {
 		return "", err
@@ -4655,8 +4656,8 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		return result.Error
 	}
 
-	var p0060data types.P0060Data
-	var extradatap0060 types.Extradata = &p0060data
+	var p0060data paramTypes.P0060Data
+	var extradatap0060 paramTypes.Extradata = &p0060data
 	iDate := iStartDate
 	iKey := iAllocMethod + iGender
 	err := GetItemD(int(iCompany), "P0060", iKey, iDate, &extradatap0060)
@@ -4664,8 +4665,8 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		return errors.New(err.Error())
 	}
 
-	var p0059data types.P0059Data
-	var extradatap0059 types.Extradata = &p0059data
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
 
 	iKey = iHistoryCode + iBenefitCode
 	err = GetItemD(int(iCompany), "P0059", iKey, iDate, &extradatap0059)
@@ -4834,4 +4835,105 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 		}
 	}
 	return "", nil
+}
+func GetAllFundValueByPol(iCompany uint, iPolicy uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, "")
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpv, opv, _ := GetaFundValue(iCompany, iPolicy, iFundCode, iDate)
+		bpfv = bpfv + bpv
+		opfv = opfv + opv
+	}
+	return bpfv, opfv, iDate
+}
+
+func GetaFundValue(iCompany uint, iPolicy uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and fund_code = ?", iCompany, iPolicy, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = initializers.DB.Where("company_id = ? and fund_code = ?, approval_flag = ?, fund_effective_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+
+	bpfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundBidPrice
+	opfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundOfferPrice
+
+	return bpfundvalue, opfundvalue, iPriceDateUsed
+
+}
+
+func GetAllFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, "")
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpv, opv, _ := GetaFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iDate)
+		bpfv = bpfv + bpv
+		opfv = opfv + opv
+	}
+	return bpfv, opfv, iDate
+}
+
+func GetaFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string) (float64, float64, string) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq models.IlpSummary
+	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = initializers.DB.Where("company_id = ? and fund_code = ?, approval_flag = ?, fund_effective_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+
+	bpfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundBidPrice
+	opfundvalue = ilpsummaryenq.FundUnits * ilppriceenq.FundOfferPrice
+
+	return bpfundvalue, opfundvalue, iPriceDateUsed
+
 }

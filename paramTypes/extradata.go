@@ -69,8 +69,8 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.BillingCurr[i] == "" {
 				break
 			}
-			_, curr, _ := GetParamDesc(uint(coy), "P0023", m.BillingCurr[i], uint(langid))
-			allowedbilling = append(allowedbilling, curr)
+			short, curr, _ := GetParamDesc(uint(coy), "P0023", m.BillingCurr[i], uint(langid))
+			allowedbilling = append(allowedbilling, m.BillingCurr[i], short, curr)
 
 		}
 		resp["AllowedBillingCurriencies"] = allowedbilling
@@ -1692,6 +1692,13 @@ func (m *P0062Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return descs.Shortdesc, descs.Longdesc, nil
 }
 */
+// GetParamDesc - Get Long and Short Description of an item
+//
+// Inputs: Company, Param , Param ITem and Language
+//
+// # Outputs  Short Description, Long Description and Error
+//
+// ©  FuturaInsTech
 
 func GetParamDesc(iCompany uint, iParam string, iItem string, iLanguage uint) (string, string, error) {
 	var paramdesc models.ParamDesc

@@ -113,7 +113,7 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 				break
 			}
 
-			short, long, _ := GetParamDesc(uint(coy), "P0023", m.Frequencies[i], uint(langid))
+			short, long, _ := GetParamDesc(uint(coy), "Q0009", m.Frequencies[i], uint(langid))
 
 			resultOut := map[string]interface{}{
 				"Item":      m.Frequencies[i],
@@ -263,7 +263,7 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 			if m.FUNDCODE[i] == "" {
 				break
 			}
-			short, long, _ := GetParamDesc(uint(coy), "P0023", m.FUNDCODE[i], uint(langid))
+			short, long, _ := GetParamDesc(uint(coy), "P0061", m.FUNDCODE[i], uint(langid))
 
 			resultOut := map[string]interface{}{
 				"Item":      m.FUNDCODE[i],

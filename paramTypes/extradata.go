@@ -85,30 +85,45 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 		return resp
 	} else if datamap["function"] == "ContractCurr" {
 		resp := make(map[string]interface{})
-		contractcurr := make([]string, 0)
+		//	contractcurr := make([]string, 0)
+		resultarray := make([]interface{}, 0)
 		for i := 0; i < len(m.ContractCurr); i++ {
 			if m.ContractCurr[i] == "" {
 				break
 			}
-			_, curr, _ := GetParamDesc(uint(coy), "P0023", m.ContractCurr[i], uint(langid))
-			contractcurr = append(contractcurr, curr)
+			short, long, _ := GetParamDesc(uint(coy), "P0023", m.ContractCurr[i], uint(langid))
 
+			resultOut := map[string]interface{}{
+				"Item":      m.ContractCurr[i],
+				"ShortDesc": short,
+				"LongDesc":  long,
+			}
+
+			resultarray = append(resultarray, resultOut)
 		}
-		resp["AllowedContractCurriencies"] = contractcurr
+		resp["AllowedContractCurriencies"] = resultarray
 		return resp
 	} else if datamap["function"] == "Frequencies" {
 		resp := make(map[string]interface{})
-		allowedfreq := make([]string, 0)
+		//allowedfreq := make([]string, 0)
+		resultarray := make([]interface{}, 0)
+
 		for i := 0; i < len(m.Frequencies); i++ {
 			if m.Frequencies[i] == "" {
 				break
 			}
 
-			_, freq, _ := GetParamDesc(uint(coy), "Q0009", m.Frequencies[i], uint(langid))
-			allowedfreq = append(allowedfreq, freq)
+			short, long, _ := GetParamDesc(uint(coy), "P0023", m.Frequencies[i], uint(langid))
 
+			resultOut := map[string]interface{}{
+				"Item":      m.Frequencies[i],
+				"ShortDesc": short,
+				"LongDesc":  long,
+			}
+
+			resultarray = append(resultarray, resultOut)
 		}
-		resp["AllowedFrequencies"] = allowedfreq
+		resp["AllowedFrequencies"] = resultarray
 		return resp
 	} else {
 		return nil
@@ -242,15 +257,23 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 	} else if datamap["function"] == "FundCode" {
 		resp := make(map[string]interface{})
-		funds := make([]string, 0)
+		//funds := make([]string, 0)
+		resultarray := make([]interface{}, 0)
 		for i := 0; i < len(m.FUNDCODE); i++ {
 			if m.FUNDCODE[i] == "" {
 				break
 			}
-			_, fund, _ := GetParamDesc(uint(coy), "P0061", m.FUNDCODE[i], uint(langid))
-			funds = append(funds, fund)
+			short, long, _ := GetParamDesc(uint(coy), "P0023", m.FUNDCODE[i], uint(langid))
+
+			resultOut := map[string]interface{}{
+				"Item":      m.FUNDCODE[i],
+				"ShortDesc": short,
+				"LongDesc":  long,
+			}
+
+			resultarray = append(resultarray, resultOut)
 		}
-		resp["Funds"] = funds
+		resp["Funds"] = resultarray
 		return resp
 	} else if datamap["function"] == "PptRange" {
 		resp := make(map[string]interface{})

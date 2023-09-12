@@ -64,16 +64,24 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 	if datamap["function"] == "BillingCurr" {
 		resp := make(map[string]interface{})
-		allowedbilling := make([]string, 0)
+		// allowedbilling := make([]string, 0)
+		resultarray := make([]interface{}, 0)
 		for i := 0; i < len(m.BillingCurr); i++ {
 			if m.BillingCurr[i] == "" {
 				break
 			}
-			short, curr, _ := GetParamDesc(uint(coy), "P0023", m.BillingCurr[i], uint(langid))
-			allowedbilling = append(allowedbilling, m.BillingCurr[i], short, curr)
+			short, long, _ := GetParamDesc(uint(coy), "P0023", m.BillingCurr[i], uint(langid))
+
+			resultOut := map[string]interface{}{
+				"Item":      m.BillingCurr[i],
+				"ShortDesc": short,
+				"LongDesc":  long,
+			}
+
+			resultarray = append(resultarray, resultOut)
 
 		}
-		resp["AllowedBillingCurriencies"] = allowedbilling
+		resp["AllowedBillingCurriencies"] = resultarray
 		return resp
 	} else if datamap["function"] == "ContractCurr" {
 		resp := make(map[string]interface{})

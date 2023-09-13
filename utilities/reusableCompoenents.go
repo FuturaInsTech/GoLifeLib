@@ -641,7 +641,7 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 	term := strconv.FormatUint(uint64(iTerm), 10)
 	premTerm := strconv.FormatUint(uint64(iPremTerm), 10)
 	//fmt.Println("****************", iCompany, iCoverage, iAge, iGender, iTerm, iPremMethod, iDate, iMortality)
-	if q0006data.PremCalcType == "A" {
+	if q0006data.PremCalcType == "A" || q0006data.PremCalcType == "U" {
 		if q0006data.PremiumMethod == "PM002" {
 			q0010key = iCoverage + iGender
 		}

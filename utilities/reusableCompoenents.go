@@ -5132,7 +5132,7 @@ func TDFFundM(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 		return "", result.Error
 	}
 
-	result = initializers.DB.Where("company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P").Order("fund_eff_date").Find(&benefitenq)
+	result = initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
 	for i := 0; i < len(benefitenq); i++ {
 		if benefitenq[i].IlpMortalityDate > odate {
 			odate = benefitenq[i].IlpMortalityDate
@@ -5195,7 +5195,7 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 		return "", result.Error
 	}
 
-	result = initializers.DB.Where("company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P").Order("fund_eff_date").Find(&benefitenq)
+	result = initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
 	for i := 0; i < len(benefitenq); i++ {
 		if benefitenq[i].IlpFeeDate > odate {
 			odate = benefitenq[i].IlpMortalityDate

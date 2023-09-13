@@ -5119,7 +5119,7 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 // # Outputs  Old Record is Soft Deleted and New Record is Created
 //
 // ©  FuturaInsTech
-func TDFFundM(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevFlag string) (string, error) {
+func TDFFundM(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string, error) {
 
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy
@@ -5182,7 +5182,7 @@ func TDFFundM(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 // # Outputs  Old Record is Soft Deleted and New Record is Created
 //
 // ©  FuturaInsTech
-func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevFlag string) (string, error) {
+func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string, error) {
 
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy

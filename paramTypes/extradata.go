@@ -1673,24 +1673,27 @@ func (m *P0061Data) GetFormattedData(datamap map[string]string) map[string]inter
 	//coy, _ := strconv.Atoi(datamap["company_id"])
 	//langid, _ := strconv.Atoi(datamap["LanguageId"])
 
-	resp := make(map[string]interface{})
-	resultarray := make([]interface{}, 0)
+	if datamap["function"] == "MrtaInterest" {
+		resp := make(map[string]interface{})
+		resultarray := make([]interface{}, 0)
 
-	UlFundCatory := m.FundCategory
-	UlFundCurr := m.FundCurr
-	UlFundType := m.FundType
+		UlFundCatory := m.FundCategory
+		UlFundCurr := m.FundCurr
+		UlFundType := m.FundType
 
-	resultOut := map[string]interface{}{
-		"FundCategory": UlFundCatory,
-		"FundCurr":     UlFundCurr,
-		"FundType":     UlFundType,
+		resultOut := map[string]interface{}{
+			"FundCategory": UlFundCatory,
+			"FundCurr":     UlFundCurr,
+			"FundType":     UlFundType,
+		}
+
+		resultarray = append(resultarray, resultOut)
+
+		resp["P0061"] = resultarray
+		return resp
+	} else {
+		return nil
 	}
-
-	resultarray = append(resultarray, resultOut)
-
-	resp["P0061"] = resultarray
-	return resp
-
 }
 
 // Minimum and Maximum Premium Limit

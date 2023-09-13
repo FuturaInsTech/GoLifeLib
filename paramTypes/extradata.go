@@ -1670,8 +1670,30 @@ func (m *P0061Data) ParseData(datamap map[string]interface{}) {
 
 func (m *P0061Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
-	return nil
+	//coy, _ := strconv.Atoi(datamap["company_id"])
+	//langid, _ := strconv.Atoi(datamap["LanguageId"])
 
+	if datamap["function"] == "P0061" {
+		resp := make(map[string]interface{})
+		resultarray := make([]interface{}, 0)
+
+		UlFundCatory := m.FundCategory
+		UlFundCurr := m.FundCurr
+		UlFundType := m.FundType
+
+		resultOut := map[string]interface{}{
+			"FundCategory": UlFundCatory,
+			"FundCurr":     UlFundCurr,
+			"FundType":     UlFundType,
+		}
+
+		resultarray = append(resultarray, resultOut)
+
+		resp["P0061"] = resultarray
+		return resp
+	} else {
+		return nil
+	}
 }
 
 // Minimum and Maximum Premium Limit
@@ -1741,4 +1763,34 @@ func GetParamDesc(iCompany uint, iParam string, iItem string, iLanguage uint) (s
 		//return errors.New(results.Error.Error())
 	}
 	return paramdesc.Shortdesc, paramdesc.Longdesc, nil
+}
+
+// P0063 - Flat Amount or Flat % on Fund Value  or Simple or Compount
+
+type P0063Data struct {
+	FlatAmount        float64 // Flat Amount Per Year
+	FundValPercentage float64 // Flat Percentage on Fund Value Per Year
+	Percentage        float64 // Increase % Per Year
+	SimpleOrCompound  string  // Simple or Compunt Indicator P0050
+	CapAmount         float64 // Max Amount
+}
+
+func (m *P0063Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0063Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
 }

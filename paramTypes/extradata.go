@@ -1673,7 +1673,7 @@ func (m *P0061Data) GetFormattedData(datamap map[string]string) map[string]inter
 	//coy, _ := strconv.Atoi(datamap["company_id"])
 	//langid, _ := strconv.Atoi(datamap["LanguageId"])
 
-	if datamap["function"] == "MrtaInterest" {
+	if datamap["function"] == "P0061" {
 		resp := make(map[string]interface{})
 		resultarray := make([]interface{}, 0)
 

@@ -1619,8 +1619,9 @@ func (m *P0058Data) GetFormattedData(datamap map[string]string) map[string]inter
 // ILP Rules
 // Transaction Code + Coverage Code
 type P0059Data struct {
-	CurrentOrFuture string `gorm:"type:varchar(1)"` // P0050
-	SeqNo           int
+	CurrentOrFuture    string `gorm:"type:varchar(1)"` // P0050
+	SeqNo              int
+	AllocationCategory string // P0050 2 Character
 }
 
 func (m *P0059Data) ParseData(datamap map[string]interface{}) {

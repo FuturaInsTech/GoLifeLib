@@ -56,6 +56,7 @@ type IlpTransaction struct {
 	Seqno               uint
 	UlProcessFlag       string `gorm:"type:varchar(01)"` //P0050
 	UlpPriceDate        string `gorm:"type:varchar(08)"`
+	AllocationCategory  string `gorm:"type:varchar(02)"` //P0050  Denote PR/MP/FE etc
 }
 
 type IlpFund struct {

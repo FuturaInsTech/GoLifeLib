@@ -4720,6 +4720,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.ContractCurry = policyenq.PContractCurr
 		ilptrancrt.HistoryCode = iHistoryCode
 		ilptrancrt.InvNonInvFlag = ilpfundenq[j].FundType
+		ilptrancrt.AllocationCategory = "PR"
 		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 		ilptrancrt.AccountCode = "Invested" // ranga
 		var acccode models.AccountCode
@@ -4756,6 +4757,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	ilptrancrt.ContractCurry = policyenq.PContractCurr
 	ilptrancrt.HistoryCode = iHistoryCode
 	ilptrancrt.InvNonInvFlag = "NI"
+	ilptrancrt.AllocationCategory = "NI"
 	ilptrancrt.InvNonInvPercentage = 0
 	ilptrancrt.Tranno = iTranno
 
@@ -5090,6 +5092,8 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 			ilptrancrt.ContractCurry = iContractCurr
 			ilptrancrt.HistoryCode = iHistoryCode
 			ilptrancrt.InvNonInvFlag = ilpfundenq[j].FundType
+			ilptrancrt.AllocationCategory = "PR"
+
 			ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 			ilptrancrt.AccountCode = iFunction + "Invested"
 			var acccode models.AccountCode

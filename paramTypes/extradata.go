@@ -36,6 +36,7 @@ type Q0005Data struct {
 	BillingLeadDays       int
 	LapseInterest         float64
 	AgencyChannel         []string //P0050
+	BackDateAllowed       string   // P0050  YESNO
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {

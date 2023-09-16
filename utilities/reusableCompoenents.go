@@ -5240,3 +5240,269 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 	return "", nil
 }
+
+func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode string, iEffDate string) (float64, string, error) {
+
+	var policyenq models.Policy
+
+	results := initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if results.Error != nil {
+		return 0, "", results.Error
+	}
+
+	iDate := policyenq.PRCD
+	boolstat, _ := CheckStatus(iCompany, iHistoryCode, iDate, policyenq.PolStatus)
+
+	if boolstat {
+		err := errors.New("Invalid Policy Status")
+		return 0, "", err
+	}
+
+	var benefitupd models.Benefit
+
+	results = initializers.DB.Find(&benefitupd, "company_id = ? and policy_id = ? and id = ?", iCompany, iPolicy, iBenefit)
+
+	if results.Error != nil {
+		return 0, "", results.Error
+	}
+
+	iDate = benefitupd.BStartDate
+	boolstat, _ = CheckStatus(iCompany, iHistoryCode, iDate, policyenq.PolStatus)
+
+	if boolstat {
+		err := errors.New("Invalid Benefit Status")
+		return 0, "", err
+	}
+
+	iCoverage := benefitupd.BCoverage
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		err := errors.New("Q0006 Not Found")
+		return 0, "", err
+	}
+
+	if q0006data.PremCalcType != "U" {
+		err := errors.New("Not Unit Linked")
+		return 0, "", err
+	}
+
+	if q0006data.UlMorttMethod == "" {
+		err := errors.New("Mortality Method Not Found")
+		return 0, "", err
+
+	}
+
+	if q0006data.UlMortFreq == "" {
+		err := errors.New("Mortality Frequency Not Found")
+		return 0, "", err
+	}
+	iNextDue := Date2String(GetNextDue(iEffDate, q0006data.UlMortFreq, ""))
+
+	iUlMortalityMethod := q0006data.UlMorttMethod
+	oSA := 0.0
+	oAmount := 0.0
+	switch iUlMortalityMethod {
+	case "ULM001":
+		oSA = float64(benefitupd.BSumAssured)
+	case "ULM002":
+		oFund, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+		oSA = float64(benefitupd.BSumAssured) - oFund
+
+	case "ULM003":
+		oFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, "", iEffDate)
+		oSA = float64(benefitupd.BSumAssured) - oFund
+	case "ULM004":
+		oFund, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+		oSA = float64(benefitupd.BSumAssured) + oFund
+	case "ULM005":
+		oFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, "", iEffDate)
+		oSA = float64(benefitupd.BSumAssured) + oFund
+	default:
+		oSA = 0
+	}
+	fmt.Println("New SA", oSA)
+	if oSA < 0 {
+		oSA = 0
+	}
+	iPrem := 0.00
+	iAge, _, _, _, _, _ := CalculateAge(benefitupd.BDOB, iEffDate, q0006data.AgeCalcMethod)
+	iGender := benefitupd.BGender
+	iTerm := benefitupd.BTerm
+	iPremTerm := benefitupd.BPTerm
+	iPremMethod := q0006data.PremiumMethod
+	iMortalityClass := benefitupd.BMortality
+	iPrem, err = GetAnnualRate(iCompany, iCoverage, uint(iAge), iGender, iTerm, iPremTerm, iPremMethod, iEffDate, iMortalityClass)
+	iPrem = iPrem * oSA / 10000
+	iMortFreq := q0006data.UlMortFreq
+	mPrem := 0.00
+	switch iMortFreq {
+	case "M":
+		mPrem = iPrem / 12
+	case "Q":
+		mPrem = iPrem / 4
+	case "H":
+		mPrem = iPrem / 2
+	case "Y":
+		mPrem = iPrem / 1
+	}
+
+	fmt.Println(iPrem, mPrem)
+	oAmount = RoundFloat(mPrem, 2)
+
+	return oAmount, iNextDue, nil
+}
+
+func GetUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string) (float64, string, error) {
+
+	iKey := iFeeMethod
+	iNextDue := Date2String(GetNextDue(iEffDate, iFeeFreq, ""))
+	oAmount := 0.00
+	var p0063data paramTypes.P0063Data
+	var extradatap0063 paramTypes.Extradata = &p0063data
+	err := GetItemD(int(iCompany), "P0063", iKey, iStartDate, &extradatap0063)
+	if err != nil {
+		err := errors.New("P0063 Not Found")
+		return 0, "", err
+	}
+	switch iKey {
+	case "ULFEE01":
+		oAmount = p0063data.FlatAmount
+	case "ULFEE02":
+		tempdate := iStartDate
+		i := 0
+		for tempdate < iEffDate {
+			a := GetNextDue(tempdate, "Y", "")
+			tempdate = Date2String(a)
+			i++
+		}
+		iDays := i * 365
+		oAmount = SimpleInterest(p0063data.FlatAmount, p0063data.Percentage, float64(iDays))
+	case "ULFEE03":
+		tempdate := iStartDate
+		i := 0
+		for tempdate < iEffDate {
+			a := GetNextDue(tempdate, "Y", "")
+			tempdate = Date2String(a)
+			i++
+		}
+		iDays := i * 365
+		oAmount = CompoundInterest(p0063data.FlatAmount, p0063data.Percentage, float64(iDays))
+
+	case "ULFEE04":
+		oAmount, _, _ = GetAllFundValueByBenefit(iCompany, iPolicy, iBenefitID, "", iEffDate)
+		oAmount = oAmount * p0063data.FundValPercentage / 100
+
+	}
+	mPrem := 0.00
+	switch iFeeFreq {
+	case "M":
+		mPrem = oAmount / 12
+	case "Q":
+		mPrem = oAmount / 4
+	case "H":
+		mPrem = oAmount / 2
+	case "Y":
+		mPrem = oAmount / 1
+	}
+
+	oAmount = RoundFloat(mPrem, 2)
+
+	return oAmount, iNextDue, err
+}
+
+func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint) error {
+
+	var policyenq models.Policy
+
+	result := initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = initializers.DB.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
+	for j := 0; j < len(ilpfundenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, "")
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+
+		var ilptrancrt models.IlpTransaction
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpfundenq[j].FundCode
+		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
+		if iHistoryCode == "H0132" {
+			ilptrancrt.AccountCode = "MortalityPrem" // ranga
+		} else if iHistoryCode == "H0133" {
+			ilptrancrt.AccountCode = "ILPFee" // ranga
+		}
+
+		var acccode models.AccountCode
+		result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
+		if result.RowsAffected == 0 {
+			return result.Error
+		}
+		ilptrancrt.AccountCodeID = acccode.ID
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = initializers.DB.Create(&ilptrancrt)
+	}
+	var tdfpolicyupd models.TDFPolicy
+	iType := "FUNDM"
+	if iHistoryCode == "H0132" {
+		iType = "FUNDM"
+	} else if iHistoryCode == "H0133" {
+		iType = "FUNDF"
+	}
+	var tdfrule models.TDFRule
+	result = initializers.DB.Find(&tdfrule, "company_id = ? and tdf_type  = ?", iCompany, iType)
+	result = initializers.DB.Find(&tdfpolicyupd, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iType)
+	if result.RowsAffected == 0 {
+		tdfpolicyupd.CompanyID = iCompany
+		tdfpolicyupd.PolicyID = iPolicy
+		tdfpolicyupd.EffectiveDate = iStartDate
+		tdfpolicyupd.TDFType = iType
+		tdfpolicyupd.Tranno = iTranno
+		tdfpolicyupd.Seqno = tdfrule.Seqno
+		initializers.DB.Create(&tdfpolicyupd)
+	}
+	return nil
+}

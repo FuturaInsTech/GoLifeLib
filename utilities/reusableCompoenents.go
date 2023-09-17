@@ -5355,7 +5355,7 @@ func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode strin
 	return oAmount, iNextDue, nil
 }
 
-func GetUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string) (float64, string, error) {
+func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string) (float64, string, error) {
 
 	iKey := iFeeMethod
 	iNextDue := Date2String(GetNextDue(iEffDate, iFeeFreq, ""))

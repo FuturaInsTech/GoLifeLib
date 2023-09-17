@@ -4885,7 +4885,7 @@ func GetaFundValue(iCompany uint, iPolicy uint, iFundCode string, iDate string) 
 
 	var ilppriceenq models.IlpPrice
 	var iPriceDateUsed = "00000000"
-	result = initializers.DB.Where("company_id = ? and fund_code = ?, approval_flag = ?, fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	result = initializers.DB.Where("company_id = ? and fund_code = ? and approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
 	if result.Error != nil {
 		return 0, 0, iDate
 	}
@@ -4953,7 +4953,7 @@ func GetaFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCod
 
 	var ilppriceenq models.IlpPrice
 	var iPriceDateUsed = "00000000"
-	result = initializers.DB.Where("company_id = ? and fund_code = ?, approval_flag = ?, fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	result = initializers.DB.Where("company_id = ? and fund_code = ? and  approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
 	if result.Error != nil {
 		return 0, 0, iDate
 	}

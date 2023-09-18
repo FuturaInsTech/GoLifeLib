@@ -4914,9 +4914,16 @@ func GetAllFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundC
 	}
 
 	var ilpsummaryenq []models.IlpSummary
-	result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
-	if result.Error != nil {
-		return 0, 0, iDate
+	if iFundCode != "" {
+		result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+		if result.Error != nil {
+			return 0, 0, iDate
+		}
+	} else {
+		result := initializers.DB.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+		if result.Error != nil {
+			return 0, 0, iDate
+		}
 	}
 
 	bpfv := 0.0

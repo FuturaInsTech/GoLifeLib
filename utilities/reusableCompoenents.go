@@ -5439,6 +5439,9 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		return errors.New(err.Error())
 	}
 
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
 	for j := 0; j < len(ilpfundenq); j++ {
 		iBusinessDate := GetBusinessDate(iCompany, 0, "")
 		if p0059data.CurrentOrFuture == "F" {
@@ -5446,7 +5449,8 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		} else if p0059data.CurrentOrFuture == "E" {
 			iBusinessDate = iEffDate
 		}
-
+		iFundCode := ilpfundenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
 		var ilptrancrt models.IlpTransaction
 		ilptrancrt.CompanyID = iCompany
 		ilptrancrt.PolicyID = iPolicy
@@ -5455,7 +5459,8 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		ilptrancrt.FundType = ilpfundenq[j].FundType
 		ilptrancrt.TransactionDate = iEffDate
 		ilptrancrt.FundEffDate = iBusinessDate
-		ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
 		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
 		ilptrancrt.FundUnits = 0
 		ilptrancrt.FundPrice = 0

@@ -5472,12 +5472,12 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		ilptrancrt.FundUnits = 0
 		ilptrancrt.FundPrice = 0
 		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
-		ilptrancrt.OriginalAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
 		ilptrancrt.ContractCurry = policyenq.PContractCurr
 		ilptrancrt.HistoryCode = iHistoryCode
 		ilptrancrt.InvNonInvFlag = "AC"
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
-		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
+		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 2)
 		if ilptrancrt.AllocationCategory == "MP" {
 			ilptrancrt.AccountCode = "MortalityPrem"
 			// ranga

@@ -4709,8 +4709,8 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.BenefitID = iBenefit
 		ilptrancrt.FundCode = ilpfundenq[j].FundCode
 		ilptrancrt.FundType = ilpfundenq[j].FundType
-		ilptrancrt.TransactionDate = iEffDate
-		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.TransactionDate = iBusinessDate
+		ilptrancrt.FundEffDate = iEffDate
 		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
 		ilptrancrt.FundUnits = 0
@@ -4723,12 +4723,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
 		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 		ilptrancrt.AccountCode = "Invested" // ranga
-		var acccode models.AccountCode
-		result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-		if result.RowsAffected == 0 {
-			return result.Error
-		}
-		ilptrancrt.AccountCodeID = acccode.ID
+
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""
 		ilptrancrt.SurrenderPercentage = 0
@@ -4762,12 +4757,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	ilptrancrt.Tranno = iTranno
 
 	ilptrancrt.AccountCode = "NonInvested"
-	var acccode models.AccountCode
-	result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-	if result.RowsAffected == 0 {
-		return result.Error
-	}
-	ilptrancrt.AccountCodeID = acccode.ID
+
 	ilptrancrt.CurrencyRate = 1.00 // ranga
 	ilptrancrt.MortalityIndicator = ""
 	ilptrancrt.SurrenderPercentage = 0
@@ -5059,12 +5049,7 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 		ilptrancrt.InvNonInvFlag = "NI"
 		ilptrancrt.InvNonInvPercentage = 0.00
 		ilptrancrt.AccountCode = "NonInvested"
-		var acccode models.AccountCode
-		result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-		if result.RowsAffected == 0 {
-			return result.Error
-		}
-		ilptrancrt.AccountCodeID = acccode.ID
+
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""
 		ilptrancrt.SurrenderPercentage = 0
@@ -5104,12 +5089,7 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 
 			ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 			ilptrancrt.AccountCode = iFunction + "Invested"
-			var acccode models.AccountCode
-			result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-			if result.RowsAffected == 0 {
-				return result.Error
-			}
-			ilptrancrt.AccountCodeID = acccode.ID
+
 			ilptrancrt.CurrencyRate = 1.00 // ranga
 			ilptrancrt.MortalityIndicator = ""
 			ilptrancrt.SurrenderPercentage = 0
@@ -5464,8 +5444,8 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		ilptrancrt.BenefitID = iBenefit
 		ilptrancrt.FundCode = ilpfundenq[j].FundCode
 		ilptrancrt.FundType = ilpfundenq[j].FundType
-		ilptrancrt.TransactionDate = iEffDate
-		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.TransactionDate = iBusinessDate
+		ilptrancrt.FundEffDate = iEffDate
 		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
 		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
@@ -5485,12 +5465,6 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 			ilptrancrt.AccountCode = "ILPFee" // ranga
 		}
 
-		var acccode models.AccountCode
-		result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-		if result.RowsAffected == 0 {
-			return result.Error
-		}
-		ilptrancrt.AccountCodeID = acccode.ID
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""
 		ilptrancrt.SurrenderPercentage = 0

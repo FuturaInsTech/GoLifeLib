@@ -26,7 +26,7 @@ type IlpSummary struct {
 	BenefitID uint
 	FundCode  string  `gorm:"type:varchar(5)"` //P0050
 	FundType  string  `gorm:"type:varchar(2)"` //P0050
-	FundUnits float64 `gorm:"type:decimal(10,5);"`
+	FundUnits float64 `gorm:"type:decimal(15,5);"`
 }
 
 type IlpTransaction struct {
@@ -40,14 +40,14 @@ type IlpTransaction struct {
 	FundEffDate         string `gorm:"type:varchar(8)"`
 	FundAmount          float64
 	FundCurr            string  `gorm:"type:varchar(3)"`
-	FundUnits           float64 `gorm:"type:decimal(7,5);"`
+	FundUnits           float64 `gorm:"type:decimal(15,5);"`
 	FundPrice           float64 `gorm:"type:decimal(15,5);"`
 	CurrentOrFuture     string  `gorm:"type:varchar(1)"` //P0050
 	OriginalAmount      float64
 	ContractCurry       string  `gorm:"type:varchar(3)"`
 	HistoryCode         string  `gorm:"type:varchar(5)"`
 	InvNonInvFlag       string  `gorm:"type:varchar(2)"`
-	InvNonInvPercentage float64 `gorm:"type:decimal(7,5);"`
+	InvNonInvPercentage float64 `gorm:"type:decimal(15,5);"`
 	AccountCode         string  `gorm:"type:varchar(30)"`
 	CurrencyRate        float64
 	MortalityIndicator  string `gorm:"type:varchar(1)"`

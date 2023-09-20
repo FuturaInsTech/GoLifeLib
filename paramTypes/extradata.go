@@ -1623,6 +1623,7 @@ type P0059Data struct {
 	CurrentOrFuture    string `gorm:"type:varchar(1)"` // P0050
 	SeqNo              int
 	AllocationCategory string // P0050 2 Character
+	AccountCode        string `gorm:"type:varchar(30)"`
 }
 
 func (m *P0059Data) ParseData(datamap map[string]interface{}) {

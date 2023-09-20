@@ -27,6 +27,7 @@ type IlpSummary struct {
 	FundCode  string  `gorm:"type:varchar(5)"` //P0050
 	FundType  string  `gorm:"type:varchar(2)"` //P0050
 	FundUnits float64 `gorm:"type:decimal(15,5);"`
+	FundCurr  string  `gorm:"type:varchar(3)"`
 }
 
 type IlpTransaction struct {

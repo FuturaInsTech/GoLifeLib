@@ -5410,6 +5410,9 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		return result.Error
 	}
 
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
 	var p0059data paramTypes.P0059Data
 	var extradatap0059 paramTypes.Extradata = &p0059data
 
@@ -5426,29 +5429,41 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		return errors.New(err.Error())
 	}
 
+	var ilpsumenq []models.IlpSummary
+
+	result = initializers.DB.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
 	// Get Total Fund Value
 	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
 
-	for j := 0; j < len(ilpfundenq); j++ {
+	for j := 0; j < len(ilpsumenq); j++ {
 		iBusinessDate := GetBusinessDate(iCompany, 0, "")
 		if p0059data.CurrentOrFuture == "F" {
 			iBusinessDate = AddLeadDays(iBusinessDate, 1)
 		} else if p0059data.CurrentOrFuture == "E" {
 			iBusinessDate = iEffDate
 		}
-		iFundCode := ilpfundenq[j].FundCode
+		iFundCode := ilpsumenq[j].FundCode
 		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
 		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			return errors.New(err.Error())
+		}
 		ilptrancrt.CompanyID = iCompany
 		ilptrancrt.PolicyID = iPolicy
 		ilptrancrt.BenefitID = iBenefit
-		ilptrancrt.FundCode = ilpfundenq[j].FundCode
-		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
 		ilptrancrt.TransactionDate = iEffDate
 		ilptrancrt.FundEffDate = iBusinessDate
 		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
-		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundCurr = p0061data.FundCurr
 		ilptrancrt.FundUnits = 0
 		ilptrancrt.FundPrice = 0
 		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture

@@ -4709,8 +4709,8 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.BenefitID = iBenefit
 		ilptrancrt.FundCode = ilpfundenq[j].FundCode
 		ilptrancrt.FundType = ilpfundenq[j].FundType
-		ilptrancrt.TransactionDate = iBusinessDate
-		ilptrancrt.FundEffDate = iEffDate
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
 		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
 		ilptrancrt.FundUnits = 0
@@ -5444,8 +5444,8 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		ilptrancrt.BenefitID = iBenefit
 		ilptrancrt.FundCode = ilpfundenq[j].FundCode
 		ilptrancrt.FundType = ilpfundenq[j].FundType
-		ilptrancrt.TransactionDate = iBusinessDate
-		ilptrancrt.FundEffDate = iEffDate
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
 		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
 		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr

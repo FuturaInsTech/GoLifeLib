@@ -5473,12 +5473,7 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		ilptrancrt.InvNonInvFlag = "AC"
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
 		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
-		if ilptrancrt.AllocationCategory == "MP" {
-			ilptrancrt.AccountCode = "MortalityPrem"
-			// ranga
-		} else {
-			ilptrancrt.AccountCode = "ILPFee" // ranga
-		}
+		ilptrancrt.AccountCode = p0059data.AccountCode
 
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""

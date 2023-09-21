@@ -24,9 +24,10 @@ type IlpSummary struct {
 	types.CModel
 	PolicyID  uint
 	BenefitID uint
-	FundCode  string `gorm:"type:varchar(5)"` //P0050
-	FundType  string `gorm:"type:varchar(2)"` //P0050
-	FundUnits float64
+	FundCode  string  `gorm:"type:varchar(5)"` //P0050
+	FundType  string  `gorm:"type:varchar(2)"` //P0050
+	FundUnits float64 `gorm:"type:decimal(15,5);"`
+	FundCurr  string  `gorm:"type:varchar(3)"`
 }
 
 type IlpTransaction struct {
@@ -39,17 +40,16 @@ type IlpTransaction struct {
 	TransactionDate     string `gorm:"type:varchar(8)"`
 	FundEffDate         string `gorm:"type:varchar(8)"`
 	FundAmount          float64
-	FundCurr            string `gorm:"type:varchar(3)"`
-	FundUnits           float64
-	FundPrice           float64
-	CurrentOrFuture     string `gorm:"type:varchar(1)"` //P0050
+	FundCurr            string  `gorm:"type:varchar(3)"`
+	FundUnits           float64 `gorm:"type:decimal(15,5);"`
+	FundPrice           float64 `gorm:"type:decimal(15,5);"`
+	CurrentOrFuture     string  `gorm:"type:varchar(1)"` //P0050
 	OriginalAmount      float64
-	ContractCurry       string `gorm:"type:varchar(3)"`
-	HistoryCode         string `gorm:"type:varchar(5)"`
-	InvNonInvFlag       string `gorm:"type:varchar(2)"`
-	InvNonInvPercentage float64
-	AccountCodeID       uint
-	AccountCode         string `gorm:"type:varchar(30)"`
+	ContractCurry       string  `gorm:"type:varchar(3)"`
+	HistoryCode         string  `gorm:"type:varchar(5)"`
+	InvNonInvFlag       string  `gorm:"type:varchar(2)"`
+	InvNonInvPercentage float64 `gorm:"type:decimal(15,5);"`
+	AccountCode         string  `gorm:"type:varchar(30)"`
 	CurrencyRate        float64
 	MortalityIndicator  string `gorm:"type:varchar(1)"`
 	SurrenderPercentage float64
@@ -64,9 +64,9 @@ type IlpFund struct {
 	types.CModel
 	PolicyID       uint
 	BenefitID      uint
-	EffectiveDate  string `gorm:"type:varchar(8)"`
-	FundCode       string `gorm:"type:varchar(5)"` //P0050
-	FundType       string `gorm:"type:varchar(2)"` //P0050
-	FundCurr       string `gorm:"type:varchar(3)"` //P0050
-	FundPercentage float64
+	EffectiveDate  string  `gorm:"type:varchar(8)"`
+	FundCode       string  `gorm:"type:varchar(5)"` //P0050
+	FundType       string  `gorm:"type:varchar(2)"` //P0050
+	FundCurr       string  `gorm:"type:varchar(3)"` //P0050
+	FundPercentage float64 `gorm:"type:decimal(7,5);"`
 }

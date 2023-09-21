@@ -4723,12 +4723,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
 		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 		ilptrancrt.AccountCode = "Invested" // ranga
-		var acccode models.AccountCode
-		result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-		if result.RowsAffected == 0 {
-			return result.Error
-		}
-		ilptrancrt.AccountCodeID = acccode.ID
+
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""
 		ilptrancrt.SurrenderPercentage = 0
@@ -4762,12 +4757,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	ilptrancrt.Tranno = iTranno
 
 	ilptrancrt.AccountCode = "NonInvested"
-	var acccode models.AccountCode
-	result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-	if result.RowsAffected == 0 {
-		return result.Error
-	}
-	ilptrancrt.AccountCodeID = acccode.ID
+
 	ilptrancrt.CurrencyRate = 1.00 // ranga
 	ilptrancrt.MortalityIndicator = ""
 	ilptrancrt.SurrenderPercentage = 0
@@ -5059,12 +5049,7 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 		ilptrancrt.InvNonInvFlag = "NI"
 		ilptrancrt.InvNonInvPercentage = 0.00
 		ilptrancrt.AccountCode = "NonInvested"
-		var acccode models.AccountCode
-		result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-		if result.RowsAffected == 0 {
-			return result.Error
-		}
-		ilptrancrt.AccountCodeID = acccode.ID
+
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""
 		ilptrancrt.SurrenderPercentage = 0
@@ -5104,12 +5089,7 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 
 			ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 			ilptrancrt.AccountCode = iFunction + "Invested"
-			var acccode models.AccountCode
-			result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-			if result.RowsAffected == 0 {
-				return result.Error
-			}
-			ilptrancrt.AccountCodeID = acccode.ID
+
 			ilptrancrt.CurrencyRate = 1.00 // ranga
 			ilptrancrt.MortalityIndicator = ""
 			ilptrancrt.SurrenderPercentage = 0
@@ -5430,6 +5410,9 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		return result.Error
 	}
 
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
 	var p0059data paramTypes.P0059Data
 	var extradatap0059 paramTypes.Extradata = &p0059data
 
@@ -5446,29 +5429,41 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		return errors.New(err.Error())
 	}
 
+	var ilpsumenq []models.IlpSummary
+
+	result = initializers.DB.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
 	// Get Total Fund Value
 	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
 
-	for j := 0; j < len(ilpfundenq); j++ {
+	for j := 0; j < len(ilpsumenq); j++ {
 		iBusinessDate := GetBusinessDate(iCompany, 0, "")
 		if p0059data.CurrentOrFuture == "F" {
 			iBusinessDate = AddLeadDays(iBusinessDate, 1)
 		} else if p0059data.CurrentOrFuture == "E" {
 			iBusinessDate = iEffDate
 		}
-		iFundCode := ilpfundenq[j].FundCode
+		iFundCode := ilpsumenq[j].FundCode
 		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
 		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			return errors.New(err.Error())
+		}
 		ilptrancrt.CompanyID = iCompany
 		ilptrancrt.PolicyID = iPolicy
 		ilptrancrt.BenefitID = iBenefit
-		ilptrancrt.FundCode = ilpfundenq[j].FundCode
-		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
 		ilptrancrt.TransactionDate = iEffDate
 		ilptrancrt.FundEffDate = iBusinessDate
 		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
-		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundCurr = p0061data.FundCurr
 		ilptrancrt.FundUnits = 0
 		ilptrancrt.FundPrice = 0
 		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
@@ -5477,20 +5472,9 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		ilptrancrt.HistoryCode = iHistoryCode
 		ilptrancrt.InvNonInvFlag = "AC"
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
-		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 2)
-		if ilptrancrt.AllocationCategory == "MP" {
-			ilptrancrt.AccountCode = "MortalityPrem"
-			// ranga
-		} else {
-			ilptrancrt.AccountCode = "ILPFee" // ranga
-		}
+		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
+		ilptrancrt.AccountCode = p0059data.AccountCode
 
-		var acccode models.AccountCode
-		result = initializers.DB.First(&acccode, "company_id = ? and account_code = ? ", iCompany, ilptrancrt.AccountCode)
-		if result.RowsAffected == 0 {
-			return result.Error
-		}
-		ilptrancrt.AccountCodeID = acccode.ID
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""
 		ilptrancrt.SurrenderPercentage = 0

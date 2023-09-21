@@ -1623,6 +1623,7 @@ type P0059Data struct {
 	CurrentOrFuture    string `gorm:"type:varchar(1)"` // P0050
 	SeqNo              int
 	AllocationCategory string // P0050 2 Character
+	AccountCode        string `gorm:"type:varchar(30)"`
 }
 
 func (m *P0059Data) ParseData(datamap map[string]interface{}) {
@@ -1792,6 +1793,36 @@ func (m *P0063Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0063Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// P0064 - ILP Surrender Penalty
+
+type P0064Data struct {
+	SurrenderPenalty []P0064
+}
+type P0064 struct {
+	NoOfMonths        int
+	PenaltyPercentage float64
+}
+
+func (m *P0064Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0064Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
 	return nil
 

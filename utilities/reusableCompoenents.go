@@ -2659,23 +2659,51 @@ func NoOfDays(startDate string, endDate string) (year int64, month int64, week i
 }
 
 // #80
+//
+//		func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
+//			var businessdate models.BusinessDate
+//			// Get with User
+//			result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id <>  null and department <> ?", iCompany, iUser, iDepartment, "")
+//			if result.Error == nil {
+//				// If User Not Found, get with Department
+//				result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and department <> ? and user_id = null", iCompany, iDepartment, "")
+//				if result.Error == nil {
+//					// If Department Not Found, get with comapny
+//					result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id = null", iCompany, "")
+//					if result.Error == nil {
+//						if result.RowsAffected == 0 {
+//							return Date2String(time.Now())
+//						} else {
+//							oDate := businessdate.Date
+//							return oDate
+//						}
+//					} else {
+//						oDate := businessdate.Date
+//						return oDate
+//					}
+//				} else {
+//					oDate := businessdate.Date
+//					return oDate
+//				}
+//			}
+//			return Date2String(time.Now())
+//		}
+//
+//	Check Company, User and Department.  If User is 0
+//	Check Company, Department.  If Department is blank
+//	Check Company
 func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
 	var businessdate models.BusinessDate
 	// Get with User
-	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ?", iCompany, iUser, iDepartment)
-	if result.Error == nil {
+	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department <> ?", iCompany, iUser, iDepartment, "")
+	if result.RowsAffected == 0 {
 		// If User Not Found, get with Department
-		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ?", iCompany, iDepartment)
-		if result.Error == nil {
+		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and department <> ? and user_id IS NULL ", iCompany, iDepartment, "")
+		if result.RowsAffected == 0 {
 			// If Department Not Found, get with comapny
-			result = initializers.DB.Find(&businessdate, "company_id = ?", iCompany)
-			if result.Error == nil {
-				if result.RowsAffected == 0 {
-					return Date2String(time.Now())
-				} else {
-					oDate := businessdate.Date
-					return oDate
-				}
+			result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL", iCompany, "")
+			if result.RowsAffected == 0 {
+				return Date2String(time.Now())
 
 			} else {
 				oDate := businessdate.Date
@@ -2686,8 +2714,11 @@ func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate strin
 			return oDate
 		}
 
+	} else {
+		oDate := businessdate.Date
+		return oDate
 	}
-	return Date2String(time.Now())
+
 }
 
 // #81

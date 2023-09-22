@@ -5260,6 +5260,14 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	return "", nil
 }
 
+// # 129
+// CalcMortPrem - Calculate Mortality Premium for ILP
+//
+// Inputs: Company, Policy, Benefit ID, History Code, Effective Date
+//
+// # Outputs  Mortality Premium for the Frequency, Next Due Date and Error
+//
+// ©  FuturaInsTech
 func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode string, iEffDate string) (float64, string, error) {
 
 	var policyenq models.Policy
@@ -5374,6 +5382,15 @@ func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode strin
 	return oAmount, iNextDue, nil
 }
 
+// # 130
+// CalcPolicyFee - Calculate PolicyFee  for ILP
+//
+// Inputs: Company, Policy, Benefit Code, Benefit Code, Start Date of Benefit, Effective Date, Fee Method and Fee Frequency
+//
+// # Outputs  Policy Fee for the Frequency, Next Due Date and Error
+//
+// ©  FuturaInsTech
+
 func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string) (float64, string, error) {
 
 	iKey := iFeeMethod
@@ -5432,6 +5449,14 @@ func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage str
 	return oAmount, iNextDue, err
 }
 
+// # 131
+// PostUlpDeduction - Post ILP Deductions (Mortality/Policy Fee or Any other deductions)
+//
+// Inputs: Company, Policy, Benefit Code, Benefit ID, Amount to be deducted, History Code, Benefit Code, Start Date of Benefit, Effective Date and Tranno
+//
+// # Outputs  Record is written in ILP Transaction Table
+//
+// ©  FuturaInsTech
 func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint) error {
 
 	var policyenq models.Policy
@@ -5534,4 +5559,25 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		initializers.DB.Create(&tdfpolicyupd)
 	}
 	return nil
+}
+
+// # 132
+// CheckPendingILP - Check Pending ILP Transaction on a Policy
+//
+// Inputs: Company, Policy, Benefit Code
+//
+// # Outputs  Error Description
+//
+// ©  FuturaInsTech
+
+func CheckPendingILP(iCompany uint, iPolicy uint, iLanguage uint) string {
+	var ilptransenq models.IlpTransaction
+
+	result := initializers.DB.Find(&ilptransenq, "company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P")
+	if result.RowsAffected != 0 {
+		errorCode := "E0005"
+		longdesc, _ := GetErrorDesc(uint(iCompany), iLanguage, errorCode)
+		return errorCode + ": -" + longdesc
+	}
+	return ""
 }

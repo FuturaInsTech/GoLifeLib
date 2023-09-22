@@ -2701,7 +2701,7 @@ func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate strin
 		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and department <> ? and user_id IS NULL ", iCompany, iDepartment, "")
 		if result.RowsAffected == 0 {
 			// If Department Not Found, get with comapny
-			result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL", iCompany, "")
+			result = initializers.DB.Find(&businessdate, "company_id = ? and department IS NULL and user_id IS NULL", iCompany)
 			if result.RowsAffected == 0 {
 				return Date2String(time.Now())
 

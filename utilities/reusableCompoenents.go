@@ -2453,7 +2453,7 @@ func GetMRTABen(iSA float64, iInterest float64, iPolYear float64, iInterimPeriod
 }
 
 // #66
-func GetMrtaPrem(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
+func GetMrtaPremO(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
 
 	var q0006data paramTypes.Q0006Data
 	var extradata paramTypes.Extradata = &q0006data
@@ -5581,4 +5581,62 @@ func CheckPendingILP(iCompany uint, iPolicy uint, iLanguage uint) string {
 		return shortCode + ": -" + longdesc
 	}
 	return ""
+}
+
+// # 133
+// GetMrtaPrem - calculate MRTA Premium (New Version)
+//
+// Inputs: Company, Benefit Code, Initial SA, Initial Age, Gender, Term , Premium Paying Term, Interest, Interim Period, Start Date
+//
+// # Outputs  Premium and Error Description
+//
+// ©  FuturaInsTech
+
+func GetMrtaPrem(iCompany uint, iCoverage string, iSA float64, iAge uint, iGender string, iTerm uint, iPremTerm uint, iInterest float64, iInterimPeriod uint, iDate string) (float64, error) {
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		return 0, err
+	}
+
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
+	var q0010key string
+	var prem float64
+	prem = 0
+	var prem1 float64
+	prem1 = 0
+	oSA := iSA
+	term := strconv.FormatUint(uint64(iTerm), 10)
+	premTerm := strconv.FormatUint(uint64(iTerm), 10)
+
+	if q0006data.PremCalcType == "A" {
+		q0010key = iCoverage + iGender
+	} else if q0006data.PremCalcType == "P" {
+		q0010key = iCoverage + iGender + term + premTerm
+		// END1 + Male + Term + Premium Term
+	}
+	err = GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)
+	if err != nil {
+		return 0, err
+	}
+
+	for x := 0; x < int(iTerm); x++ {
+		rSA := GetMRTABen(float64(oSA), float64(iInterest), float64(x+1), float64(iInterimPeriod), float64(iTerm))
+		for i := 0; i < len(q0010data.Rates); i++ {
+			if q0010data.Rates[i].Age == uint(iAge) {
+				prem = q0010data.Rates[i].Rate / 10000
+				prem1 = (prem * rSA) + prem1
+				iAge = iAge + 1
+				break
+			}
+		}
+		oSA = rSA
+	}
+	prem = prem1
+
+	return prem, nil
+
 }

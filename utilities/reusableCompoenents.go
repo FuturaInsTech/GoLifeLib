@@ -4750,7 +4750,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.ContractCurry = policyenq.PContractCurr
 		ilptrancrt.HistoryCode = iHistoryCode
-		ilptrancrt.InvNonInvFlag = ilpfundenq[j].FundType
+		ilptrancrt.InvNonInvFlag = "AC"
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
 		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 		ilptrancrt.AccountCode = "Invested" // ranga
@@ -5571,13 +5571,14 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 // ©  FuturaInsTech
 
 func CheckPendingILP(iCompany uint, iPolicy uint, iLanguage uint) string {
+
 	var ilptransenq models.IlpTransaction
 
 	result := initializers.DB.Find(&ilptransenq, "company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P")
 	if result.RowsAffected != 0 {
-		errorCode := "E0005"
-		longdesc, _ := GetErrorDesc(uint(iCompany), iLanguage, errorCode)
-		return errorCode + ": -" + longdesc
+		shortCode := "E0005"
+		longdesc, _ := GetErrorDesc(uint(iCompany), iLanguage, shortCode)
+		return shortCode + ": -" + longdesc
 	}
 	return ""
 }

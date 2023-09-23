@@ -1620,10 +1620,17 @@ func (m *P0058Data) GetFormattedData(datamap map[string]string) map[string]inter
 // ILP Rules
 // Transaction Code + Coverage Code
 type P0059Data struct {
-	CurrentOrFuture    string `gorm:"type:varchar(1)"` // P0050
-	SeqNo              int
-	AllocationCategory string // P0050 2 Character
-	AccountCode        string `gorm:"type:varchar(30)"`
+	CurrentOrFuture          string `gorm:"type:varchar(1)"` // P0050
+	SeqNo                    int
+	AllocationCategory       string // P0050 2 Character
+	AccountCode              string `gorm:"type:varchar(30)"`
+	NegativeUnits            string // P0050 YES/NO Y
+	NegativeUnitsPeriod      uint   // In Months    36
+	NegativeAmounts          string //P0050 YES/NO  N
+	NegativeAmountsPeriod    uint   // In Months    26
+	RecoverFromTopUpFirst    string // YES/NO
+	NegUnitsOrAmtRecovPeriod uint   //In Months     60 MONTHS
+
 }
 
 func (m *P0059Data) ParseData(datamap map[string]interface{}) {

@@ -643,13 +643,15 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 	//fmt.Println("****************", iCompany, iCoverage, iAge, iGender, iTerm, iPremMethod, iDate, iMortality)
 	if q0006data.PremCalcType == "A" || q0006data.PremCalcType == "U" {
 		if q0006data.PremiumMethod == "PM002" {
+			// END1 + Male
 			q0010key = iCoverage + iGender
 		}
 	} else if q0006data.PremCalcType == "P" {
-		if q0006data.PremiumMethod == "PM001" {
+		// END1 + Male + Term + Premium Term
+		if q0006data.PremiumMethod == "PM001" || q0006data.PremiumMethod == "PM003" {
 			q0010key = iCoverage + iGender + term + premTerm
 		}
-		// END1 + Male + Term + Premium Term
+
 	}
 	fmt.Println("Premium Key ******", iCoverage, iGender, term, premTerm, q0006data.PremCalcType, q0010key)
 	err := GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)
@@ -2453,7 +2455,7 @@ func GetMRTABen(iSA float64, iInterest float64, iPolYear float64, iInterimPeriod
 }
 
 // #66
-func GetMrtaPrem(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
+func GetMrtaPremO(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
 
 	var q0006data paramTypes.Q0006Data
 	var extradata paramTypes.Extradata = &q0006data
@@ -2659,23 +2661,51 @@ func NoOfDays(startDate string, endDate string) (year int64, month int64, week i
 }
 
 // #80
+//
+//		func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
+//			var businessdate models.BusinessDate
+//			// Get with User
+//			result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id <>  null and department <> ?", iCompany, iUser, iDepartment, "")
+//			if result.Error == nil {
+//				// If User Not Found, get with Department
+//				result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and department <> ? and user_id = null", iCompany, iDepartment, "")
+//				if result.Error == nil {
+//					// If Department Not Found, get with comapny
+//					result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id = null", iCompany, "")
+//					if result.Error == nil {
+//						if result.RowsAffected == 0 {
+//							return Date2String(time.Now())
+//						} else {
+//							oDate := businessdate.Date
+//							return oDate
+//						}
+//					} else {
+//						oDate := businessdate.Date
+//						return oDate
+//					}
+//				} else {
+//					oDate := businessdate.Date
+//					return oDate
+//				}
+//			}
+//			return Date2String(time.Now())
+//		}
+//
+//	Check Company, User and Department.  If User is 0
+//	Check Company, Department.  If Department is blank
+//	Check Company
 func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
 	var businessdate models.BusinessDate
 	// Get with User
-	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ?", iCompany, iUser, iDepartment)
-	if result.Error == nil {
+	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department <> ?", iCompany, iUser, iDepartment, "")
+	if result.RowsAffected == 0 {
 		// If User Not Found, get with Department
-		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ?", iCompany, iDepartment)
-		if result.Error == nil {
+		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and department <> ? and user_id IS NULL ", iCompany, iDepartment, "")
+		if result.RowsAffected == 0 {
 			// If Department Not Found, get with comapny
-			result = initializers.DB.Find(&businessdate, "company_id = ?", iCompany)
-			if result.Error == nil {
-				if result.RowsAffected == 0 {
-					return Date2String(time.Now())
-				} else {
-					oDate := businessdate.Date
-					return oDate
-				}
+			result = initializers.DB.Find(&businessdate, "company_id = ? and department IS NULL and user_id IS NULL", iCompany)
+			if result.RowsAffected == 0 {
+				return Date2String(time.Now())
 
 			} else {
 				oDate := businessdate.Date
@@ -2686,8 +2716,11 @@ func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate strin
 			return oDate
 		}
 
+	} else {
+		oDate := businessdate.Date
+		return oDate
 	}
-	return Date2String(time.Now())
+
 }
 
 // #81
@@ -4719,7 +4752,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
 		ilptrancrt.ContractCurry = policyenq.PContractCurr
 		ilptrancrt.HistoryCode = iHistoryCode
-		ilptrancrt.InvNonInvFlag = ilpfundenq[j].FundType
+		ilptrancrt.InvNonInvFlag = "AC"
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
 		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
 		ilptrancrt.AccountCode = "Invested" // ranga
@@ -5229,6 +5262,14 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	return "", nil
 }
 
+// # 129
+// CalcMortPrem - Calculate Mortality Premium for ILP
+//
+// Inputs: Company, Policy, Benefit ID, History Code, Effective Date
+//
+// # Outputs  Mortality Premium for the Frequency, Next Due Date and Error
+//
+// ©  FuturaInsTech
 func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode string, iEffDate string) (float64, string, error) {
 
 	var policyenq models.Policy
@@ -5343,6 +5384,15 @@ func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode strin
 	return oAmount, iNextDue, nil
 }
 
+// # 130
+// CalcPolicyFee - Calculate PolicyFee  for ILP
+//
+// Inputs: Company, Policy, Benefit Code, Benefit Code, Start Date of Benefit, Effective Date, Fee Method and Fee Frequency
+//
+// # Outputs  Policy Fee for the Frequency, Next Due Date and Error
+//
+// ©  FuturaInsTech
+
 func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string) (float64, string, error) {
 
 	iKey := iFeeMethod
@@ -5401,6 +5451,14 @@ func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage str
 	return oAmount, iNextDue, err
 }
 
+// # 131
+// PostUlpDeduction - Post ILP Deductions (Mortality/Policy Fee or Any other deductions)
+//
+// Inputs: Company, Policy, Benefit Code, Benefit ID, Amount to be deducted, History Code, Benefit Code, Start Date of Benefit, Effective Date and Tranno
+//
+// # Outputs  Record is written in ILP Transaction Table
+//
+// ©  FuturaInsTech
 func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint) error {
 
 	var policyenq models.Policy
@@ -5503,4 +5561,84 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		initializers.DB.Create(&tdfpolicyupd)
 	}
 	return nil
+}
+
+// # 132
+// CheckPendingILP - Check Pending ILP Transaction on a Policy
+//
+// Inputs: Company, Policy, Benefit Code
+//
+// # Outputs  Error Description
+//
+// ©  FuturaInsTech
+
+func CheckPendingILP(iCompany uint, iPolicy uint, iLanguage uint) string {
+
+	var ilptransenq models.IlpTransaction
+
+	result := initializers.DB.Find(&ilptransenq, "company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P")
+	if result.RowsAffected != 0 {
+		shortCode := "E0005"
+		longdesc, _ := GetErrorDesc(uint(iCompany), iLanguage, shortCode)
+		return shortCode + ": -" + longdesc
+	}
+	return ""
+}
+
+// # 133
+// GetMrtaPrem - calculate MRTA Premium (New Version)
+//
+// Inputs: Company, Benefit Code, Initial SA, Initial Age, Gender, Term , Premium Paying Term, Interest, Interim Period, Start Date
+//
+// # Outputs  Premium and Error Description
+//
+// ©  FuturaInsTech
+
+func GetMrtaPrem(iCompany uint, iCoverage string, iSA float64, iAge uint, iGender string, iTerm uint, iPremTerm uint, iInterest float64, iInterimPeriod uint, iDate string) (float64, error) {
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		return 0, err
+	}
+
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
+	var q0010key string
+	var prem float64
+	prem = 0
+	var prem1 float64
+	prem1 = 0
+	oSA := iSA
+	term := strconv.FormatUint(uint64(iTerm), 10)
+	premTerm := strconv.FormatUint(uint64(iTerm), 10)
+
+	if q0006data.PremCalcType == "A" {
+		q0010key = iCoverage + iGender
+	} else if q0006data.PremCalcType == "P" {
+		q0010key = iCoverage + iGender + term + premTerm
+		// END1 + Male + Term + Premium Term
+	}
+	err = GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)
+	if err != nil {
+		return 0, err
+	}
+
+	for x := 0; x < int(iTerm); x++ {
+		rSA := GetMRTABen(float64(oSA), float64(iInterest), float64(x+1), float64(iInterimPeriod), float64(iTerm))
+		for i := 0; i < len(q0010data.Rates); i++ {
+			if q0010data.Rates[i].Age == uint(iAge) {
+				prem = q0010data.Rates[i].Rate / 10000
+				prem1 = (prem * rSA) + prem1
+				iAge = iAge + 1
+				break
+			}
+		}
+		oSA = rSA
+	}
+	prem = prem1
+
+	return prem, nil
+
 }

@@ -2714,16 +2714,45 @@ func NoOfDays(startDate string, endDate string) (year int64, month int64, week i
 //	Check Company, User and Department.  If User is 0
 //	Check Company, Department.  If Department is blank
 //	Check Company
-func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
+// func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
+// 	var businessdate models.BusinessDate
+// 	// Get with User
+// 	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department <> ?", iCompany, iUser, iDepartment, "")
+// 	if result.RowsAffected == 0 {
+// 		// If User Not Found, get with Department
+// 		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL ", iCompany, iDepartment)
+// 		if result.RowsAffected == 0 {
+// 			// If Department Not Found, get with comapny
+// 			result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL", iCompany, "")
+// 			if result.RowsAffected == 0 {
+// 				return Date2String(time.Now())
+
+// 			} else {
+// 				oDate := businessdate.Date
+// 				return oDate
+// 			}
+// 		} else {
+// 			oDate := businessdate.Date
+// 			return oDate
+// 		}
+
+// 	} else {
+// 		oDate := businessdate.Date
+// 		return oDate
+// 	}
+
+// }
+
+func GetBusinessDate(iCompany uint, iUser uint, iDepartment uint) (oDate string) {
 	var businessdate models.BusinessDate
 	// Get with User
-	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department <> ?", iCompany, iUser, iDepartment, "")
+	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department IS NOT NULL", iCompany, iUser, iDepartment, "")
 	if result.RowsAffected == 0 {
 		// If User Not Found, get with Department
 		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL ", iCompany, iDepartment)
 		if result.RowsAffected == 0 {
 			// If Department Not Found, get with comapny
-			result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL", iCompany, "")
+			result = initializers.DB.Find(&businessdate, "company_id = ? and department IS NULL and user_id IS NULL", iCompany)
 			if result.RowsAffected == 0 {
 				return Date2String(time.Now())
 
@@ -4204,7 +4233,7 @@ func GetPremDueDates(iStartDate string, freq string) string {
 // ***
 
 func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string, iIFSC string, iBankAc string) (oreceipt uint, oerror error) {
-	iBusinssdate := GetBusinessDate(iCompany, 1, "02")
+	iBusinssdate := GetBusinessDate(iCompany, 1, 2)
 
 	var policyenq models.Policy
 	var receiptupd models.Receipt
@@ -4749,7 +4778,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	}
 
 	for j := 0; j < len(ilpfundenq); j++ {
-		iBusinessDate := GetBusinessDate(iCompany, 0, "")
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 		if p0059data.CurrentOrFuture == "F" {
 			iBusinessDate = AddLeadDays(iBusinessDate, 1)
 		} else if p0059data.CurrentOrFuture == "E" {
@@ -4885,7 +4914,7 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 // # 122
 func GetAllFundValueByPol(iCompany uint, iPolicy uint, iFundCode string, iDate string) (float64, float64, string) {
 	if iDate == "" {
-		iDate = GetBusinessDate(iCompany, 0, "")
+		iDate = GetBusinessDate(iCompany, 0, 0)
 	}
 
 	var ilpsummaryenq []models.IlpSummary
@@ -4953,7 +4982,7 @@ func GetaFundValue(iCompany uint, iPolicy uint, iFundCode string, iDate string) 
 // ©  FuturaInsTech
 func GetAllFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string) (float64, float64, string) {
 	if iDate == "" {
-		iDate = GetBusinessDate(iCompany, 0, "")
+		iDate = GetBusinessDate(iCompany, 0, 0)
 	}
 
 	var ilpsummaryenq []models.IlpSummary
@@ -5114,7 +5143,7 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 	} else {
 		// Invested Posting
 		for j := 0; j < len(ilpfundenq); j++ {
-			iBusinessDate := GetBusinessDate(iCompany, 0, "")
+			iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 			if iCurrentOrFuture == "F" {
 				iBusinessDate = AddLeadDays(iBusinessDate, 1)
 			} else if iCurrentOrFuture == "E" {
@@ -5529,7 +5558,7 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
 
 	for j := 0; j < len(ilpsumenq); j++ {
-		iBusinessDate := GetBusinessDate(iCompany, 0, "")
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 		if p0059data.CurrentOrFuture == "F" {
 			iBusinessDate = AddLeadDays(iBusinessDate, 1)
 		} else if p0059data.CurrentOrFuture == "E" {

@@ -5433,7 +5433,18 @@ func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage str
 		oAmount, _, _ = GetAllFundValueByBenefit(iCompany, iPolicy, iBenefitID, "", iEffDate)
 		oAmount = oAmount * p0063data.FundValPercentage / 100
 
+	case "ULFEE05":
+		oAmount, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffDate)
+		oAmount = oAmount * p0063data.FundValPercentage / 100
+
 	}
+
+	if p0063data.CapAmount != 0 {
+		if oAmount > p0063data.CapAmount {
+			oAmount = p0063data.CapAmount
+		}
+	}
+
 	mPrem := 0.00
 	switch iFeeFreq {
 	case "M":

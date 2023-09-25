@@ -18,25 +18,27 @@ type Extradata interface {
 
 // Q0005 Structure T5688
 type Q0005Data struct {
-	FreeLookDays          int
-	MaxLives              int
-	MinLives              int
-	MinSurrMonths         int
-	ProductFamily         string
-	ReinstatementMonth    int
-	Renewable             string
-	Single                string
-	Frequencies           [4]string // M Q H Y
-	ContractCurr          []string  // INR USD SGD HKD LKR PKR DON IDR
-	BillingCurr           []string
-	ComponentAddAtAnyTime string // Policy Anniversary or Any Time N / Y
-	FuturePremAdj         string //Y or N
-	FuturePremAdjYrs      int    // eg., 3 Yrs
-	LapsedDays            int
-	BillingLeadDays       int
-	LapseInterest         float64
-	AgencyChannel         []string //P0050
-	BackDateAllowed       string   // P0050  YESNO
+	FreeLookDays           int
+	MaxLives               int
+	MinLives               int
+	MinSurrMonths          int
+	ProductFamily          string
+	ReinstatementMonth     int
+	Renewable              string
+	Single                 string
+	Frequencies            [4]string // M Q H Y
+	ContractCurr           []string  // INR USD SGD HKD LKR PKR DON IDR
+	BillingCurr            []string
+	ComponentAddAtAnyTime  string // Policy Anniversary or Any Time N / Y
+	FuturePremAdj          string //Y or N
+	FuturePremAdjYrs       int    // eg., 3 Yrs
+	LapsedDays             int
+	BillingLeadDays        int
+	LapseInterest          float64
+	AgencyChannel          []string //P0050
+	BackDateAllowed        string   // P0050  YESNO
+	NoLapseGuarantee       string   //P0050 YESNO
+	NoLapseGuaranteeMonths int
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {

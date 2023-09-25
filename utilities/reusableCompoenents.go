@@ -643,13 +643,15 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 	//fmt.Println("****************", iCompany, iCoverage, iAge, iGender, iTerm, iPremMethod, iDate, iMortality)
 	if q0006data.PremCalcType == "A" || q0006data.PremCalcType == "U" {
 		if q0006data.PremiumMethod == "PM002" {
+			// END1 + Male
 			q0010key = iCoverage + iGender
 		}
 	} else if q0006data.PremCalcType == "P" {
-		if q0006data.PremiumMethod == "PM001" {
+		// END1 + Male + Term + Premium Term
+		if q0006data.PremiumMethod == "PM001" || q0006data.PremiumMethod == "PM003" {
 			q0010key = iCoverage + iGender + term + premTerm
 		}
-		// END1 + Male + Term + Premium Term
+
 	}
 	fmt.Println("Premium Key ******", iCoverage, iGender, term, premTerm, q0006data.PremCalcType, q0010key)
 	err := GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)
@@ -5431,7 +5433,18 @@ func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage str
 		oAmount, _, _ = GetAllFundValueByBenefit(iCompany, iPolicy, iBenefitID, "", iEffDate)
 		oAmount = oAmount * p0063data.FundValPercentage / 100
 
+	case "ULFEE05":
+		oAmount, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffDate)
+		oAmount = oAmount * p0063data.FundValPercentage / 100
+
 	}
+
+	if p0063data.CapAmount != 0 {
+		if oAmount > p0063data.CapAmount {
+			oAmount = p0063data.CapAmount
+		}
+	}
+
 	mPrem := 0.00
 	switch iFeeFreq {
 	case "M":

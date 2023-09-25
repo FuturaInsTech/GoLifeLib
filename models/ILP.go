@@ -57,6 +57,7 @@ type IlpTransaction struct {
 	UlProcessFlag       string `gorm:"type:varchar(01)"` //P0050
 	UlpPriceDate        string `gorm:"type:varchar(08)"`
 	AllocationCategory  string `gorm:"type:varchar(02)"` //P0050  Denote PR/MP/FE etc
+	AdjustedDate        string `gorm:"type:varchar(08)"`
 }
 
 type IlpFund struct {
@@ -68,5 +69,5 @@ type IlpFund struct {
 	FundCode       string  `gorm:"type:varchar(5)"` //P0050
 	FundType       string  `gorm:"type:varchar(2)"` //P0050
 	FundCurr       string  `gorm:"type:varchar(3)"` //P0050
-	FundPercentage float64 `gorm:"type:decimal(7,5);"`
+	FundPercentage float64 `gorm:"type:decimal(15,5);"`
 }

@@ -8,7 +8,8 @@ import (
 type BusinessDate struct {
 	gorm.Model
 	types.CModel
-	UserID     uint
-	Department string `gorm:"type:varchar(05)"`
+	UserID uint
+	//Department string `gorm:"type:varchar(05)"`
+	Department uint
 	Date       string `gorm:"type:varchar(08)"`
 }

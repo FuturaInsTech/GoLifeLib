@@ -2742,11 +2742,16 @@ func NoOfDays(startDate string, endDate string) (year int64, month int64, week i
 // 	}
 
 // }
+// 01 - NB
+// 02 - Cash and Payment
+// 03 -
+// 04
+// 05 - Claims
 
 func GetBusinessDate(iCompany uint, iUser uint, iDepartment uint) (oDate string) {
 	var businessdate models.BusinessDate
 	// Get with User
-	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department IS NOT NULL", iCompany, iUser, iDepartment, "")
+	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department IS NOT NULL", iCompany, iUser, iDepartment)
 	if result.RowsAffected == 0 {
 		// If User Not Found, get with Department
 		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL ", iCompany, iDepartment)

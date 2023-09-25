@@ -2151,7 +2151,7 @@ func GetTolerance(iCompany uint, iTransaction string, iCurrency string, iProduct
 // # Death Amount
 //
 // ©  FuturaInsTech
-func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDate string, iCause string) (oAmount float64) {
+func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage string, iEffectiveDate string, iCause string) (oAmount float64) {
 	var benefit models.Benefit
 	result := initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and b_coverage = ?", iCompany, iPolicy, iCoverage)
 
@@ -2160,14 +2160,22 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 		return
 	}
 
-	iFund := float64(70000.00)
 	iSA := float64(benefit.BSumAssured)
 	iStartDate := benefit.BStartDate
+	iDate := benefit.BStartDate
 	var q0006data paramTypes.Q0006Data
 	var extradata paramTypes.Extradata = &q0006data
-	iDate := benefit.BStartDate
 
 	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
+	if err != nil {
+		oAmount = 0
+		return
+	}
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+
+	err = GetItemD(int(iCompany), "Q0005", iCoverage, iDate, &extradataq0005)
 	if err != nil {
 		oAmount = 0
 		return
@@ -2202,14 +2210,26 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 	if oDeathMethod != "" { //DC006
 		ideathMethod = oDeathMethod
 	}
+	iFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
 
 	switch {
 	case ideathMethod == "DC001": // Return of SA
 		oAmount = iSA
 		break
 	case ideathMethod == "DC002": // Return of FV
-		oAmount = iFund
-		break
+		if q0005data.NoLapseGuarantee == "Y" {
+			if iNoofMonths <= q0005data.NoLapseGuaranteeMonths {
+				if iFund <= 0 {
+					oAmount = iSA
+					break
+				}
+			}
+		} else {
+			oAmount = iFund
+			break
+
+		}
+
 	case ideathMethod == "DC003": // Return of SA or Fund Value whichever is Highter
 		if iSA >= iFund {
 			oAmount = iSA

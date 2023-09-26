@@ -2744,9 +2744,10 @@ func NoOfDays(startDate string, endDate string) (year int64, month int64, week i
 // }
 // 01 - NB
 // 02 - Cash and Payment
-// 03 -
-// 04
-// 05 - Claims
+// 03 - Maturity
+// 04 - Death Claim
+// 05 - Customer Service
+// 06
 
 func GetBusinessDate(iCompany uint, iUser uint, iDepartment uint) (oDate string) {
 	var businessdate models.BusinessDate

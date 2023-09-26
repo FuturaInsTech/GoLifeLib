@@ -13,6 +13,7 @@ type DeathD struct {
 	ClientID         uint
 	BenefitID        uint
 	BCoverage        string `gorm:"type:varchar(05)"` //Q0006
+	DeathMethod      string `gorm:"type:varchar(05)"` //Q0006
 	BSumAssured      uint64
 	DeathAmount      uint64
 	RevBonus         float64

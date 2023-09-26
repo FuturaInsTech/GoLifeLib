@@ -1,4 +1,4 @@
-package initializers1
+package initializers
 
 import (
 	"bytes"

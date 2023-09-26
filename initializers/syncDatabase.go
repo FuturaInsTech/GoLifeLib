@@ -65,7 +65,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.MedReq{})
 	// DB.AutoMigrate(&models.Nominee{})
 	// DB.AutoMigrate(&models.DeathH{})
-	// DB.AutoMigrate(&models.DeathD{})
+	DB.AutoMigrate(&models.DeathD{})
 	// DB.AutoMigrate(&quotation.Qcommunication{})
 	// DB.AutoMigrate(&models.Payer{})
 	// DB.AutoMigrate(&models.SaChange{})

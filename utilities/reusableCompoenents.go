@@ -2210,7 +2210,7 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 	if oDeathMethod != "" { //DC006
 		ideathMethod = oDeathMethod
 	}
-	iFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
+	iFund := 0.0
 
 	switch {
 	case ideathMethod == "DC001": // Return of SA
@@ -2219,18 +2219,19 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 	case ideathMethod == "DC002": // Return of FV
 		if q0005data.NoLapseGuarantee == "Y" {
 			if iNoofMonths <= q0005data.NoLapseGuaranteeMonths {
+				iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
 				if iFund <= 0 {
 					oAmount = iSA
 					break
 				}
 			}
 		} else {
+			iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
 			oAmount = iFund
 			break
-
 		}
-
 	case ideathMethod == "DC003": // Return of SA or Fund Value whichever is Highter
+		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
 		if iSA >= iFund {
 			oAmount = iSA
 		} else {
@@ -2238,6 +2239,7 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 		}
 		break
 	case ideathMethod == "DC004": // Return of SA + Fund Value
+		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
 		oAmount = iSA + iFund
 		break
 	case ideathMethod == "DC005": // Return of Premium Paid (All Coverages)
@@ -2257,7 +2259,6 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 			inoofinstalments = (inoofinstalments) / 12
 			break
 		}
-
 		oAmount = float64(inoofinstalments) * policy.InstalmentPrem
 		//oAmount = GetPremiumPaid(policy.PRCD, policy.PaidToDate, policy.PFreq, policy.InstalmentPrem)
 		break

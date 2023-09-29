@@ -2151,7 +2151,7 @@ func GetTolerance(iCompany uint, iTransaction string, iCurrency string, iProduct
 // # Death Amount
 //
 // ©  FuturaInsTech
-func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDate string, iCause string) (oAmount float64) {
+func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage string, iEffectiveDate string, iCause string) (oAmount float64) {
 	var benefit models.Benefit
 	result := initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and b_coverage = ?", iCompany, iPolicy, iCoverage)
 
@@ -2160,14 +2160,22 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 		return
 	}
 
-	iFund := float64(70000.00)
 	iSA := float64(benefit.BSumAssured)
 	iStartDate := benefit.BStartDate
+	iDate := benefit.BStartDate
 	var q0006data paramTypes.Q0006Data
 	var extradata paramTypes.Extradata = &q0006data
-	iDate := benefit.BStartDate
 
 	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
+	if err != nil {
+		oAmount = 0
+		return
+	}
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+
+	err = GetItemD(int(iCompany), "Q0005", iCoverage, iDate, &extradataq0005)
 	if err != nil {
 		oAmount = 0
 		return
@@ -2202,15 +2210,28 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 	if oDeathMethod != "" { //DC006
 		ideathMethod = oDeathMethod
 	}
+	iFund := 0.0
 
 	switch {
 	case ideathMethod == "DC001": // Return of SA
 		oAmount = iSA
 		break
 	case ideathMethod == "DC002": // Return of FV
-		oAmount = iFund
-		break
+		if q0005data.NoLapseGuarantee == "Y" {
+			if iNoofMonths <= q0005data.NoLapseGuaranteeMonths {
+				iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
+				if iFund <= 0 {
+					oAmount = iSA
+					break
+				}
+			}
+		} else {
+			iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
+			oAmount = iFund
+			break
+		}
 	case ideathMethod == "DC003": // Return of SA or Fund Value whichever is Highter
+		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
 		if iSA >= iFund {
 			oAmount = iSA
 		} else {
@@ -2218,6 +2239,7 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 		}
 		break
 	case ideathMethod == "DC004": // Return of SA + Fund Value
+		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
 		oAmount = iSA + iFund
 		break
 	case ideathMethod == "DC005": // Return of Premium Paid (All Coverages)
@@ -2237,7 +2259,6 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDat
 			inoofinstalments = (inoofinstalments) / 12
 			break
 		}
-
 		oAmount = float64(inoofinstalments) * policy.InstalmentPrem
 		//oAmount = GetPremiumPaid(policy.PRCD, policy.PaidToDate, policy.PFreq, policy.InstalmentPrem)
 		break
@@ -2694,13 +2715,48 @@ func NoOfDays(startDate string, endDate string) (year int64, month int64, week i
 //	Check Company, User and Department.  If User is 0
 //	Check Company, Department.  If Department is blank
 //	Check Company
-func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
+// func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
+// 	var businessdate models.BusinessDate
+// 	// Get with User
+// 	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department <> ?", iCompany, iUser, iDepartment, "")
+// 	if result.RowsAffected == 0 {
+// 		// If User Not Found, get with Department
+// 		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL ", iCompany, iDepartment)
+// 		if result.RowsAffected == 0 {
+// 			// If Department Not Found, get with comapny
+// 			result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL", iCompany, "")
+// 			if result.RowsAffected == 0 {
+// 				return Date2String(time.Now())
+
+// 			} else {
+// 				oDate := businessdate.Date
+// 				return oDate
+// 			}
+// 		} else {
+// 			oDate := businessdate.Date
+// 			return oDate
+// 		}
+
+// 	} else {
+// 		oDate := businessdate.Date
+// 		return oDate
+// 	}
+
+// }
+// 01 - NB
+// 02 - Cash and Payment
+// 03 - Maturity
+// 04 - Death Claim
+// 05 - Customer Service
+// 06
+
+func GetBusinessDate(iCompany uint, iUser uint, iDepartment uint) (oDate string) {
 	var businessdate models.BusinessDate
 	// Get with User
-	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department <> ?", iCompany, iUser, iDepartment, "")
+	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department IS NOT NULL", iCompany, iUser, iDepartment)
 	if result.RowsAffected == 0 {
 		// If User Not Found, get with Department
-		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and department <> ? and user_id IS NULL ", iCompany, iDepartment, "")
+		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL ", iCompany, iDepartment)
 		if result.RowsAffected == 0 {
 			// If Department Not Found, get with comapny
 			result = initializers.DB.Find(&businessdate, "company_id = ? and department IS NULL and user_id IS NULL", iCompany)
@@ -4184,7 +4240,7 @@ func GetPremDueDates(iStartDate string, freq string) string {
 // ***
 
 func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string, iIFSC string, iBankAc string) (oreceipt uint, oerror error) {
-	iBusinssdate := GetBusinessDate(iCompany, 1, "02")
+	iBusinssdate := GetBusinessDate(iCompany, 1, 2)
 
 	var policyenq models.Policy
 	var receiptupd models.Receipt
@@ -4729,7 +4785,7 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	}
 
 	for j := 0; j < len(ilpfundenq); j++ {
-		iBusinessDate := GetBusinessDate(iCompany, 0, "")
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 		if p0059data.CurrentOrFuture == "F" {
 			iBusinessDate = AddLeadDays(iBusinessDate, 1)
 		} else if p0059data.CurrentOrFuture == "E" {
@@ -4865,7 +4921,7 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 // # 122
 func GetAllFundValueByPol(iCompany uint, iPolicy uint, iFundCode string, iDate string) (float64, float64, string) {
 	if iDate == "" {
-		iDate = GetBusinessDate(iCompany, 0, "")
+		iDate = GetBusinessDate(iCompany, 0, 0)
 	}
 
 	var ilpsummaryenq []models.IlpSummary
@@ -4933,7 +4989,7 @@ func GetaFundValue(iCompany uint, iPolicy uint, iFundCode string, iDate string) 
 // ©  FuturaInsTech
 func GetAllFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string) (float64, float64, string) {
 	if iDate == "" {
-		iDate = GetBusinessDate(iCompany, 0, "")
+		iDate = GetBusinessDate(iCompany, 0, 0)
 	}
 
 	var ilpsummaryenq []models.IlpSummary
@@ -5094,7 +5150,7 @@ func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr st
 	} else {
 		// Invested Posting
 		for j := 0; j < len(ilpfundenq); j++ {
-			iBusinessDate := GetBusinessDate(iCompany, 0, "")
+			iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 			if iCurrentOrFuture == "F" {
 				iBusinessDate = AddLeadDays(iBusinessDate, 1)
 			} else if iCurrentOrFuture == "E" {
@@ -5509,7 +5565,7 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
 
 	for j := 0; j < len(ilpsumenq); j++ {
-		iBusinessDate := GetBusinessDate(iCompany, 0, "")
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 		if p0059data.CurrentOrFuture == "F" {
 			iBusinessDate = AddLeadDays(iBusinessDate, 1)
 		} else if p0059data.CurrentOrFuture == "E" {

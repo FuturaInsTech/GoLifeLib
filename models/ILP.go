@@ -70,6 +70,6 @@ type IlpFund struct {
 	FundType       string  `gorm:"type:varchar(2)"` //P0050
 	FundCurr       string  `gorm:"type:varchar(3)"` //P0050
 	FundPercentage float64 `gorm:"type:decimal(15,5);"`
-	iHistoryCode   string  `gorm:"type:decimal(10);"` // Transaciton Code  H0136
+	iHistoryCode   string  `gorm:"type:varchar(10);"` // Transaciton Code  H0136
 
 }

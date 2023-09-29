@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt"
 )
 
 const secret = "RYz0umVR1Hxw6JiOdE6L5m7Ne5ZcJB6agbqmxdAlunVuchoPgI+dCWD6QzWJkckgliPzRGaC+55+raGaAKrOX0pQeh2NohNi/CBy7h7Qg+wsTNrdiKwTcG9tARtmOgAvdls6qcDjTwzPaoeA+HxC6ECrpb7zr5jnnJbKkCu3d4QwFp9hiEUWpcChANZciba3Zi3tLELew7fwuC/DjxmXQoq6kfRRhAD7vZuAk1kzRQkzYoX4OMgvgIrJyBx2wnzDpAsAers2j6FB2fuU10aNhZDnYZ68oWGKWv4QEM3bSDESJBqFVdHpgdoErCvmrqyC08lk0KUS+P0t0gsvMARgNg=="

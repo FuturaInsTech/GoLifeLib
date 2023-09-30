@@ -5709,3 +5709,136 @@ func GetMrtaPrem(iCompany uint, iCoverage string, iSA float64, iAge uint, iGende
 	return prem, nil
 
 }
+
+// # 134
+// PostTopAllocation - This function apportion amount into different funds and investible and non investible (Top up Only)
+//
+// Inputs:
+//
+// # Success/Failure
+//
+// ©  FuturaInsTech
+func PostTopAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iFrequency string, iStartDate string, iEffDate string, iGender string, iAllocMethod string, iTranno uint) error {
+
+	var policyenq models.Policy
+
+	result := initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var p0060data paramTypes.P0060Data
+	var extradatap0060 paramTypes.Extradata = &p0060data
+	iDate := iStartDate
+	iKey := iAllocMethod + iGender
+	err := GetItemD(int(iCompany), "P0060", iKey, iDate, &extradatap0060)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey = iHistoryCode + iBenefitCode
+	err = GetItemD(int(iCompany), "P0059", iKey, iDate, &extradatap0059)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	if iEffDate == iStartDate {
+		a := GetNextDue(iStartDate, iFrequency, "")
+		iEffDate = Date2String(a)
+	}
+	iNoofMonths := NewNoOfInstalments(iStartDate, iEffDate)
+	iAllocPercentage := 0.00
+	for i := 0; i < len(p0060data.AlBand); i++ {
+		if uint(iNoofMonths) <= p0060data.AlBand[i].Months {
+			iAllocPercentage = p0060data.AlBand[i].Percentage
+			break
+		}
+	}
+	iInvested := RoundFloat(iAmount*(iAllocPercentage/100), 2)
+	iNonInvested := RoundFloat(iAmount*((100-iAllocPercentage)/100), 2)
+
+	var ilpfundenq []models.IlpFund
+	// Select  Top-up Funds ONly
+	result = initializers.DB.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ? and history_code= ?", iCompany, iPolicy, iBenefit, iHistoryCode)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
+	for j := 0; j < len(ilpfundenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+
+		var ilptrancrt models.IlpTransaction
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpfundenq[j].FundCode
+		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
+		ilptrancrt.AccountCode = "Invested" // ranga
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = initializers.DB.Create(&ilptrancrt)
+	}
+	// Non Invested Amount Updation
+
+	var ilptrancrt models.IlpTransaction
+	// Move Variables
+	ilptrancrt.CompanyID = iCompany
+	ilptrancrt.PolicyID = iPolicy
+	ilptrancrt.BenefitID = iBenefit
+	ilptrancrt.FundCode = "NONIN"
+	ilptrancrt.FundType = "NI"
+	ilptrancrt.TransactionDate = iEffDate
+	ilptrancrt.FundEffDate = iEffDate
+	ilptrancrt.FundAmount = iNonInvested
+	ilptrancrt.FundCurr = ""
+	ilptrancrt.FundUnits = 0
+	ilptrancrt.FundPrice = 0
+	ilptrancrt.CurrentOrFuture = "C"
+	ilptrancrt.OriginalAmount = iNonInvested
+	ilptrancrt.ContractCurry = policyenq.PContractCurr
+	ilptrancrt.HistoryCode = iHistoryCode
+	ilptrancrt.InvNonInvFlag = "NI"
+	ilptrancrt.AllocationCategory = "NI"
+	ilptrancrt.InvNonInvPercentage = 0
+	ilptrancrt.Tranno = iTranno
+
+	ilptrancrt.AccountCode = "NonInvested"
+
+	ilptrancrt.CurrencyRate = 1.00 // ranga
+	ilptrancrt.MortalityIndicator = ""
+	ilptrancrt.SurrenderPercentage = 0
+	ilptrancrt.Seqno = uint(p0059data.SeqNo)
+	ilptrancrt.UlProcessFlag = "C"
+	result = initializers.DB.Delete(&ilptrancrt)
+
+	// Delete Newly Cleared Fund Rules which is created for Top-up
+	initializers.DB.Delete(ilpfundenq)
+
+	return nil
+
+}

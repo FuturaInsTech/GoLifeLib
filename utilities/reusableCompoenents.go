@@ -5834,7 +5834,7 @@ func PostTopAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 	ilptrancrt.SurrenderPercentage = 0
 	ilptrancrt.Seqno = uint(p0059data.SeqNo)
 	ilptrancrt.UlProcessFlag = "C"
-	result = initializers.DB.Delete(&ilptrancrt)
+	result = initializers.DB.Create(&ilptrancrt)
 
 	// Delete Newly Cleared Fund Rules which is created for Top-up
 	initializers.DB.Delete(ilpfundenq)

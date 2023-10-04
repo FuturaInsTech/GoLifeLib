@@ -5842,3 +5842,47 @@ func PostTopAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 	return nil
 
 }
+
+// # 134
+// GetAllowedFunds - This function return all allowed funds for a particular benefit
+//
+// Inputs: Company, Coverage Code and Coverage Start Date
+//
+// Outputs : Fund Array consist of fund code, fund category, fund type and fund currency and error code
+//
+//
+// ©  FuturaInsTech
+
+func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface{}, error) {
+
+	fundlist := make([]interface{}, 0)
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		return nil, err
+	}
+	if q0006data.FUNDCODE == nil {
+		return nil, err
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	for i := 0; i < len(q0006data.FUNDCODE); i++ {
+		err = GetItemD(int(iCompany), "P0061", q0006data.FUNDCODE[i], iDate, &extradatap0061)
+		if err != nil {
+			return nil, err
+		}
+		resultOut := map[string]interface{}{
+			"FundCode":     p0061data.FundCode,
+			"FundCategory": p0061data.FundCategory,
+			"FundCurr":     p0061data.FundCurr,
+			"FundType":     p0061data.FundType,
+		}
+		fmt.Print(fundlist)
+		fundlist = append(fundlist, resultOut)
+	}
+	return fundlist, nil
+}

@@ -30,6 +30,18 @@ type IlpSummary struct {
 	FundCurr  string  `gorm:"type:varchar(3)"`
 }
 
+type IlpAnnSummary struct {
+	gorm.Model
+	types.CModel
+	PolicyID      uint
+	BenefitID     uint
+	FundCode      string  `gorm:"type:varchar(5)"` //P0050
+	FundType      string  `gorm:"type:varchar(2)"` //P0050
+	FundUnits     float64 `gorm:"type:decimal(15,5);"`
+	FundCurr      string  `gorm:"type:varchar(3)"`
+	EffectiveDate string  `gorm:"type:varchar(8)"`
+}
+
 type IlpTransaction struct {
 	gorm.Model
 	types.CModel

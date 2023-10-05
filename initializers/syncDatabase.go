@@ -86,4 +86,6 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.IlpPrice{})
 	DB.AutoMigrate(&models.IlpSummary{})
 	DB.AutoMigrate(&models.IlpTransaction{})
+	DB.AutoMigrate(&models.IlpAnnSummary{})
+
 }

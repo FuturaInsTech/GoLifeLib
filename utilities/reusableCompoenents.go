@@ -3909,6 +3909,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "18":
 					oData := GetNomiData(iCompany, iPolicy)
 					resultMap["Nominee"] = oData
+				// case oLetType == "19":
+				// 	oData := GetGLData(iCompany, iPolicy, iDate, iToDate)
+				// 	resultMap["Nominee"] = oData
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:
@@ -5885,4 +5888,160 @@ func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface
 		fundlist = append(fundlist, resultOut)
 	}
 	return fundlist, nil
+}
+
+func ValidateAddress(clientval models.Address, userco uint, userlan uint) (string error) {
+
+	if clientval.AddressType == "" {
+		shortCode := "GL486"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressLine1 == "" {
+		shortCode := "GL487"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressLine2 == "" {
+		shortCode := "GL488"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressLine3 == "" {
+		shortCode := "GL489"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressPostCode == "" {
+		shortCode := "GL490"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressState == "" {
+		shortCode := "GL491"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressCountry == "" {
+		shortCode := "GL492"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressStartDate == "Invalid date" {
+		shortCode := "GL493"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	return
+}
+
+func ValidateClient(clientval models.Client, userco uint, userlan uint) (string error) {
+
+	if clientval.ClientShortName == "" {
+		shortCode := "GL469"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientLongName == "" {
+		shortCode := "GL470"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.Gender == "" {
+		shortCode := "GL471"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.Salutation == "" {
+		shortCode := "GL472"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.Language == "" {
+		shortCode := "GL473"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientDob == "" {
+		shortCode := "GL474"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientEmail == "" {
+		shortCode := "GL475"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
+		shortCode := "GL477"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientMobile == "" {
+		shortCode := "GL476"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	_, err := strconv.Atoi(clientval.ClientMobile)
+	if err != nil {
+		shortCode := "GL478"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientStatus == "" {
+		shortCode := "GL494"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.NationalId == "" {
+		shortCode := "GL501"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	return
+}
+
+func ValidateBank(bankval models.Bank, userco uint, userlan uint) (string error) {
+	if bankval.BankCode == "" {
+		shortCode := "GL479"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankAccountNo == "" {
+		shortCode := "GL480"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.StartDate == "Invalid date" {
+		shortCode := "GL481"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankType == "" {
+		shortCode := "GL482"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankAccountStatus == "" {
+		shortCode := "GL483"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.ClientID == 0 {
+		shortCode := "GL484"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankGroup == "" {
+		shortCode := "GL485"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	return
 }

@@ -3996,6 +3996,10 @@ func AmountinWords(amount float64, curr string) (aiw string) {
 		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
 		return aiw
 
+	case currcd[cid] == "BDT":
+		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
+		return aiw
+
 	default:
 		return "error"
 	}

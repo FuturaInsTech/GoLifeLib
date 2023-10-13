@@ -16,7 +16,7 @@ type Extradata interface {
 	GetFormattedData(datamap map[string]string) map[string]interface{}
 }
 
-// Q0005 Structure T5688
+// Q0005
 type Q0005Data struct {
 	FreeLookDays           int
 	MaxLives               int
@@ -1835,4 +1835,28 @@ func (m *P0064Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 	return nil
 
+}
+
+type P0023Data struct {
+	Symbol string
+	Coin   string
+}
+
+func (m *P0023Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0023Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
 }

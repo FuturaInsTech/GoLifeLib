@@ -3962,8 +3962,8 @@ func AmountinWords(amount float64, curr string) (aiw string) {
 
 	// Define currency and their names
 	currcd := []string{"", "INR", "USD", "SGD", "EUR", "GBP", "BDT"}
-	currnm := []string{"", " Rupees ", " US Dollars ", " Singapore Dollars ", " Euros ", " Pounds ", "Bangladesi Taka"}
-	currcn := []string{"", " Paise ", " Cents ", " Cents ", " Cents ", " Pence ", "Poisha"}
+	currnm := []string{"", " Rupees ", " US Dollars ", " Singapore Dollars ", " Euros ", " Pounds ", " Bangladesi Taka"}
+	currcn := []string{"", " Paise ", " Cents ", " Cents ", " Cents ", " Pence ", " Poisha"}
 	cid := 0
 
 	for i := 0; i <= len(currcd); i++ {

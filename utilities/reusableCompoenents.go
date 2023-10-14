@@ -3780,7 +3780,7 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iToDate string) error {
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
@@ -3909,6 +3909,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "18":
 					oData := GetNomiData(iCompany, iPolicy)
 					resultMap["Nominee"] = oData
+				// case oLetType == "19":
+				// 	oData := GetGLData(iCompany, iPolicy, iDate, iToDate)
+				// 	resultMap["Nominee"] = oData
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:
@@ -3958,9 +3961,9 @@ func GetName(iCompany uint, iClient uint) string {
 func AmountinWords(amount float64, curr string) (aiw string) {
 
 	// Define currency and their names
-	currcd := []string{"", "INR", "USD", "SGD", "EUR", "GBP"}
-	currnm := []string{"", " Rupees ", " US Dollars ", " Singapore Dollars ", " Euros ", " Pounds "}
-	currcn := []string{"", " Paise ", " Cents ", " Cents ", " Cents ", " Pence "}
+	currcd := []string{"", "INR", "USD", "SGD", "EUR", "GBP", "BDT"}
+	currnm := []string{"", " Rupees ", " US Dollars ", " Singapore Dollars ", " Euros ", " Pounds ", " Bangladesi Taka"}
+	currcn := []string{"", " Paise ", " Cents ", " Cents ", " Cents ", " Pence ", " Poisha"}
 	cid := 0
 
 	for i := 0; i <= len(currcd); i++ {
@@ -3990,6 +3993,10 @@ func AmountinWords(amount float64, curr string) (aiw string) {
 		return aiw
 
 	case currcd[cid] == "GBP":
+		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
+		return aiw
+
+	case currcd[cid] == "BDT":
 		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
 		return aiw
 
@@ -4375,7 +4382,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	iAgency := policyenq.AgencyID
 
-	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency)
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "")
 	if err != nil {
 		return 0, errors.New(err.Error())
 	}
@@ -5834,11 +5841,211 @@ func PostTopAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 	ilptrancrt.SurrenderPercentage = 0
 	ilptrancrt.Seqno = uint(p0059data.SeqNo)
 	ilptrancrt.UlProcessFlag = "C"
-	result = initializers.DB.Delete(&ilptrancrt)
+	result = initializers.DB.Create(&ilptrancrt)
 
 	// Delete Newly Cleared Fund Rules which is created for Top-up
 	initializers.DB.Delete(ilpfundenq)
 
 	return nil
 
+}
+
+// # 134
+// GetAllowedFunds - This function return all allowed funds for a particular benefit
+//
+// Inputs: Company, Coverage Code and Coverage Start Date
+//
+// Outputs : Fund Array consist of fund code, fund category, fund type and fund currency and error code
+//
+//
+// ©  FuturaInsTech
+
+func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface{}, error) {
+
+	fundlist := make([]interface{}, 0)
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		return nil, err
+	}
+	if q0006data.FUNDCODE == nil {
+		return nil, err
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	for i := 0; i < len(q0006data.FUNDCODE); i++ {
+		err = GetItemD(int(iCompany), "P0061", q0006data.FUNDCODE[i], iDate, &extradatap0061)
+		if err != nil {
+			return nil, err
+		}
+		resultOut := map[string]interface{}{
+			"FundCode":     p0061data.FundCode,
+			"FundCategory": p0061data.FundCategory,
+			"FundCurr":     p0061data.FundCurr,
+			"FundType":     p0061data.FundType,
+		}
+		fmt.Print(fundlist)
+		fundlist = append(fundlist, resultOut)
+	}
+	return fundlist, nil
+}
+
+func ValidateAddress(clientval models.Address, userco uint, userlan uint) (string error) {
+
+	if clientval.AddressType == "" {
+		shortCode := "GL486"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressLine1 == "" {
+		shortCode := "GL487"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressLine2 == "" {
+		shortCode := "GL488"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressLine3 == "" {
+		shortCode := "GL489"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressPostCode == "" {
+		shortCode := "GL490"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressState == "" {
+		shortCode := "GL491"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressCountry == "" {
+		shortCode := "GL492"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.AddressStartDate == "Invalid date" {
+		shortCode := "GL493"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	return
+}
+
+func ValidateClient(clientval models.Client, userco uint, userlan uint) (string error) {
+
+	if clientval.ClientShortName == "" {
+		shortCode := "GL469"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientLongName == "" {
+		shortCode := "GL470"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.Gender == "" {
+		shortCode := "GL471"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.Salutation == "" {
+		shortCode := "GL472"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.Language == "" {
+		shortCode := "GL473"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientDob == "" {
+		shortCode := "GL474"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientEmail == "" {
+		shortCode := "GL475"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
+		shortCode := "GL477"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientMobile == "" {
+		shortCode := "GL476"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	_, err := strconv.Atoi(clientval.ClientMobile)
+	if err != nil {
+		shortCode := "GL478"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.ClientStatus == "" {
+		shortCode := "GL494"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if clientval.NationalId == "" {
+		shortCode := "GL501"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	return
+}
+
+func ValidateBank(bankval models.Bank, userco uint, userlan uint) (string error) {
+	if bankval.BankCode == "" {
+		shortCode := "GL479"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankAccountNo == "" {
+		shortCode := "GL480"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.StartDate == "Invalid date" {
+		shortCode := "GL481"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankType == "" {
+		shortCode := "GL482"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankAccountStatus == "" {
+		shortCode := "GL483"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.ClientID == 0 {
+		shortCode := "GL484"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	if bankval.BankGroup == "" {
+		shortCode := "GL485"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+		return errors.New(shortCode + " : " + longDesc)
+	}
+	return
 }

@@ -16,7 +16,7 @@ type Extradata interface {
 	GetFormattedData(datamap map[string]string) map[string]interface{}
 }
 
-// Q0005 Structure T5688
+// Q0005
 type Q0005Data struct {
 	FreeLookDays           int
 	MaxLives               int
@@ -1834,5 +1834,15 @@ func (m *P0064Data) ParseData(datamap map[string]interface{}) {
 func (m *P0064Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
 	return nil
+
+}
+
+// P0023 - Currency Printing Details
+
+type P0023Data struct {
+	CurSymbol   string // Currency Symbol $, £, €, etc
+	CurBill     string // Dollars, Pounds, Euros, etc
+	CurCoin     string // Cents, Pence, Cents, etc
+	CurWordType string // M - Millions, Billions, Trilions and  L - Lakhs and Crores
 
 }

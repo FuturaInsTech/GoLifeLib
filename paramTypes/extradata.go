@@ -1846,3 +1846,23 @@ type P0023Data struct {
 	CurWordType string // M - Millions, Billions, Trilions and  L - Lakhs and Crores
 
 }
+
+func (m *P0023Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0023Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

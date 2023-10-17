@@ -25,4 +25,6 @@ type SurrD struct {
 	AccumDivInt     float64
 	TotalFundValue  float64
 	TotalSurrAmount float64
+	SurrPenalty     float64
+	SurrTax         float64
 }

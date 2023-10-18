@@ -664,6 +664,7 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 	for i := 0; i < len(q0010data.Rates); i++ {
 		if q0010data.Rates[i].Age == uint(iAge) {
 			prem = q0010data.Rates[i].Rate
+			break
 		}
 	}
 	fmt.Println("************", iCompany, iAge, q0010key, iDate, prem)

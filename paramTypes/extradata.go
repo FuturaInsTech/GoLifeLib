@@ -1866,3 +1866,32 @@ func (m *P0023Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+type P0065Data struct {
+	FieldList []P0065
+}
+type P0065 struct {
+	Field     string // Field Name of the Table
+	Mandatory string // P0050 Yes/No
+
+}
+
+func (m *P0065Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0065Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

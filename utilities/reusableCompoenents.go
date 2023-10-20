@@ -3006,7 +3006,7 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 }
 
 // #86
-func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iEffDate string) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
 	initializers.DB.Find(&company, "id = ?", iCompany)
@@ -3027,6 +3027,7 @@ func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 		"CompanyTan":               company.CompanyTan,
 		"CompanyIncorporationDate": DateConvert(company.CompanyIncorporationDate),
 		"CompanyTerminationDate":   DateConvert(company.CompanyTerminationDate),
+		"BusinessDate":             DateConvert(iEffDate),
 	}
 	companyarray = append(companyarray, resultOut)
 	return companyarray
@@ -3833,7 +3834,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.CompanyEmail = p0033data.CompanyEmail
 			communication.Tranno = policy.Tranno
 			communication.TemplateName = iKey
-			communication.EffectiveDate = policy.PRCD
+			communication.EffectiveDate = iDate
 			oLetType := ""
 
 			signData := make([]interface{}, 0)
@@ -3853,7 +3854,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt, iDate)
 					resultMap["CompanyData"] = oData
 				case oLetType == "2":
 					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)

@@ -5895,6 +5895,22 @@ func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface
 	return fundlist, nil
 }
 
+// func ValidateFieldsBharani(iCompany uint, historyCode string, fieldName string) string {
+
+// 	var p0065data paramTypes.P0065Data
+// 	var extradata paramTypes.Extradata = &p0065data
+// 	iDate := ""
+// 	GetItemD(int(iCompany), "P0065", historyCode, iDate, &extradata)
+
+//		for i := 0; i < len(p0065data.FieldList); i++ {
+//			if fieldName == p0065data.FieldList[i].Field {
+//				if p0065data.FieldList[i].Mandatory == "Y" {
+//					return p0065data.FieldList[i].Mandatory
+//				}
+//			}
+//		}
+//		return "N"
+//	}
 func ValidateAddress(clientval models.Address, userco uint, userlan uint) (string error) {
 
 	if clientval.AddressType == "" {

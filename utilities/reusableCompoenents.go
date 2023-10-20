@@ -4770,12 +4770,12 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	if err != nil {
 		return errors.New(err.Error())
 	}
-
+	iAllocationDate := ""
 	if iEffDate == iStartDate {
 		a := GetNextDue(iStartDate, iFrequency, "")
-		iEffDate = Date2String(a)
+		iAllocationDate = Date2String(a)
 	}
-	iNoofMonths := NewNoOfInstalments(iStartDate, iEffDate)
+	iNoofMonths := NewNoOfInstalments(iStartDate, iAllocationDate)
 	iAllocPercentage := 0.00
 	for i := 0; i < len(p0060data.AlBand); i++ {
 		if uint(iNoofMonths) <= p0060data.AlBand[i].Months {

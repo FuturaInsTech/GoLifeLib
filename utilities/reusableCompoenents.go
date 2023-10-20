@@ -2220,19 +2220,19 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 	case ideathMethod == "DC002": // Return of FV
 		if q0005data.NoLapseGuarantee == "Y" {
 			if iNoofMonths <= q0005data.NoLapseGuaranteeMonths {
-				iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
+				iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, iEffectiveDate)
 				if iFund <= 0 {
 					oAmount = iSA
 					break
 				}
 			}
 		} else {
-			iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
+			iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, iEffectiveDate)
 			oAmount = iFund
 			break
 		}
 	case ideathMethod == "DC003": // Return of SA or Fund Value whichever is Highter
-		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
+		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, iEffectiveDate)
 		if iSA >= iFund {
 			oAmount = iSA
 		} else {
@@ -2240,7 +2240,7 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 		}
 		break
 	case ideathMethod == "DC004": // Return of SA + Fund Value
-		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffectiveDate)
+		iFund, _, _ = GetAllFundValueByPol(iCompany, iPolicy, iEffectiveDate)
 		oAmount = iSA + iFund
 		break
 	case ideathMethod == "DC005": // Return of Premium Paid (All Coverages)
@@ -3006,7 +3006,7 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 }
 
 // #86
-func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iEffDate string) []interface{} {
+func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iDate string) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
 	initializers.DB.Find(&company, "id = ?", iCompany)
@@ -3027,7 +3027,7 @@ func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 		"CompanyTan":               company.CompanyTan,
 		"CompanyIncorporationDate": DateConvert(company.CompanyIncorporationDate),
 		"CompanyTerminationDate":   DateConvert(company.CompanyTerminationDate),
-		"BusinessDate":             DateConvert(iEffDate),
+		"LetterDate":               DateConvert(iDate),
 	}
 	companyarray = append(companyarray, resultOut)
 	return companyarray
@@ -3080,6 +3080,7 @@ func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // #89
+
 func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
@@ -3098,6 +3099,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 	gracedate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
 	premduedates := GetPremDueDates(policy.PRCD, policy.PFreq)
+	iAnnivDate := Date2String(GetNextDue(policy.AnnivDate, "Y", "R"))
 
 	var benefitenq []models.Benefit
 
@@ -3113,7 +3115,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		}
 	}
 
-	oAnnivDate := String2Date(policy.AnnivDate)
+	oAnnivDate := String2Date(iAnnivDate)
 	oPRCD := String2Date(policy.PRCD)
 	ocompletedyears, _, _, _, _, _ := DateDiff(oAnnivDate, oPRCD, "")
 
@@ -3151,6 +3153,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		"PolicyPremTerm":     oPremTerm,
 		"GraceDays":          q0005data.LapsedDays,
 		"PremiumDueDates":    premduedates,
+		"PrevAnnivDate":      DateConvert(iAnnivDate),
 		// "PUWDate":DateConvert(policy.PUWDate),
 	}
 	policyarray = append(policyarray, resultOut)
@@ -3161,9 +3164,13 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 
 // #90
 func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+	var policyenq models.Policy
 	var benefit []models.Benefit
 	var clientenq models.Client
 	var addressenq models.Address
+	initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	paidToDate := policyenq.PaidToDate
+	nextDueDate := policyenq.NxtBTDate
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
 	benefitarray := make([]interface{}, 0)
@@ -3206,7 +3213,9 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 			"BRerate":            benefit[k].BRerate,
 			"LifeAssuredName":    clientname,
 			"LifeAssuredAddress": address,
-			"LifeAssuredDOB":     clientdob,
+			"LifeAssuredDOB":     DateConvert(clientdob),
+			"paidToDate":         DateConvert(paidToDate),
+			"nextDueDate":        DateConvert(nextDueDate),
 		}
 		benefitarray = append(benefitarray, resultOut)
 	}
@@ -3281,14 +3290,14 @@ func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var receiptenq models.Receipt
 	initializers.DB.Find(&receiptenq, "company_id = ? and id = ?", iCompany, iReceipt)
-	amtinwords := AmountinWords(receiptenq.AccAmount, receiptenq.AccCurry)
+	amtinwords, csymbol := AmountinWords(receiptenq.CompanyID, receiptenq.AccAmount, receiptenq.AccCurry)
 	receiptarray := make([]interface{}, 0)
 	resultOut := map[string]interface{}{
 		"ID":                IDtoPrint(receiptenq.ID),
 		"CompanyID":         IDtoPrint(receiptenq.CompanyID),
 		"Branch":            receiptenq.Branch,
 		"AccCurry":          receiptenq.AccCurry,
-		"AccAmount":         receiptenq.AccAmount,
+		"AccAmount":         NumbertoPrint(receiptenq.AccAmount),
 		"PolicyID":          IDtoPrint(receiptenq.PolicyID),
 		"ClientID":          IDtoPrint(receiptenq.ClientID),
 		"DateOfCollection":  DateConvert(receiptenq.DateOfCollection),
@@ -3298,6 +3307,7 @@ func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 		"InstalmentPremium": receiptenq.InstalmentPremium,
 		"AddressID":         IDtoPrint(receiptenq.AddressID),
 		"AmountInWords":     amtinwords,
+		"CurrSymbol":        csymbol,
 		//		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
 		//		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
 		//		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
@@ -3782,7 +3792,7 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iToDate string) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) error {
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
@@ -3834,7 +3844,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.CompanyEmail = p0033data.CompanyEmail
 			communication.Tranno = policy.Tranno
 			communication.TemplateName = iKey
-			communication.EffectiveDate = iDate
+			communication.EffectiveDate = policy.PRCD
 			oLetType := ""
 
 			signData := make([]interface{}, 0)
@@ -3846,6 +3856,14 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			}
 
 			signData = append(signData, resultOut)
+
+			batchData := make([]interface{}, 0)
+			resultOut = map[string]interface{}{
+				"FromDate": DateConvert(iDate),
+				"ToDate":   DateConvert(iToDate),
+			}
+
+			batchData = append(batchData, resultOut)
 
 			resultMap := make(map[string]interface{})
 
@@ -3911,9 +3929,21 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "18":
 					oData := GetNomiData(iCompany, iPolicy)
 					resultMap["Nominee"] = oData
-				// case oLetType == "19":
-				// 	oData := GetGLData(iCompany, iPolicy, iDate, iToDate)
-				// 	resultMap["Nominee"] = oData
+				case oLetType == "19":
+					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign)
+					resultMap["GLData"] = oData
+				case oLetType == "20":
+					oData := GetIlpSummaryData(iCompany, iPolicy)
+					resultMap["IlPSummaryData"] = oData
+				case oLetType == "21":
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy)
+					resultMap["ILPANNSummaryData"] = oData
+				case oLetType == "22":
+					oData := GetIlpTranctionData(iCompany, iPolicy)
+					resultMap["ILPTransactionData"] = oData
+				case oLetType == "98":
+					resultMap["BatchData"] = batchData
+
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:
@@ -3960,56 +3990,35 @@ func GetName(iCompany uint, iClient uint) string {
 
 // #106
 // New Function to do Amount in Words in Receipts
-func AmountinWords(amount float64, curr string) (aiw string) {
+func AmountinWords(iCompany uint, amount float64, curr string) (aiw string, csym string) {
+	iBusinssdate := GetBusinessDate(iCompany, 1, 2)
 
-	// Define currency and their names
-	currcd := []string{"", "INR", "USD", "SGD", "EUR", "GBP", "BDT"}
-	currnm := []string{"", " Rupees ", " US Dollars ", " Singapore Dollars ", " Euros ", " Pounds ", " Bangladesi Taka"}
-	currcn := []string{"", " Paise ", " Cents ", " Cents ", " Cents ", " Pence ", " Poisha"}
-	cid := 0
+	var p0023data paramTypes.P0023Data
+	var extradatap0023 paramTypes.Extradata = &p0023data
 
-	for i := 0; i <= len(currcd); i++ {
-		if curr == currcd[i] {
-			cid = i
-			break
-		}
-		continue
+	err := GetItemD(int(iCompany), "P0023", curr, iBusinssdate, &extradatap0023)
+	if err != nil {
+		return err.Error(), ""
+
 	}
-
+	// Alternate Words type between Millions and Lakhs
 	switch {
-	case currcd[cid] == "INR":
-		aiw = InWordsINR(amount, currnm[cid], currcn[cid])
-		return aiw
+	case p0023data.CurWordType == "L":
+		aiw = WordsinLakhs(amount, p0023data.CurSymbol, p0023data.CurBill, p0023data.CurCoin)
+		return aiw, p0023data.CurSymbol
 
-	case currcd[cid] == "USD":
-
-		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
-		return aiw
-
-	case currcd[cid] == "SGD":
-		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
-		return aiw
-
-	case currcd[cid] == "EUR":
-		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
-		return aiw
-
-	case currcd[cid] == "GBP":
-		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
-		return aiw
-
-	case currcd[cid] == "BDT":
-		aiw = InWordsUSD(amount, currnm[cid], currcn[cid])
-		return aiw
+	case p0023data.CurWordType == "M":
+		aiw = WordsinMillions(amount, p0023data.CurSymbol, p0023data.CurBill, p0023data.CurCoin)
+		return aiw, p0023data.CurSymbol
 
 	default:
-		return "error"
+		return "error", ""
 	}
 }
 
 // #107
 // Function to convert INR amounts in words
-func InWordsINR(camt float64, cname string, ccoin string) (aiw string) {
+func WordsinLakhs(camt float64, csym string, cname string, ccoin string) (aiw string) {
 	// Function to convert a number to its corresponding words
 
 	// Define word representations for numbers from 0 to 19
@@ -4023,7 +4032,7 @@ func InWordsINR(camt float64, cname string, ccoin string) (aiw string) {
 	}
 
 	if camt < 0 {
-		return "minus " + InWordsINR(-camt, cname, ccoin)
+		return "minus " + WordsinLakhs(-camt, csym, cname, ccoin)
 	}
 
 	num := int(camt)
@@ -4043,7 +4052,7 @@ func InWordsINR(camt float64, cname string, ccoin string) (aiw string) {
 	units := num
 
 	words := ""
-	words += cname
+	words += cname + " "
 
 	// Convert crores to words
 	if croreWords := HundredsInWords(crores, ones, tens); len(croreWords) > 0 {
@@ -4070,7 +4079,7 @@ func InWordsINR(camt float64, cname string, ccoin string) (aiw string) {
 	if decWords := HundredsInWords(dec, ones, tens); len(decWords) > 0 {
 		words += " and "
 		words += decWords
-		words += ccoin
+		words += " " + ccoin
 	}
 
 	return strings.TrimSpace(words)
@@ -4078,7 +4087,7 @@ func InWordsINR(camt float64, cname string, ccoin string) (aiw string) {
 
 // #108
 // Function to convert USD,SGD,EURO,GBP... amounts in words
-func InWordsUSD(camt float64, cname string, ccoin string) (aiw string) {
+func WordsinMillions(camt float64, csym string, cname string, ccoin string) (aiw string) {
 	// Define word representations for numbers from 0 to 19
 	ones := []string{"", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"}
 
@@ -4090,7 +4099,7 @@ func InWordsUSD(camt float64, cname string, ccoin string) (aiw string) {
 	}
 
 	if camt < 0 {
-		return "minus " + InWordsUSD(-camt, cname, ccoin)
+		return "minus " + WordsinMillions(-camt, csym, cname, ccoin)
 	}
 
 	num := int(camt)
@@ -4139,14 +4148,14 @@ func InWordsUSD(camt float64, cname string, ccoin string) (aiw string) {
 		words += unitWords
 	}
 
-	words += cname
+	words += " " + cname
 
 	// Convert dec to decwords
 
 	if decWords := HundredsInWords(dec, ones, tens); len(decWords) > 0 {
 		words += " and "
 		words += decWords
-		words += ccoin
+		words += " " + ccoin
 	}
 
 	return strings.TrimSpace(words)
@@ -4384,7 +4393,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	iAgency := policyenq.AgencyID
 
-	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "")
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "")
 	if err != nil {
 		return 0, errors.New(err.Error())
 	}
@@ -4928,7 +4937,7 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 }
 
 // # 122
-func GetAllFundValueByPol(iCompany uint, iPolicy uint, iFundCode string, iDate string) (float64, float64, string) {
+func GetAllFundValueByPol(iCompany uint, iPolicy uint, iDate string) (float64, float64, string) {
 	if iDate == "" {
 		iDate = GetBusinessDate(iCompany, 0, 0)
 	}
@@ -4942,7 +4951,7 @@ func GetAllFundValueByPol(iCompany uint, iPolicy uint, iFundCode string, iDate s
 	bpfv := 0.0
 	opfv := 0.0
 	for i := 0; i < len(ilpsummaryenq); i++ {
-		bpv, opv, _ := GetaFundValue(iCompany, iPolicy, iFundCode, iDate)
+		bpv, opv, _ := GetaFundValue(iCompany, iPolicy, ilpsummaryenq[i].FundCode, iDate)
 		bpfv = RoundFloat(bpfv+bpv, 2)
 		opfv = RoundFloat(opfv+opv, 2)
 	}
@@ -5406,13 +5415,13 @@ func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode strin
 		oSA = float64(benefitupd.BSumAssured) - oFund
 
 	case "ULM003":
-		oFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, "", iEffDate)
+		oFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, iEffDate)
 		oSA = float64(benefitupd.BSumAssured) - oFund
 	case "ULM004":
 		oFund, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
 		oSA = float64(benefitupd.BSumAssured) + oFund
 	case "ULM005":
-		oFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, "", iEffDate)
+		oFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, iEffDate)
 		oSA = float64(benefitupd.BSumAssured) + oFund
 	default:
 		oSA = 0
@@ -5499,7 +5508,7 @@ func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage str
 		oAmount = oAmount * p0063data.FundValPercentage / 100
 
 	case "ULFEE05":
-		oAmount, _, _ = GetAllFundValueByPol(iCompany, iPolicy, "", iEffDate)
+		oAmount, _, _ = GetAllFundValueByPol(iCompany, iPolicy, iEffDate)
 		oAmount = oAmount * p0063data.FundValPercentage / 100
 
 	}
@@ -6066,4 +6075,401 @@ func ValidateBank(bankval models.Bank, userco uint, userlan uint) (string error)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 	return
+}
+
+func PostUlpDeductionByAmount(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string) error {
+
+	var policyenq models.Policy
+
+	result := initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode + iallocType
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = initializers.DB.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = initializers.DB.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+
+		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+		ilptrancrt.FundCurr = p0061data.FundCurr
+
+		ibidprice, _, ipriceuseddate := GetFundCPrice(iCompany, ilpsumenq[j].FundCode, iBusinessDate)
+		ilptrancrt.FundPrice = ibidprice
+		ilptrancrt.FundEffDate = ipriceuseddate
+		ilptrancrt.FundUnits = RoundFloat(ilptrancrt.FundAmount/ibidprice, 5)
+
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.SurrenderPercentage = RoundFloat(((ilptrancrt.FundAmount / iFundValue) * 100), 2)
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = RoundFloat(((iFundValue / iTotalFundValue) * 100), 2)
+		ilptrancrt.AccountCode = p0059data.AccountCode
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		//ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "C"
+		result = initializers.DB.Create(&ilptrancrt)
+		if result.Error != nil {
+			return errors.New(err.Error())
+		}
+
+		//update ilpsummary
+		var ilpsummupd models.IlpSummary
+		result = initializers.DB.Find(&ilpsummupd, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, ilptrancrt.BenefitID, ilptrancrt.FundCode)
+
+		if result.RowsAffected != 0 {
+			ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
+			initializers.DB.Save(&ilpsummupd)
+		} else {
+			return errors.New(err.Error())
+		}
+	}
+	return nil
+}
+
+func GetFundCPrice(iCompany uint, iFundCode string, iDate string) (float64, float64, string) {
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result := initializers.DB.Where("company_id = ? and fund_code = ? and approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0.0, 0.0, iPriceDateUsed
+	}
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	iBidPrice := ilppriceenq.FundBidPrice
+	iOfferPrice := ilppriceenq.FundOfferPrice
+	return iBidPrice, iOfferPrice, iPriceDateUsed
+}
+
+func PostUlpDeductionByUnits(iCompany uint, iPolicy uint, iBenefit uint, iSurrPercentage float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string) error {
+
+	var policyenq models.Policy
+
+	result := initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode + iallocType
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = initializers.DB.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = initializers.DB.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ibidprice, _, ipriceuseddate := GetFundCPrice(iCompany, ilpsumenq[j].FundCode, iBusinessDate)
+		ilptrancrt.FundPrice = ibidprice
+		ilptrancrt.FundEffDate = ipriceuseddate
+		iUnits, _ := GetIlpFundUnits(iCompany, iPolicy, iFundCode)
+		// Full Withdrawl is -100% and Part Withdrawl is -20% or -30% etc
+		iSurrUnits := iUnits * iSurrPercentage / 100
+		ilptrancrt.FundUnits = RoundFloat(iSurrUnits, 5)
+		//utilities.RoundFloat(ilptrancrt.FundAmount/ibidprice, 5)
+		ilptrancrt.FundAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+		ilptrancrt.FundCurr = p0061data.FundCurr
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.SurrenderPercentage = RoundFloat(((ilptrancrt.FundAmount / iFundValue) * 100), 2)
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = RoundFloat(((ilptrancrt.FundAmount / iTotalFundValue) * 100), 2)
+		ilptrancrt.AccountCode = p0059data.AccountCode
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		//ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "C"
+		result = initializers.DB.Create(&ilptrancrt)
+		if result.Error != nil {
+			return errors.New(err.Error())
+		}
+
+		//update ilpsummary
+		var ilpsummupd models.IlpSummary
+		result = initializers.DB.Find(&ilpsummupd, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, ilptrancrt.BenefitID, ilptrancrt.FundCode)
+
+		if result.RowsAffected != 0 {
+			ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
+			initializers.DB.Save(&ilpsummupd)
+		} else {
+			return errors.New(err.Error())
+		}
+	}
+	return nil
+}
+
+func GetIlpFundUnits(iCompany uint, iPolicy uint, iFundCode string) (float64, error) {
+	var ilpsummaryenq models.IlpSummary
+	result := initializers.DB.First(&ilpsummaryenq, "company_id = ? and policy_id = ? and fund_code = ?", iCompany, iPolicy, iFundCode)
+	if result.Error != nil {
+		return 0.0, nil
+	}
+	oUnits := ilpsummaryenq.FundUnits
+	return oUnits, nil
+}
+
+func GetIlpTranctionData(iCompany uint, iPolicy uint) []interface{} {
+	var policyenq models.Policy
+	initializers.DB.First(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	iAnnivDate := Date2String(GetNextDue(policyenq.AnnivDate, "Y", "R"))
+	iPrevAnnivDate := Date2String(GetNextDue(iAnnivDate, "Y", "R"))
+	var ilptranction []models.IlpTransaction
+	initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iPrevAnnivDate, iAnnivDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+	ilptranctionarray := make([]interface{}, 0)
+
+	for k := 0; k < len(ilptranction); k++ {
+		resultOut := map[string]interface{}{
+			"PolicyID": ilptranction[k].PolicyID,
+			//"BenefitID":           ilptranction[k].BenefitID,
+			"FundCode":        ilptranction[k].FundCode,
+			"FundType":        ilptranction[k].FundType,
+			"TransactionDate": DateConvert(ilptranction[k].TransactionDate),
+			"FundEffDate":     DateConvert(ilptranction[k].FundEffDate),
+			"FundAmount":      ilptranction[k].FundAmount,
+			//"FundCurr":            ilptranction[k].FundCurr,
+			"FundUnits": ilptranction[k].FundUnits,
+			"FundPrice": NumbertoPrint(float64(ilptranction[k].FundPrice)),
+			//"CurrentOrFuture":     ilptranction[k].CurrentOrFuture,
+			"OriginalAmount": ilptranction[k].OriginalAmount,
+			"ContractCurry":  ilptranction[k].ContractCurry,
+			//"HistoryCode":         ilptranction[k].HistoryCode,
+			//"InvNonInvFlag":       ilptranction[k].InvNonInvFlag,
+			"InvNonInvPercentage": ilptranction[k].InvNonInvPercentage,
+			"AccountCode":         ilptranction[k].AccountCode,
+			//"CurrencyRate":        ilptranction[k].CurrencyRate,
+			//"MortalityIndicator":  ilptranction[k].MortalityIndicator,
+			//"SurrenderPercentage": ilptranction[k].SurrenderPercentage,
+			//"Seqno":               ilptranction[k].Seqno,
+			//"UlProcessFlag":       ilptranction[k].UlProcessFlag,
+			"UlpPriceDate":       DateConvert(ilptranction[k].UlpPriceDate),
+			"AllocationCategory": ilptranction[k].AllocationCategory,
+			//"AdjustedDate":        DateConvert(ilptranction[k].AdjustedDate),
+			"ID": IDtoPrint(ilptranction[k].ID),
+		}
+
+		ilptranctionarray = append(ilptranctionarray, resultOut)
+	}
+	return ilptranctionarray
+}
+
+func GetIlpSummaryData(iCompany uint, iPolicy uint) interface{} {
+	var ilpsummary []models.IlpSummary
+	initializers.DB.Find(&ilpsummary, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	ilpsummaryarray := make([]interface{}, 0)
+	ilpsumtotfundvalue := make([]interface{}, 0)
+	bpfv, opfv, _ := GetAllFundValueByPol(iCompany, iPolicy, "")
+
+	resultOut := map[string]interface{}{
+		"BpFundValue": RoundFloat(bpfv, 5),
+		"OpFundValue": RoundFloat(opfv, 5),
+	}
+	ilpsumtotfundvalue = append(ilpsumtotfundvalue, resultOut)
+
+	for k := 0; k < len(ilpsummary); k++ {
+		resultOut := map[string]interface{}{
+			"ID":        IDtoPrint(ilpsummary[k].ID),
+			"CompanyID": IDtoPrint(ilpsummary[k].CompanyID),
+			"BenefitID": IDtoPrint(ilpsummary[k].BenefitID),
+			"PolicyID":  IDtoPrint(ilpsummary[k].PolicyID),
+			"FundCode":  ilpsummary[k].FundCode,
+			"FundType":  ilpsummary[k].FundType,
+			"FundUnits": ilpsummary[k].FundUnits,
+			"FundCurr":  ilpsummary[k].FundCurr,
+		}
+
+		ilpsummaryarray = append(ilpsummaryarray, resultOut)
+	}
+	ilpsumcombinedvalue := map[string]interface{}{
+		"TotalFundValues": ilpsumtotfundvalue,
+		"IlpSummaryFunds": ilpsummaryarray,
+	}
+
+	return ilpsumcombinedvalue
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func GetIlpAnnsummaryData(iCompany uint, iPolicy uint) []interface{} {
+	var policyenq models.Policy
+	initializers.DB.First(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	iAnnivDate := Date2String(GetNextDue(policyenq.AnnivDate, "Y", "R"))
+	iPrevAnnivDate := Date2String(GetNextDue(iAnnivDate, "Y", "R"))
+	var ilpannsummary []models.IlpAnnSummary
+	initializers.DB.Find(&ilpannsummary, "company_id = ? and policy_id = ? and effective_date <= ?", iCompany, iPolicy, iPrevAnnivDate)
+	ilpannsummaryarray := make([]interface{}, 0)
+
+	for k := 0; k < len(ilpannsummary); k++ {
+		resultOut := map[string]interface{}{
+			"ID":            IDtoPrint(ilpannsummary[k].ID),
+			"PolicyID":      IDtoPrint(ilpannsummary[k].PolicyID),
+			"BenefitID":     IDtoPrint(ilpannsummary[k].BenefitID),
+			"FundCode":      ilpannsummary[k].FundCode,
+			"FundType":      ilpannsummary[k].FundType,
+			"FundUnits":     ilpannsummary[k].FundUnits,
+			"FundCurr":      ilpannsummary[k].FundCurr,
+			"EffectiveDate": DateConvert(ilpannsummary[k].EffectiveDate),
+		}
+
+		ilpannsummaryarray = append(ilpannsummaryarray, resultOut)
+	}
+	return ilpannsummaryarray
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) []interface{} {
+	var glmoves []models.GlMove
+	if iGlHistoryCode == "" && iGlAccountCode == "" && iGlSign == "" {
+		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=?", iCompany, iPolicy, iFromDate, iToDate)
+	} else if iGlHistoryCode != "" && iGlAccountCode == "" && iGlSign == "" {
+		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode)
+	} else if iGlHistoryCode != "" && iGlAccountCode != "" && iGlSign == "" {
+		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%")
+	} else if iGlHistoryCode != "" && iGlAccountCode != "" && iGlSign != "" {
+		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%", iGlSign)
+	} else if iGlHistoryCode == "" && iGlAccountCode != "" && iGlSign != "" {
+		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%", iGlSign)
+	} else if iGlHistoryCode == "" && iGlAccountCode != "" && iGlSign == "" {
+		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%")
+	}
+
+	glarray := make([]interface{}, 0)
+
+	for k := 0; k < len(glmoves); k++ {
+		var GlRldgSuffix = ""
+		if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
+			GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
+		}
+
+		var GlRldgSuffixName = ""
+		if len(GlRldgSuffix) == 4 {
+			_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
+		} else if len(GlRldgSuffix) == 3 {
+			_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+		}
+		resultOut := map[string]interface{}{
+
+			"GlRdocno":         glmoves[k].GlRdocno,
+			"GlRldgAcct":       glmoves[k].GlRldgAcct,
+			"GlRldgSuffix":     GlRldgSuffix,
+			"GlRldgSuffixDesc": GlRldgSuffixName,
+			"GlCurry":          glmoves[k].GlCurry,
+			"GlAmount":         NumbertoPrint(glmoves[k].GlAmount),
+			"ContractCurry":    glmoves[k].ContractCurry,
+			"ContractAmount":   NumbertoPrint(glmoves[k].ContractAmount),
+			"AccountCodeID":    glmoves[k].AccountCodeID,
+			"AccountCode":      glmoves[k].AccountCode,
+			"GlSign":           glmoves[k].GlSign,
+			"SequenceNo":       glmoves[k].SequenceNo,
+			"CurrencyRate":     glmoves[k].CurrencyRate,
+			"CurrentDate":      DateConvert(glmoves[k].CurrentDate),
+			"EffectiveDate":    DateConvert(glmoves[k].EffectiveDate),
+			"ReconciledDate":   DateConvert(glmoves[k].ReconciledDate),
+			"ExtractedDate":    DateConvert(glmoves[k].ExtractedDate),
+			"HistoryCode":      glmoves[k].HistoryCode,
+		}
+		glarray = append(glarray, resultOut)
+	}
+	return glarray
 }

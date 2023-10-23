@@ -1895,3 +1895,31 @@ func (m *P0065Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Country, Phone No, Country Code and Flag
+type P0066Data struct {
+	Name     string
+	DialCode string
+	Code     string
+	flag     string
+}
+
+func (m *P0066Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0066Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

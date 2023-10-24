@@ -19,6 +19,7 @@ type Client struct {
 	ClientDob       string `gorm:"type:varchar(8)"`
 	ClientDod       string `gorm:"type:varchar(8)"`
 	ClientEmail     string `gorm:"type:varchar(100)"`
+	ClientMobCode   string `gorm:"type:varchar(05)"`
 	ClientMobile    string `gorm:"type:varchar(20)"`
 	ClientStatus    string `gorm:"type:varchar(05)"`
 	ClientType      string `gorm:"type:varchar(01)"` // C CORPORATE I FOR INDIVIDUAL

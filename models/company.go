@@ -23,7 +23,9 @@ type Company struct {
 	CompanyIncorporationDate string `gorm:"type:varchar(08)"`
 	CompanyTerminationDate   string `gorm:"type:varchar(08)"`
 	CompanyStatusID          uint
-	CurrencyID               uint // P0030  USD2INR
+	CurrencyID               uint   // P0030  USD2INR
+	NationalIdentityMand     string `gorm:"type:varchar(01)"`
+	NationalIdentityEncrypt  string `gorm:"type:varchar(01)"`
 
 	ContHeaders     []ContHeader
 	Users           []User

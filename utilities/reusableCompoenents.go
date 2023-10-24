@@ -6388,8 +6388,6 @@ func GetIlpSummaryData(iCompany uint, iPolicy uint) interface{} {
 	return ilpsumcombinedvalue
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 func GetIlpAnnsummaryData(iCompany uint, iPolicy uint) []interface{} {
 	var policyenq models.Policy
 	initializers.DB.First(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
@@ -6415,8 +6413,6 @@ func GetIlpAnnsummaryData(iCompany uint, iPolicy uint) []interface{} {
 	}
 	return ilpannsummaryarray
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) []interface{} {
 	var glmoves []models.GlMove

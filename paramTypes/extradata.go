@@ -1901,7 +1901,7 @@ type P0066Data struct {
 	Name     string
 	DialCode string
 	Code     string
-	flag     string
+	Flag     string
 }
 
 func (m *P0066Data) ParseData(datamap map[string]interface{}) {

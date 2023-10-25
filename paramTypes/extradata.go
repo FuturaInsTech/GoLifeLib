@@ -1923,3 +1923,28 @@ func (m *P0066Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Tax Rules
+type P0067Data struct {
+	TaxSection string // Characters
+}
+
+func (m *P0067Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0067Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

@@ -1278,7 +1278,7 @@ func GetMaxTranno(iCompany uint, iPolicy uint, iMethod string, iEffDate string, 
 // ©  FuturaInsTech
 func PostGlMove(iCompany uint, iContractCurry string, iEffectiveDate string,
 	iTranno int, iGlAmount float64, iAccAmount float64, iAccountCodeID uint, iGlRdocno uint,
-	iGlRldgAcct string, iSeqnno uint64, iGlSign string, iAccountCode string, iHistoryCode string) error {
+	iGlRldgAcct string, iSeqnno uint64, iGlSign string, iAccountCode string, iHistoryCode string, iRevInd string) error {
 
 	iAccAmount = RoundFloat(iAccAmount, 2)
 
@@ -1330,6 +1330,7 @@ func PostGlMove(iCompany uint, iContractCurry string, iEffectiveDate string,
 
 	GlRdocno := glmove.GlRdocno
 	glmove.ID = 0
+	glmove.ReversalIndicator = iRevInd
 	tx := initializers.DB.Save(&glmove)
 	tx.Commit()
 
@@ -2560,8 +2561,9 @@ func RevGlMove(tranno, userco, ipolicy float64) error {
 		iAccountCode := glmoveenq[i].AccountCode
 		iHistoryCode := glmoveenq[i].HistoryCode
 		iTranno := tranno
+		iRevInd := "R"
 		//glmoveupd.UpdatedID = userid
-		err := PostGlMove(uint(iCompany), iContractCurry, iEffectiveDate, int(iTranno), iGlAmount, iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSeqnno, iGlSign, iAccountCode, iHistoryCode)
+		err := PostGlMove(uint(iCompany), iContractCurry, iEffectiveDate, int(iTranno), iGlAmount, iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSeqnno, iGlSign, iAccountCode, iHistoryCode, iRevInd)
 		if err != nil {
 			return err
 		}
@@ -4347,7 +4349,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	iTranno := 0
 
 	err = PostGlMove(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
-		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iMethod)
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iMethod, "")
 
 	if err != nil {
 		return 0, errors.New(err.Error())
@@ -4373,7 +4375,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	iTranno = 0
 
 	err = PostGlMove(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
-		iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iMethod)
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iMethod, "")
 
 	if err != nil {
 		return 0, errors.New(err.Error())

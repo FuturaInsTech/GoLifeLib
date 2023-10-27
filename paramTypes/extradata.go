@@ -195,7 +195,7 @@ type Q0006Data struct {
 	MrtaInterest         []float64 // MRTA Interest - Array
 	BenefitType          string    // Health,CI,Waiver,Pension etc., P0050
 	CommissionOnExtraInd string    //P0050 Yes/No
-
+	UlSwitchMethod       string    //P0050
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {

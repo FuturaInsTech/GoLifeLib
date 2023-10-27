@@ -51,7 +51,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.PHistory{})
 	// DB.AutoMigrate(models.GlType{})
 	// DB.AutoMigrate(models.AccountCode{})
-	// DB.AutoMigrate(&models.GlMove{})
+	DB.AutoMigrate(&models.GlMove{})
 	// DB.AutoMigrate(&models.GlBal{})
 	// DB.AutoMigrate(&models.Receipt{})
 	// DB.AutoMigrate(&models.Tdfh{})

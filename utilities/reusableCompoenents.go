@@ -3671,17 +3671,17 @@ func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 
 	resultOut := map[string]interface{}{
 		"ID":            IDtoPrint(iPolicy),
-		"PolicyDeposit": oPolicyDeposit,
-		"RevBonus":      oRevBonus,
-		"TermBonus":     oTermBonus,
-		"IntBonus":      oIntBonus,
-		"AccDividend":   oAccumDiv,
-		"AccDivInt":     oAccumDivInt,
-		"AddBonus":      oAddBonus,
-		"LoyalBonus":    oLoyalBonus,
-		"AplAmount":     oAplAmt,
-		"PolLoan":       oPolLoan,
-		"CashDeposit":   oCashDep,
+		"PolicyDeposit": NumbertoPrint(oPolicyDeposit),
+		"RevBonus":      NumbertoPrint(oRevBonus),
+		"TermBonus":     NumbertoPrint(oTermBonus),
+		"IntBonus":      NumbertoPrint(oIntBonus),
+		"AccDividend":   NumbertoPrint(oAccumDiv),
+		"AccDivInt":     NumbertoPrint(oAccumDivInt),
+		"AddBonus":      NumbertoPrint(oAddBonus),
+		"LoyalBonus":    NumbertoPrint(oLoyalBonus),
+		"AplAmount":     NumbertoPrint(oAplAmt),
+		"PolLoan":       NumbertoPrint(oPolLoan),
+		"CashDeposit":   NumbertoPrint(oCashDep),
 	}
 	bonusarray = append(bonusarray, resultOut)
 
@@ -3861,7 +3861,8 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 
 			batchData := make([]interface{}, 0)
 			resultOut = map[string]interface{}{
-				"FromDate": DateConvert(iDate),
+				"Date":     DateConvert(iDate),
+				"FromDate": DateConvert(iFromDate),
 				"ToDate":   DateConvert(iToDate),
 			}
 
@@ -3938,10 +3939,10 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					oData := GetIlpSummaryData(iCompany, iPolicy)
 					resultMap["IlPSummaryData"] = oData
 				case oLetType == "21":
-					oData := GetIlpAnnsummaryData(iCompany, iPolicy)
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode)
 					resultMap["ILPANNSummaryData"] = oData
 				case oLetType == "22":
-					oData := GetIlpTranctionData(iCompany, iPolicy)
+					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate)
 					resultMap["ILPTransactionData"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
@@ -6311,13 +6312,18 @@ func GetIlpFundUnits(iCompany uint, iPolicy uint, iFundCode string) (float64, er
 	return oUnits, nil
 }
 
-func GetIlpTranctionData(iCompany uint, iPolicy uint) []interface{} {
+func GetIlpTranctionData(iCompany uint, iPolicy uint, iHistoryCode string, iDate string) []interface{} {
 	var policyenq models.Policy
 	initializers.DB.First(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
 	iAnnivDate := Date2String(GetNextDue(policyenq.AnnivDate, "Y", "R"))
 	iPrevAnnivDate := Date2String(GetNextDue(iAnnivDate, "Y", "R"))
 	var ilptranction []models.IlpTransaction
-	initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iPrevAnnivDate, iAnnivDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+	if iHistoryCode == "B0103" {
+		initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iPrevAnnivDate, iAnnivDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+	} else if iHistoryCode == "B0115" {
+		initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iAnnivDate, iDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+	}
+
 	ilptranctionarray := make([]interface{}, 0)
 
 	for k := 0; k < len(ilptranction); k++ {
@@ -6390,13 +6396,17 @@ func GetIlpSummaryData(iCompany uint, iPolicy uint) interface{} {
 	return ilpsumcombinedvalue
 }
 
-func GetIlpAnnsummaryData(iCompany uint, iPolicy uint) []interface{} {
+func GetIlpAnnsummaryData(iCompany uint, iPolicy uint, iHistoryCode string) []interface{} {
 	var policyenq models.Policy
 	initializers.DB.First(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
 	iAnnivDate := Date2String(GetNextDue(policyenq.AnnivDate, "Y", "R"))
 	iPrevAnnivDate := Date2String(GetNextDue(iAnnivDate, "Y", "R"))
 	var ilpannsummary []models.IlpAnnSummary
-	initializers.DB.Find(&ilpannsummary, "company_id = ? and policy_id = ? and effective_date <= ?", iCompany, iPolicy, iPrevAnnivDate)
+	if iHistoryCode == "B0103" {
+		initializers.DB.Find(&ilpannsummary, "company_id = ? and policy_id = ? and effective_date = ?", iCompany, iPolicy, iPrevAnnivDate)
+	} else if iHistoryCode == "B0115" {
+		initializers.DB.Find(&ilpannsummary, "company_id = ? and policy_id = ? and effective_date = ?", iCompany, iPolicy, iAnnivDate)
+	}
 	ilpannsummaryarray := make([]interface{}, 0)
 
 	for k := 0; k < len(ilpannsummary); k++ {
@@ -6416,36 +6426,109 @@ func GetIlpAnnsummaryData(iCompany uint, iPolicy uint) []interface{} {
 	return ilpannsummaryarray
 }
 
-func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) []interface{} {
+func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) interface{} {
 	var glmoves []models.GlMove
 	if iGlHistoryCode == "" && iGlAccountCode == "" && iGlSign == "" {
-		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=?", iCompany, iPolicy, iFromDate, iToDate)
+		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=?", iCompany, iPolicy, iFromDate, iToDate)
+		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date <=?", iCompany, iPolicy, iFromDate, iToDate).Order("effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode != "" && iGlAccountCode == "" && iGlSign == "" {
-		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode)
+		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode)
+		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode).Order("history_code, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode != "" && iGlAccountCode != "" && iGlSign == "" {
-		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%")
+		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%")
+		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%").Order("history_code, account_code, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode != "" && iGlAccountCode != "" && iGlSign != "" {
-		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%", iGlSign)
+		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%", iGlSign)
+		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%", iGlSign).Order("history_code, account_code, gl_sign, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode == "" && iGlAccountCode != "" && iGlSign != "" {
-		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%", iGlSign)
+		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%", iGlSign)
+		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%", iGlSign).Order("account_code, gl_sign, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode == "" && iGlAccountCode != "" && iGlSign == "" {
-		initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%")
+		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%")
+		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%").Order("account_code, effective_date , tranno").Find(&glmoves)
 	}
 
-	glarray := make([]interface{}, 0)
-
+	glsumtotarray := make([]interface{}, 0)
+	refaccountcode := ""
+	glaccounttotal := 0.0
+	var GlRldgSuffix = ""
+	var GlRldgSuffixName = ""
 	for k := 0; k < len(glmoves); k++ {
-		var GlRldgSuffix = ""
+		if k == 0 {
+			refaccountcode = glmoves[k].AccountCode
+		}
+
 		if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
 			GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
 		}
 
-		var GlRldgSuffixName = ""
-		if len(GlRldgSuffix) == 4 {
-			_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
-		} else if len(GlRldgSuffix) == 3 {
-			_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+		var err error
+		if GlRldgSuffix != "" {
+			_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
+			if err != nil {
+				_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+			}
 		}
+		if glmoves[k].AccountCode == refaccountcode {
+			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
+
+		} else {
+			// Check P0067 Tax Details
+			var p0067data paramTypes.P0067Data
+			var extradatap0067 paramTypes.Extradata = &p0067data
+			iKey := GlRldgSuffix
+
+			err := GetItemD(int(iCompany), "P0067", iKey, iToDate, &extradatap0067)
+			if err != nil {
+				return errors.New(err.Error())
+			}
+
+			resultOut := map[string]interface{}{
+				"GlRldgSuffix":     GlRldgSuffix,
+				"GlRldgSuffixDesc": GlRldgSuffixName,
+				"AccountCode":      refaccountcode,
+				"GlAccountTotal":   NumbertoPrint(glaccounttotal),
+				"GlTaxSection":     p0067data.TaxSection,
+			}
+			glsumtotarray = append(glsumtotarray, resultOut)
+			refaccountcode = glmoves[k].AccountCode
+			glaccounttotal = 0.0
+			GlRldgSuffix = ""
+			GlRldgSuffixName = ""
+		}
+	}
+	// Check P0067 Tax Details
+	var p0067data paramTypes.P0067Data
+	var extradatap0067 paramTypes.Extradata = &p0067data
+	iKey := GlRldgSuffix
+
+	err := GetItemD(int(iCompany), "P0067", iKey, iFromDate, &extradatap0067)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	resultOut := map[string]interface{}{
+		"GlRldgSuffix":     GlRldgSuffix,
+		"GlRldgSuffixDesc": GlRldgSuffixName,
+		"AccountCode":      refaccountcode,
+		"GlAccountTotal":   NumbertoPrint(glaccounttotal),
+		"GlTaxSection":     p0067data.TaxSection,
+	}
+	glsumtotarray = append(glsumtotarray, resultOut)
+
+	glarray := make([]interface{}, 0)
+	for k := 0; k < len(glmoves); k++ {
+		if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
+			GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
+		}
+
+		var err error
+		if GlRldgSuffix != "" {
+			_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
+			if err != nil {
+				_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+			}
+		}
+
 		resultOut := map[string]interface{}{
 
 			"GlRdocno":         glmoves[k].GlRdocno,
@@ -6460,14 +6543,21 @@ func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iG
 			"AccountCode":      glmoves[k].AccountCode,
 			"GlSign":           glmoves[k].GlSign,
 			"SequenceNo":       glmoves[k].SequenceNo,
-			"CurrencyRate":     glmoves[k].CurrencyRate,
+			"CurrencyRate":     NumbertoPrint(glmoves[k].CurrencyRate),
 			"CurrentDate":      DateConvert(glmoves[k].CurrentDate),
 			"EffectiveDate":    DateConvert(glmoves[k].EffectiveDate),
 			"ReconciledDate":   DateConvert(glmoves[k].ReconciledDate),
 			"ExtractedDate":    DateConvert(glmoves[k].ExtractedDate),
 			"HistoryCode":      glmoves[k].HistoryCode,
+			"ReversalInd":      glmoves[k].ReversalIndicator,
 		}
 		glarray = append(glarray, resultOut)
 	}
-	return glarray
+
+	glcombineddata := map[string]interface{}{
+		"glsumtotarray": glsumtotarray,
+		"glarray":       glarray,
+	}
+	return glcombineddata
+
 }

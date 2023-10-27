@@ -44,4 +44,5 @@ type Benefit struct {
 	IlpFunds         []IlpFund
 	IlpTransactions  []IlpTransaction
 	IlpSummaries     []IlpSummary
+	IlpFundSwitches  []IlpFundSwitch
 }

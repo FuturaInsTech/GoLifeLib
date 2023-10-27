@@ -86,15 +86,24 @@ type IlpFund struct {
 
 }
 
-type IlpFundSwitch struct {
+type IlpSwitchHeader struct {
 	gorm.Model
 	types.CModel
-	PolicyID             uint
-	BenefitID            uint
-	EffectiveDate        string      `gorm:"type:varchar(8)"`
-	FundSwitchBasis      string      `gorm:"type:varchar(1)"` //P0050 Unit or Amount
-	SourceFundCode       [20]string  `gorm:"type:varchar(5)"` //P0050
-	SourceFundPercentage [20]float64 `gorm:"type:decimal(5,2);"`
-	TargetFundCode       [20]string  `gorm:"type:varchar(5)"` //P0050
-	TargetFundPercentage float64     `gorm:"type:decimal(5,2);"`
+	PolicyID        uint
+	BenefitID       uint
+	EffectiveDate   string `gorm:"type:varchar(8)"`
+	FundSwitchBasis string `gorm:"type:varchar(1)"` //P0050 Unit or Amount
+
+}
+
+type IlpSwitchFund struct {
+	gorm.Model
+	types.CModel
+	PolicyID        uint
+	BenefitID       uint
+	EffectiveDate   string `gorm:"type:varchar(8)"`
+	SwitchDirection string `gorm:"type:varchar(1)"`
+	SequenceNo      uint
+	FundCode        string  `gorm:"type:varchar(5)"` //P0050
+	FundPercentage  float64 `gorm:"type:decimal(5,2)"`
 }

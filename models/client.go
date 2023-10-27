@@ -24,6 +24,7 @@ type Client struct {
 	ClientStatus    string `gorm:"type:varchar(05)"`
 	ClientType      string `gorm:"type:varchar(01)"` // C CORPORATE I FOR INDIVIDUAL
 	NationalId      string `gorm:"type:varchar(50);unique"`
+	Nationality     string `gorm:"type:varchar(02)"`
 	Addresses       []Address
 	Nominees        []Nominee
 	LeadDetails     []LeadDetail

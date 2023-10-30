@@ -6319,9 +6319,9 @@ func GetIlpTranctionData(iCompany uint, iPolicy uint, iHistoryCode string, iDate
 	iPrevAnnivDate := Date2String(GetNextDue(iAnnivDate, "Y", "R"))
 	var ilptranction []models.IlpTransaction
 	if iHistoryCode == "B0103" {
-		initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iPrevAnnivDate, iAnnivDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+		initializers.DB.Where("company_id = ? and policy_id = ? and ul_process_flag = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, "C", iPrevAnnivDate, iAnnivDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
 	} else if iHistoryCode == "B0115" {
-		initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iAnnivDate, iDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+		initializers.DB.Where("company_id = ? and policy_id = ? and ul_process_flag = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, "C", iAnnivDate, iDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
 	}
 
 	ilptranctionarray := make([]interface{}, 0)

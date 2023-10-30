@@ -56,4 +56,6 @@ type Policy struct {
 	IlpFunds         []IlpFund
 	IlpTransactions  []IlpTransaction
 	IlpSummaries     []IlpSummary
+	IlpSwitchHeaders []IlpSwitchHeader
+	IlpSwitchFunds   []IlpSwitchFund
 }

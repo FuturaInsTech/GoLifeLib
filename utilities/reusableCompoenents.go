@@ -6319,9 +6319,9 @@ func GetIlpTranctionData(iCompany uint, iPolicy uint, iHistoryCode string, iDate
 	iPrevAnnivDate := Date2String(GetNextDue(iAnnivDate, "Y", "R"))
 	var ilptranction []models.IlpTransaction
 	if iHistoryCode == "B0103" {
-		initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iPrevAnnivDate, iAnnivDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+		initializers.DB.Where("company_id = ? and policy_id = ? and ul_process_flag = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, "C", iPrevAnnivDate, iAnnivDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
 	} else if iHistoryCode == "B0115" {
-		initializers.DB.Where("company_id = ? and policy_id = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, iAnnivDate, iDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
+		initializers.DB.Where("company_id = ? and policy_id = ? and ul_process_flag = ? and transaction_date >= ? and transaction_date < ?", iCompany, iPolicy, "C", iAnnivDate, iDate).Order("fund_code, transaction_date , tranno").Find(&ilptranction)
 	}
 
 	ilptranctionarray := make([]interface{}, 0)
@@ -6456,22 +6456,23 @@ func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iG
 	for k := 0; k < len(glmoves); k++ {
 		if k == 0 {
 			refaccountcode = glmoves[k].AccountCode
-		}
-
-		if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
-			GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
-		}
-
-		var err error
-		if GlRldgSuffix != "" {
-			_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
-			if err != nil {
-				_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+			if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
+				GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
 			}
+			var err error
+			if GlRldgSuffix != "" {
+				_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
+				if err != nil {
+					_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+				}
+			}
+			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
+			continue
 		}
+
 		if glmoves[k].AccountCode == refaccountcode {
 			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
-
+			continue
 		} else {
 			// Check P0067 Tax Details
 			var p0067data paramTypes.P0067Data
@@ -6482,7 +6483,6 @@ func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iG
 			if err != nil {
 				return errors.New(err.Error())
 			}
-
 			resultOut := map[string]interface{}{
 				"GlRldgSuffix":     GlRldgSuffix,
 				"GlRldgSuffixDesc": GlRldgSuffixName,
@@ -6491,10 +6491,21 @@ func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iG
 				"GlTaxSection":     p0067data.TaxSection,
 			}
 			glsumtotarray = append(glsumtotarray, resultOut)
-			refaccountcode = glmoves[k].AccountCode
+			// process the first record of next account code
 			glaccounttotal = 0.0
-			GlRldgSuffix = ""
-			GlRldgSuffixName = ""
+			refaccountcode = glmoves[k].AccountCode
+			if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
+				GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
+			}
+
+			if GlRldgSuffix != "" {
+				_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
+				if err != nil {
+					_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+				}
+			}
+			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
+			continue
 		}
 	}
 	// Check P0067 Tax Details
@@ -6521,7 +6532,7 @@ func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iG
 			GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
 		}
 
-		var err error
+		GlRldgSuffixName := ""
 		if GlRldgSuffix != "" {
 			_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
 			if err != nil {

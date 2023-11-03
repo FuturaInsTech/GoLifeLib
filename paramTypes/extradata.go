@@ -1926,7 +1926,11 @@ func (m *P0066Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Tax Rules
 type P0067Data struct {
-	TaxSection string // Characters
+	GlTax []P0067
+}
+type P0067 struct {
+	AccountCode string
+	TaxSection  string
 }
 
 func (m *P0067Data) ParseData(datamap map[string]interface{}) {

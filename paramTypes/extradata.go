@@ -1873,7 +1873,7 @@ type P0065Data struct {
 type P0065 struct {
 	Field     string // Field Name of the Table
 	Mandatory string // P0050 Yes/No
-
+	ErrorCode string // Error Code Table
 }
 
 func (m *P0065Data) ParseData(datamap map[string]interface{}) {

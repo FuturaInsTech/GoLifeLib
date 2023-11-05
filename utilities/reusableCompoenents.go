@@ -5305,7 +5305,7 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	result = initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
 	for i := 0; i < len(benefitenq); i++ {
 		if benefitenq[i].IlpFeeDate > odate {
-			odate = benefitenq[i].IlpMortalityDate
+			odate = benefitenq[i].IlpFeeDate
 		}
 	}
 

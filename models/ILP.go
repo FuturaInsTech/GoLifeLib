@@ -92,7 +92,7 @@ type IlpSwitchHeader struct {
 	PolicyID        uint
 	BenefitID       uint
 	EffectiveDate   string `gorm:"type:varchar(8)"`
-	FundSwitchBasis string `gorm:"type:varchar(1)"` //P0050 Unit or Amount
+	FundSwitchBasis string `gorm:"type:varchar(1)"` //P0050 Unit or Amount or Percentage
 	IlpSwitchFunds  []IlpSwitchFund
 }
 
@@ -106,6 +106,8 @@ type IlpSwitchFund struct {
 	SwitchDirection   string `gorm:"type:varchar(1)"` //P0050 Source or Target
 	SequenceNo        uint
 	FundCode          string  `gorm:"type:varchar(5)"`   //P0050
+	FundType          string  `gorm:"type:varchar(2)"`   //P0050
+	FundCurr          string  `gorm:"type:varchar(3)"`   //P0050
 	FundPercentage    float64 `gorm:"type:decimal(8,5)"` // Arrived Value
 	FundUnits         float64 `gorm:"type:decimal(15,5);"`
 	FundAmount        float64

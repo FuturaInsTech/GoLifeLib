@@ -6144,6 +6144,12 @@ func PostUlpDeductionByAmount(iCompany uint, iPolicy uint, iBenefit uint, iAmoun
 	return nil
 }
 
+// # ???
+// *********************************************************************************************
+// GetFundCPrice  - To get Price used for a given date for a given fund
+// Inputs : Company Code, Fund Code, Business Date
+// Outputs : Bid Price, Offer Price, Price Date Used (LIFO)
+// ©  FuturaInsTech
 func GetFundCPrice(iCompany uint, iFundCode string, iDate string) (float64, float64, string) {
 	var ilppriceenq models.IlpPrice
 	var iPriceDateUsed = "00000000"

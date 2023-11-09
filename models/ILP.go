@@ -111,6 +111,7 @@ type IlpSwitchFund struct {
 	FundPercentage    float64 `gorm:"type:decimal(8,5)"` // Arrived Value
 	FundUnits         float64 `gorm:"type:decimal(15,5);"`
 	FundAmount        float64
+	FundPrice         float64 `gorm:"type:decimal(15,5);"`
 }
 
 type IlpStatementPrint struct { // temporary table
@@ -125,7 +126,7 @@ type IlpStatementPrint struct { // temporary table
 	FundCode        string  `gorm:"type:varchar(5)"` //P0050
 	FundUnits       float64 `gorm:"type:decimal(15,5);"`
 	FundAmount      float64
-	FundPrince      float64
+	FundPrice       float64 `gorm:"type:decimal(15,5);"`
 }
 
 // Read ILPANNSUMMARY TABLE WITH EFFECTIVE AS FROM DATE

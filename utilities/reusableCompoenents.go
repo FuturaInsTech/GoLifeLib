@@ -6712,13 +6712,11 @@ func GetPremTaxGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate str
 // # Inputs Company, Coverage Code, Start Date of Coverage, Age , Gender, Risk Term, Premium Term, Mortality Class, Sum Assured, Premium Method (Q0006), Discount Type, Discount Method, Frequency Method, Frequency
 // # Outputs Annual Premium and Model Premium
 // ©  FuturaInsTech
-//
-
 func GetNewPremium(iCompany uint, iCoverage string, iDate string, iAge uint, iGender string, iRiskTerm uint, iPremTerm uint, iMortality string, iSA float64, iPremMethod string, iDiscType string, iDiscMethod string, iFrqMethod string, iFrequency string) (oAnnualPrem float64, oBasePrem float64) {
 
 	prem, _ := GetAnnualRate(iCompany, iCoverage, iAge, iGender, iRiskTerm, iPremTerm, iPremMethod, iDate, iMortality)
 	oAnnualPrem = RoundFloat((prem * float64(iSA) / 10000), 2)
-	discount := RoundFloat(CalcSaPremDiscount(iCompany, iDiscType, iDiscMethod, prem, uint(iSA), iDate), 2)
+	discount := RoundFloat(CalcSaPremDiscount(iCompany, iDiscType, iDiscMethod, oAnnualPrem, uint(iSA), iDate), 2)
 	prem = prem - discount
 	oBasePrem = CalcFrequencyPrem(iCompany, iDate, iFrqMethod, iFrequency, prem)
 

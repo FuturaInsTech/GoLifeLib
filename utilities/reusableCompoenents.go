@@ -6525,7 +6525,6 @@ func GetPremTaxGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate str
 	var covrnames []string
 
 	var acodearray []string
-	var ataxarray []string
 
 	var p0067data paramTypes.P0067Data
 	var extradatap0067 paramTypes.Extradata = &p0067data
@@ -6556,7 +6555,6 @@ func GetPremTaxGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate str
 			}
 			if notFound {
 				acodearray = append(acodearray, p0067data.GlTax[j].AccountCode)
-				ataxarray = append(ataxarray, p0067data.GlTax[j].TaxSection)
 			}
 
 		}
@@ -6595,37 +6593,64 @@ func GetPremTaxGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate str
 					break
 				}
 			}
-			for i := 0; i < len(acodearray); i++ {
-				if glaccountcode == acodearray[i] {
-					gltaxsection = ataxarray[i]
+			//gltaxsection
+			err := GetItemD(int(iCompany), "P0067", glcoveragecode, iFromDate, &extradatap0067)
+			if err != nil {
+				return nil
+			}
+			for j := 0; j < len(p0067data.GlTax); j++ {
+				glcodewithcover := p0067data.GlTax[j].AccountCode + glcoveragecode
+				if glaccountcode == p0067data.GlTax[j].AccountCode ||
+					glaccountcode == glcodewithcover {
+					gltaxsection = p0067data.GlTax[j].TaxSection
 					break
 				}
 			}
-			resultOut := map[string]interface{}{
-				"GlCoverageCode": glcoveragecode,
-				"GlCoverageName": glcoveragename,
-				"GlAccountCode":  glaccountcode,
-				"GlAccountTotal": NumbertoPrint(glaccounttotal),
-				"GlTaxSection":   gltaxsection,
+		}
+		resultOut := map[string]interface{}{
+			"GlCoverageCode": glcoveragecode,
+			"GlCoverageName": glcoveragename,
+			"GlAccountCode":  glaccountcode,
+			"GlAccountTotal": NumbertoPrint(glaccounttotal),
+			"GlTaxSection":   gltaxsection,
+		}
+		glsumtotarray = append(glsumtotarray, resultOut)
+		// process the first record of next account code
+		glaccounttotal = 0.0
+		glaccountcode = glmoves[k].AccountCode
+		glcoveragecode = glmoves[k].BCoverage
+		glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
+		//gltaxsection
+		err := GetItemD(int(iCompany), "P0067", glcoveragecode, iFromDate, &extradatap0067)
+		if err != nil {
+			return nil
+		}
+		for j := 0; j < len(p0067data.GlTax); j++ {
+			glcodewithcover := p0067data.GlTax[j].AccountCode + glcoveragecode
+			if glaccountcode == p0067data.GlTax[j].AccountCode ||
+				glaccountcode == glcodewithcover {
+				gltaxsection = p0067data.GlTax[j].TaxSection
+				break
 			}
-			glsumtotarray = append(glsumtotarray, resultOut)
-			// process the first record of next account code
-			glaccounttotal = 0.0
-			glaccountcode = glmoves[k].AccountCode
-			glcoveragecode = glmoves[k].BCoverage
-			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
-			continue
 		}
 	}
+
 	for i := 0; i < len(covrcodes); i++ {
 		if glcoveragecode == covrcodes[i] {
 			glcoveragename = covrnames[i]
 			break
 		}
 	}
-	for i := 0; i < len(acodearray); i++ {
-		if glaccountcode == acodearray[i] {
-			gltaxsection = ataxarray[i]
+	//gltaxsection
+	err := GetItemD(int(iCompany), "P0067", glcoveragecode, iFromDate, &extradatap0067)
+	if err != nil {
+		return nil
+	}
+	for j := 0; j < len(p0067data.GlTax); j++ {
+		glcodewithcover := p0067data.GlTax[j].AccountCode + glcoveragecode
+		if glaccountcode == p0067data.GlTax[j].AccountCode ||
+			glaccountcode == glcodewithcover {
+			gltaxsection = p0067data.GlTax[j].TaxSection
 			break
 		}
 	}

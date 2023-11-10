@@ -6717,8 +6717,8 @@ func GetNewPremium(iCompany uint, iCoverage string, iDate string, iAge uint, iGe
 	prem, _ := GetAnnualRate(iCompany, iCoverage, iAge, iGender, iRiskTerm, iPremTerm, iPremMethod, iDate, iMortality)
 	oAnnualPrem = RoundFloat((prem * float64(iSA) / 10000), 2)
 	discount := RoundFloat(CalcSaPremDiscount(iCompany, iDiscType, iDiscMethod, oAnnualPrem, uint(iSA), iDate), 2)
-	oAnnualPrem = oAnnualPrem - discount
-	oBasePrem = CalcFrequencyPrem(iCompany, iDate, iFrqMethod, iFrequency, prem)
+	prem1 := oAnnualPrem - discount
+	oBasePrem = CalcFrequencyPrem(iCompany, iDate, iFrqMethod, iFrequency, prem1)
 
 	return oAnnualPrem, oBasePrem
 }

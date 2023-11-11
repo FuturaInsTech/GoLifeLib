@@ -5625,7 +5625,6 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
 		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
 		ilptrancrt.AccountCode = p0059data.AccountCode
-
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""
 		ilptrancrt.SurrenderPercentage = 0
@@ -6142,25 +6141,6 @@ func PostUlpDeductionByAmount(iCompany uint, iPolicy uint, iBenefit uint, iAmoun
 		}
 	}
 	return nil
-}
-
-// # ???
-// *********************************************************************************************
-// GetFundCPrice  - To get Price used for a given date for a given fund
-// Inputs : Company Code, Fund Code, Business Date
-// Outputs : Bid Price, Offer Price, Price Date Used (LIFO)
-// ©  FuturaInsTech
-func GetFundCPrice(iCompany uint, iFundCode string, iDate string) (float64, float64, string) {
-	var ilppriceenq models.IlpPrice
-	var iPriceDateUsed = "00000000"
-	result := initializers.DB.Where("company_id = ? and fund_code = ? and approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
-	if result.Error != nil {
-		return 0.0, 0.0, iPriceDateUsed
-	}
-	iPriceDateUsed = ilppriceenq.FundEffDate
-	iBidPrice := ilppriceenq.FundBidPrice
-	iOfferPrice := ilppriceenq.FundOfferPrice
-	return iBidPrice, iOfferPrice, iPriceDateUsed
 }
 
 func PostUlpDeductionByUnits(iCompany uint, iPolicy uint, iBenefit uint, iSurrPercentage float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string) error {
@@ -6721,4 +6701,25 @@ func GetNewPremium(iCompany uint, iCoverage string, iDate string, iAge uint, iGe
 	oBasePrem = CalcFrequencyPrem(iCompany, iDate, iFrqMethod, iFrequency, prem1)
 
 	return oAnnualPrem, oBasePrem
+}
+
+// #  ????
+// GetFundCPrice - Fetch the Available Fund Price approved to use as Current Price in calculations
+//
+// Inputs: Company, Fund Code, Processing Date
+//
+// # Outputs:  Bid Price, Offer Price and Date of Price
+//
+// ©  FuturaInsTech
+func GetFundCPrice(iCompany uint, iFundCode string, iDate string) (float64, float64, string) {
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result := initializers.DB.Where("company_id = ? and fund_code = ? and approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0.0, 0.0, iPriceDateUsed
+	}
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	iBidPrice := ilppriceenq.FundBidPrice
+	iOfferPrice := ilppriceenq.FundOfferPrice
+	return iBidPrice, iOfferPrice, iPriceDateUsed
 }

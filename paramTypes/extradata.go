@@ -39,6 +39,7 @@ type Q0005Data struct {
 	BackDateAllowed        string   // P0050  YESNO
 	NoLapseGuarantee       string   //P0050 YESNO
 	NoLapseGuaranteeMonths int
+	SpecialRevivalMonths   int
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {

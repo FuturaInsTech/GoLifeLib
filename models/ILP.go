@@ -92,7 +92,7 @@ type IlpSwitchHeader struct {
 	PolicyID        uint
 	BenefitID       uint
 	EffectiveDate   string `gorm:"type:varchar(8)"`
-	FundSwitchBasis string `gorm:"type:varchar(1)"` //P0050 Unit or Amount
+	FundSwitchBasis string `gorm:"type:varchar(1)"` //P0050 Unit or Amount or Percentage
 	IlpSwitchFunds  []IlpSwitchFund
 }
 
@@ -106,7 +106,32 @@ type IlpSwitchFund struct {
 	SwitchDirection   string `gorm:"type:varchar(1)"` //P0050 Source or Target
 	SequenceNo        uint
 	FundCode          string  `gorm:"type:varchar(5)"`   //P0050
+	FundType          string  `gorm:"type:varchar(2)"`   //P0050
+	FundCurr          string  `gorm:"type:varchar(3)"`   //P0050
 	FundPercentage    float64 `gorm:"type:decimal(8,5)"` // Arrived Value
 	FundUnits         float64 `gorm:"type:decimal(15,5);"`
 	FundAmount        float64
+	FundPrice         float64 `gorm:"type:decimal(15,5);"`
 }
+
+type IlpStatementPrint struct { // temporary table
+	gorm.Model
+	types.CModel
+	PolicyID        uint
+	BenefitID       uint
+	Description     string  `gorm:"type:varchar(50)"` // opening or closing or ilp prem or ilp fee or ilp contribution
+	TransactionDate string  `gorm:"type:varchar(8)"`
+	EffectiveDate   string  `gorm:"type:varchar(8)"`
+	SequenceNo      uint    // 1,2,3
+	FundCode        string  `gorm:"type:varchar(5)"` //P0050
+	FundUnits       float64 `gorm:"type:decimal(15,5);"`
+	FundAmount      float64
+	FundPrice       float64 `gorm:"type:decimal(15,5);"`
+}
+
+// Read ILPANNSUMMARY TABLE WITH EFFECTIVE AS FROM DATE
+// IF RECORD FOUND, MOVE VALUES TO  "opENING"
+// READ ILPTRANSACTIONS EFFECITVE DATE >= OPENING DATE AND EFFECTIVE <= CLOSING DATE
+// MOVE ILPTRANSACTIONS INTO THIS NEW FILE
+// READ ILPANNSUMMARY TABLE WITH EFFECIGE DATE AS CLOSING DATE
+// MOVE VALUES TO NEW FILE WITH DESCRIPTION AS 'CLOSING"

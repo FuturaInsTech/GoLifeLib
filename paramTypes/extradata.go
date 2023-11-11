@@ -39,6 +39,7 @@ type Q0005Data struct {
 	BackDateAllowed        string   // P0050  YESNO
 	NoLapseGuarantee       string   //P0050 YESNO
 	NoLapseGuaranteeMonths int
+	SpecialRevivalMonths   int
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {
@@ -1873,7 +1874,7 @@ type P0065Data struct {
 type P0065 struct {
 	Field     string // Field Name of the Table
 	Mandatory string // P0050 Yes/No
-
+	ErrorCode string // Error Code Table
 }
 
 func (m *P0065Data) ParseData(datamap map[string]interface{}) {
@@ -1926,7 +1927,11 @@ func (m *P0066Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Tax Rules
 type P0067Data struct {
-	TaxSection string // Characters
+	GlTax []P0067
+}
+type P0067 struct {
+	AccountCode string
+	TaxSection  string
 }
 
 func (m *P0067Data) ParseData(datamap map[string]interface{}) {

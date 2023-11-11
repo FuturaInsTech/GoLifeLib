@@ -1278,7 +1278,7 @@ func GetMaxTranno(iCompany uint, iPolicy uint, iMethod string, iEffDate string, 
 // ©  FuturaInsTech
 func PostGlMove(iCompany uint, iContractCurry string, iEffectiveDate string,
 	iTranno int, iGlAmount float64, iAccAmount float64, iAccountCodeID uint, iGlRdocno uint,
-	iGlRldgAcct string, iSeqnno uint64, iGlSign string, iAccountCode string, iHistoryCode string, iRevInd string) error {
+	iGlRldgAcct string, iSeqnno uint64, iGlSign string, iAccountCode string, iHistoryCode string, iRevInd string, iCoverage string) error {
 
 	iAccAmount = RoundFloat(iAccAmount, 2)
 
@@ -1331,6 +1331,7 @@ func PostGlMove(iCompany uint, iContractCurry string, iEffectiveDate string,
 	GlRdocno := glmove.GlRdocno
 	glmove.ID = 0
 	glmove.ReversalIndicator = iRevInd
+	glmove.BCoverage = iCoverage
 	tx := initializers.DB.Save(&glmove)
 	tx.Commit()
 
@@ -2562,8 +2563,9 @@ func RevGlMove(tranno, userco, ipolicy float64) error {
 		iHistoryCode := glmoveenq[i].HistoryCode
 		iTranno := tranno
 		iRevInd := "R"
+		iCoverage := glmoveenq[i].BCoverage
 		//glmoveupd.UpdatedID = userid
-		err := PostGlMove(uint(iCompany), iContractCurry, iEffectiveDate, int(iTranno), iGlAmount, iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSeqnno, iGlSign, iAccountCode, iHistoryCode, iRevInd)
+		err := PostGlMove(uint(iCompany), iContractCurry, iEffectiveDate, int(iTranno), iGlAmount, iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSeqnno, iGlSign, iAccountCode, iHistoryCode, iRevInd, iCoverage)
 		if err != nil {
 			return err
 		}
@@ -3944,6 +3946,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "22":
 					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate)
 					resultMap["ILPTransactionData"] = oData
+				case oLetType == "23":
+					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
+					resultMap["GLData"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -4350,7 +4355,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	iTranno := 0
 
 	err = PostGlMove(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
-		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iMethod, "")
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iMethod, "", "")
 
 	if err != nil {
 		return 0, errors.New(err.Error())
@@ -4376,7 +4381,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	iTranno = 0
 
 	err = PostGlMove(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
-		iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iMethod, "")
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iMethod, "", "")
 
 	if err != nil {
 		return 0, errors.New(err.Error())
@@ -5300,7 +5305,7 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	result = initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
 	for i := 0; i < len(benefitenq); i++ {
 		if benefitenq[i].IlpFeeDate > odate {
-			odate = benefitenq[i].IlpMortalityDate
+			odate = benefitenq[i].IlpFeeDate
 		}
 	}
 
@@ -5924,162 +5929,117 @@ func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface
 //		}
 //		return "N"
 //	}
-func ValidateAddress(clientval models.Address, userco uint, userlan uint) (string error) {
+func ValidateAddress(addressval models.Address, userco uint, userlan uint, iKey string) (string error) {
 
-	if clientval.AddressType == "" {
-		shortCode := "GL486"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
 	}
-	if clientval.AddressLine1 == "" {
-		shortCode := "GL487"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.AddressLine2 == "" {
-		shortCode := "GL488"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.AddressLine3 == "" {
-		shortCode := "GL489"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.AddressPostCode == "" {
-		shortCode := "GL490"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.AddressState == "" {
-		shortCode := "GL491"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.AddressCountry == "" {
-		shortCode := "GL492"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.AddressStartDate == "Invalid date" {
-		shortCode := "GL493"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(addressval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if fv == "" || fv == 0 || fv == nil || fv == "Invalid date" {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
 	}
 
 	return
 }
 
-func ValidateClient(clientval models.Client, userco uint, userlan uint) (string error) {
+// # 99999
+// Validate the Client Table Fields mandatory as required by P0065 Rules
+func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey string) (string error) {
 
-	if clientval.ClientShortName == "" {
-		shortCode := "GL469"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
 	}
-	if clientval.ClientLongName == "" {
-		shortCode := "GL470"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(clientval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if fv == "" || fv == 0 || fv == nil || fv == "Invalid date" {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
 	}
-	if clientval.Gender == "" {
-		shortCode := "GL471"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.Salutation == "" {
-		shortCode := "GL472"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.Language == "" {
-		shortCode := "GL473"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.ClientDob == "" {
-		shortCode := "GL474"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.ClientEmail == "" {
-		shortCode := "GL475"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
+
 	if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
 		shortCode := "GL477"
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
-	if clientval.ClientMobile == "" {
-		shortCode := "GL476"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	_, err := strconv.Atoi(clientval.ClientMobile)
+
+	_, err = strconv.Atoi(clientval.ClientMobile)
 	if err != nil {
 		shortCode := "GL478"
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
-	if clientval.ClientStatus == "" {
-		shortCode := "GL494"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if clientval.NationalId == "" {
-		shortCode := "GL501"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
+
 	return
 }
 
-func ValidateBank(bankval models.Bank, userco uint, userlan uint) (string error) {
-	if bankval.BankCode == "" {
-		shortCode := "GL479"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if bankval.BankAccountNo == "" {
-		shortCode := "GL480"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if bankval.StartDate == "Invalid date" {
-		shortCode := "GL481"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+// # 99999
+// Validate the Bank Table Fields mandatory as required by P0065 Rules
+func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (string error) {
 
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if bankval.BankType == "" {
-		shortCode := "GL482"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
 
-		return errors.New(shortCode + " : " + longDesc)
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
 	}
-	if bankval.BankAccountStatus == "" {
-		shortCode := "GL483"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if bankval.ClientID == 0 {
-		shortCode := "GL484"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+	for i := 0; i < len(p0065data.FieldList); i++ {
 
-		return errors.New(shortCode + " : " + longDesc)
-	}
-	if bankval.BankGroup == "" {
-		shortCode := "GL485"
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		var fv interface{}
+		r := reflect.ValueOf(bankval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
 
-		return errors.New(shortCode + " : " + longDesc)
+		if fv == "" || fv == 0 || fv == nil || fv == "Invalid date" {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
 	}
+
 	return
 }
-
 func PostUlpDeductionByAmount(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string) error {
 
 	var policyenq models.Policy
@@ -6184,6 +6144,12 @@ func PostUlpDeductionByAmount(iCompany uint, iPolicy uint, iBenefit uint, iAmoun
 	return nil
 }
 
+// # ???
+// *********************************************************************************************
+// GetFundCPrice  - To get Price used for a given date for a given fund
+// Inputs : Company Code, Fund Code, Business Date
+// Outputs : Bid Price, Offer Price, Price Date Used (LIFO)
+// ©  FuturaInsTech
 func GetFundCPrice(iCompany uint, iFundCode string, iDate string) (float64, float64, string) {
 	var ilppriceenq models.IlpPrice
 	var iPriceDateUsed = "00000000"
@@ -6427,140 +6393,119 @@ func GetIlpAnnsummaryData(iCompany uint, iPolicy uint, iHistoryCode string) []in
 }
 
 func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) interface{} {
+	var benefitenq []models.Benefit
+
+	var covrcodes []string
+	var covrnames []string
+
+	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	for i := 0; i < len(benefitenq); i++ {
+		covrcode := benefitenq[i].BCoverage
+		_, covrname, err := GetParamDesc(iCompany, "Q0006", covrcode, 1)
+		if err != nil {
+			continue
+		}
+		covrcodes = append(covrcodes, covrcode)
+		covrnames = append(covrnames, covrname)
+	}
+
 	var glmoves []models.GlMove
 	if iGlHistoryCode == "" && iGlAccountCode == "" && iGlSign == "" {
-		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=?", iCompany, iPolicy, iFromDate, iToDate)
 		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date <=?", iCompany, iPolicy, iFromDate, iToDate).Order("effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode != "" && iGlAccountCode == "" && iGlSign == "" {
-		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode)
 		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode).Order("history_code, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode != "" && iGlAccountCode != "" && iGlSign == "" {
-		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%")
 		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%").Order("history_code, account_code, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode != "" && iGlAccountCode != "" && iGlSign != "" {
-		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%", iGlSign)
 		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and history_code = ? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, "%"+iGlAccountCode+"%", iGlSign).Order("history_code, account_code, gl_sign, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode == "" && iGlAccountCode != "" && iGlSign != "" {
-		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%", iGlSign)
 		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%", iGlSign).Order("account_code, gl_sign, effective_date , tranno").Find(&glmoves)
 	} else if iGlHistoryCode == "" && iGlAccountCode != "" && iGlSign == "" {
-		//initializers.DB.Find(&glmoves, "company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%")
-		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ? and gl_sign = ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%").Order("account_code, effective_date , tranno").Find(&glmoves)
+		initializers.DB.Where("company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date<=? and account_code like ?", iCompany, iPolicy, iFromDate, iToDate, "%"+iGlAccountCode+"%").Order("account_code, effective_date , tranno").Find(&glmoves)
 	}
 
 	glsumtotarray := make([]interface{}, 0)
-	refaccountcode := ""
+	glaccountcode := ""
 	glaccounttotal := 0.0
-	var GlRldgSuffix = ""
-	var GlRldgSuffixName = ""
+	glcoveragecode := ""
+	glcoveragename := ""
 	for k := 0; k < len(glmoves); k++ {
 		if k == 0 {
-			refaccountcode = glmoves[k].AccountCode
-			if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
-				GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
-			}
-			var err error
-			if GlRldgSuffix != "" {
-				_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
-				if err != nil {
-					_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
-				}
-			}
+			glcoveragecode = glmoves[k].BCoverage
+			glaccountcode = glmoves[k].AccountCode
 			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
 			continue
 		}
 
-		if glmoves[k].AccountCode == refaccountcode {
+		if glmoves[k].BCoverage == glcoveragecode && glmoves[k].AccountCode == glaccountcode {
 			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
 			continue
 		} else {
-			// Check P0067 Tax Details
-			var p0067data paramTypes.P0067Data
-			var extradatap0067 paramTypes.Extradata = &p0067data
-			iKey := GlRldgSuffix
-
-			err := GetItemD(int(iCompany), "P0067", iKey, iToDate, &extradatap0067)
-			if err != nil {
-				return errors.New(err.Error())
+			for i := 0; i < len(covrcodes); i++ {
+				if glcoveragecode == covrcodes[i] {
+					glcoveragename = covrnames[i]
+					break
+				}
 			}
 			resultOut := map[string]interface{}{
-				"GlRldgSuffix":     GlRldgSuffix,
-				"GlRldgSuffixDesc": GlRldgSuffixName,
-				"AccountCode":      refaccountcode,
-				"GlAccountTotal":   NumbertoPrint(glaccounttotal),
-				"GlTaxSection":     p0067data.TaxSection,
+				"Glcoveragecode": glcoveragecode,
+				"Glcoveragename": glcoveragename,
+				"AccountCode":    glaccountcode,
+				"GlAccountTotal": NumbertoPrint(glaccounttotal),
 			}
 			glsumtotarray = append(glsumtotarray, resultOut)
 			// process the first record of next account code
 			glaccounttotal = 0.0
-			refaccountcode = glmoves[k].AccountCode
-			if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
-				GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
-			}
-
-			if GlRldgSuffix != "" {
-				_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
-				if err != nil {
-					_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
-				}
-			}
+			glaccountcode = glmoves[k].AccountCode
+			glcoveragecode = glmoves[k].BCoverage
 			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
 			continue
 		}
 	}
-	// Check P0067 Tax Details
-	var p0067data paramTypes.P0067Data
-	var extradatap0067 paramTypes.Extradata = &p0067data
-	iKey := GlRldgSuffix
-
-	err := GetItemD(int(iCompany), "P0067", iKey, iFromDate, &extradatap0067)
-	if err != nil {
-		return errors.New(err.Error())
+	for i := 0; i < len(covrcodes); i++ {
+		if glcoveragecode == covrcodes[i] {
+			glcoveragename = covrnames[i]
+			break
+		}
 	}
 	resultOut := map[string]interface{}{
-		"GlRldgSuffix":     GlRldgSuffix,
-		"GlRldgSuffixDesc": GlRldgSuffixName,
-		"AccountCode":      refaccountcode,
-		"GlAccountTotal":   NumbertoPrint(glaccounttotal),
-		"GlTaxSection":     p0067data.TaxSection,
+		"GlCoverageCode": glcoveragecode,
+		"GlCoverageName": glcoveragename,
+		"AccountCode":    glaccountcode,
+		"GlAccountTotal": NumbertoPrint(glaccounttotal),
 	}
 	glsumtotarray = append(glsumtotarray, resultOut)
 
 	glarray := make([]interface{}, 0)
 	for k := 0; k < len(glmoves); k++ {
-		if glmoves[k].GlRdocno == strconv.Itoa(int(iPolicy)) {
-			GlRldgSuffix = strings.Replace(glmoves[k].GlRldgAcct, glmoves[k].GlRdocno, "", -1)
-		}
-
-		GlRldgSuffixName := ""
-		if GlRldgSuffix != "" {
-			_, GlRldgSuffixName, err = GetParamDesc(iCompany, "Q0006", GlRldgSuffix, 1)
-			if err != nil {
-				_, GlRldgSuffixName, _ = GetParamDesc(iCompany, "Q0005", GlRldgSuffix, 1)
+		glcoveragecode = glmoves[k].BCoverage
+		for i := 0; i < len(covrcodes); i++ {
+			if glcoveragecode == covrcodes[i] {
+				glcoveragename = covrnames[i]
+				break
 			}
 		}
-
 		resultOut := map[string]interface{}{
 
-			"GlRdocno":         glmoves[k].GlRdocno,
-			"GlRldgAcct":       glmoves[k].GlRldgAcct,
-			"GlRldgSuffix":     GlRldgSuffix,
-			"GlRldgSuffixDesc": GlRldgSuffixName,
-			"GlCurry":          glmoves[k].GlCurry,
-			"GlAmount":         NumbertoPrint(glmoves[k].GlAmount),
-			"ContractCurry":    glmoves[k].ContractCurry,
-			"ContractAmount":   NumbertoPrint(glmoves[k].ContractAmount),
-			"AccountCodeID":    glmoves[k].AccountCodeID,
-			"AccountCode":      glmoves[k].AccountCode,
-			"GlSign":           glmoves[k].GlSign,
-			"SequenceNo":       glmoves[k].SequenceNo,
-			"CurrencyRate":     NumbertoPrint(glmoves[k].CurrencyRate),
-			"CurrentDate":      DateConvert(glmoves[k].CurrentDate),
-			"EffectiveDate":    DateConvert(glmoves[k].EffectiveDate),
-			"ReconciledDate":   DateConvert(glmoves[k].ReconciledDate),
-			"ExtractedDate":    DateConvert(glmoves[k].ExtractedDate),
-			"HistoryCode":      glmoves[k].HistoryCode,
-			"ReversalInd":      glmoves[k].ReversalIndicator,
+			"GlRdocno":       glmoves[k].GlRdocno,
+			"GlRldgAcct":     glmoves[k].GlRldgAcct,
+			"GlCoverageCode": glcoveragecode,
+			"GlCoverageName": glcoveragename,
+			"GlCurry":        glmoves[k].GlCurry,
+			"GlAmount":       NumbertoPrint(glmoves[k].GlAmount),
+			"ContractCurry":  glmoves[k].ContractCurry,
+			"ContractAmount": NumbertoPrint(glmoves[k].ContractAmount),
+			"AccountCodeID":  glmoves[k].AccountCodeID,
+			"AccountCode":    glmoves[k].AccountCode,
+			"GlSign":         glmoves[k].GlSign,
+			"SequenceNo":     glmoves[k].SequenceNo,
+			"CurrencyRate":   NumbertoPrint(glmoves[k].CurrencyRate),
+			"CurrentDate":    DateConvert(glmoves[k].CurrentDate),
+			"EffectiveDate":  DateConvert(glmoves[k].EffectiveDate),
+			"ReconciledDate": DateConvert(glmoves[k].ReconciledDate),
+			"ExtractedDate":  DateConvert(glmoves[k].ExtractedDate),
+			"HistoryCode":    glmoves[k].HistoryCode,
+			"ReversalInd":    glmoves[k].ReversalIndicator,
 		}
 		glarray = append(glarray, resultOut)
 	}
@@ -6571,4 +6516,209 @@ func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iG
 	}
 	return glcombineddata
 
+}
+
+func GetPremTaxGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string) interface{} {
+	var benefitenq []models.Benefit
+	var codesql string = ""
+	var covrcodes []string
+	var covrnames []string
+
+	var acodearray []string
+
+	var p0067data paramTypes.P0067Data
+	var extradatap0067 paramTypes.Extradata = &p0067data
+
+	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	for i := 0; i < len(benefitenq); i++ {
+		covrcode := benefitenq[i].BCoverage
+		_, covrname, err := GetParamDesc(iCompany, "Q0006", covrcode, 1)
+		if err != nil {
+			continue
+		}
+		covrcodes = append(covrcodes, covrcode)
+		covrnames = append(covrnames, covrname)
+
+		err = GetItemD(int(iCompany), "P0067", benefitenq[i].BCoverage, iFromDate, &extradatap0067)
+		if err != nil {
+			return nil
+		}
+
+		notFound := true
+		for j := 0; j < len(p0067data.GlTax); j++ {
+			for _, str := range acodearray {
+				if str == p0067data.GlTax[j].AccountCode {
+					notFound = false
+					break
+				}
+
+			}
+			if notFound {
+				acodearray = append(acodearray, p0067data.GlTax[j].AccountCode)
+			}
+
+		}
+	}
+
+	for k := 0; k < len(acodearray); k++ {
+		if k == 0 {
+			codesql = " account_code like '%" + acodearray[k] + "%' "
+		} else {
+			codesql = codesql + " or account_code like '%" + acodearray[k] + "%' "
+		}
+	}
+	var glmoves []models.GlMove
+	initializers.DB.Where("("+codesql+") and company_id = ? and gl_rdocno = ? and effective_date >=? and effective_date <=? ", iCompany, iPolicy, iFromDate, iToDate).Order("account_code, gl_sign, effective_date , tranno").Find(&glmoves)
+
+	glsumtotarray := make([]interface{}, 0)
+	glaccounttotal := 0.0
+	glcoveragecode := ""
+	glcoveragename := ""
+	glaccountcode := ""
+	gltaxsection := ""
+	for k := 0; k < len(glmoves); k++ {
+		if k == 0 {
+			glcoveragecode = glmoves[k].BCoverage
+			glaccountcode = glmoves[k].AccountCode
+			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
+			continue
+		}
+		if glmoves[k].BCoverage == glcoveragecode && glmoves[k].AccountCode == glaccountcode {
+			glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
+			continue
+		} else {
+			for i := 0; i < len(covrcodes); i++ {
+				if glcoveragecode == covrcodes[i] {
+					glcoveragename = covrnames[i]
+					break
+				}
+			}
+			//gltaxsection
+			err := GetItemD(int(iCompany), "P0067", glcoveragecode, iFromDate, &extradatap0067)
+			if err != nil {
+				return nil
+			}
+			for j := 0; j < len(p0067data.GlTax); j++ {
+				glcodewithcover := p0067data.GlTax[j].AccountCode + glcoveragecode
+				if glaccountcode == p0067data.GlTax[j].AccountCode ||
+					glaccountcode == glcodewithcover {
+					gltaxsection = p0067data.GlTax[j].TaxSection
+					break
+				}
+			}
+		}
+		resultOut := map[string]interface{}{
+			"GlCoverageCode": glcoveragecode,
+			"GlCoverageName": glcoveragename,
+			"GlAccountCode":  glaccountcode,
+			"GlAccountTotal": NumbertoPrint(glaccounttotal),
+			"GlTaxSection":   gltaxsection,
+		}
+		glsumtotarray = append(glsumtotarray, resultOut)
+		// process the first record of next account code
+		glaccounttotal = 0.0
+		glaccountcode = glmoves[k].AccountCode
+		glcoveragecode = glmoves[k].BCoverage
+		glaccounttotal = glaccounttotal + glmoves[k].ContractAmount
+		//gltaxsection
+		err := GetItemD(int(iCompany), "P0067", glcoveragecode, iFromDate, &extradatap0067)
+		if err != nil {
+			return nil
+		}
+		for j := 0; j < len(p0067data.GlTax); j++ {
+			glcodewithcover := p0067data.GlTax[j].AccountCode + glcoveragecode
+			if glaccountcode == p0067data.GlTax[j].AccountCode ||
+				glaccountcode == glcodewithcover {
+				gltaxsection = p0067data.GlTax[j].TaxSection
+				break
+			}
+		}
+	}
+
+	for i := 0; i < len(covrcodes); i++ {
+		if glcoveragecode == covrcodes[i] {
+			glcoveragename = covrnames[i]
+			break
+		}
+	}
+	//gltaxsection
+	err := GetItemD(int(iCompany), "P0067", glcoveragecode, iFromDate, &extradatap0067)
+	if err != nil {
+		return nil
+	}
+	for j := 0; j < len(p0067data.GlTax); j++ {
+		glcodewithcover := p0067data.GlTax[j].AccountCode + glcoveragecode
+		if glaccountcode == p0067data.GlTax[j].AccountCode ||
+			glaccountcode == glcodewithcover {
+			gltaxsection = p0067data.GlTax[j].TaxSection
+			break
+		}
+	}
+	resultOut := map[string]interface{}{
+		"GlCoverageCode": glcoveragecode,
+		"GlCoverageName": glcoveragename,
+		"GlAccountCode":  glaccountcode,
+		"GlAccountTotal": NumbertoPrint(glaccounttotal),
+		"GlTaxSection":   gltaxsection,
+	}
+	glsumtotarray = append(glsumtotarray, resultOut)
+
+	glarray := make([]interface{}, 0)
+	for k := 0; k < len(glmoves); k++ {
+		glcoveragecode = glmoves[k].BCoverage
+		for i := 0; i < len(covrcodes); i++ {
+			if glcoveragecode == covrcodes[i] {
+				glcoveragename = covrnames[i]
+				break
+			}
+		}
+		resultOut := map[string]interface{}{
+			"GlRdocno":       glmoves[k].GlRdocno,
+			"GlRldgAcct":     glmoves[k].GlRldgAcct,
+			"GlCoverageCode": glmoves[k].BCoverage,
+			"GlCoverageName": glcoveragename,
+			"GlCurry":        glmoves[k].GlCurry,
+			"GlAmount":       NumbertoPrint(glmoves[k].GlAmount),
+			"ContractCurry":  glmoves[k].ContractCurry,
+			"ContractAmount": NumbertoPrint(glmoves[k].ContractAmount),
+			"AccountCodeID":  glmoves[k].AccountCodeID,
+			"AccountCode":    glmoves[k].AccountCode,
+			"GlSign":         glmoves[k].GlSign,
+			"SequenceNo":     glmoves[k].SequenceNo,
+			"CurrencyRate":   NumbertoPrint(glmoves[k].CurrencyRate),
+			"CurrentDate":    DateConvert(glmoves[k].CurrentDate),
+			"EffectiveDate":  DateConvert(glmoves[k].EffectiveDate),
+			"ReconciledDate": DateConvert(glmoves[k].ReconciledDate),
+			"ExtractedDate":  DateConvert(glmoves[k].ExtractedDate),
+			"HistoryCode":    glmoves[k].HistoryCode,
+			"ReversalInd":    glmoves[k].ReversalIndicator,
+		}
+		glarray = append(glarray, resultOut)
+	}
+
+	glcombineddata := map[string]interface{}{
+		"glsumtotarray": glsumtotarray,
+		"glarray":       glarray,
+	}
+	return glcombineddata
+
+}
+
+// # ???
+// *********************************************************************************************
+// Method : GetNewPremium
+//
+// Calculate Annual Premium  and Model Premium  (With Discount and Frequency Loading)
+// # Inputs Company, Coverage Code, Start Date of Coverage, Age , Gender, Risk Term, Premium Term, Mortality Class, Sum Assured, Premium Method (Q0006), Discount Type, Discount Method, Frequency Method, Frequency
+// # Outputs Annual Premium and Model Premium
+// ©  FuturaInsTech
+func GetNewPremium(iCompany uint, iCoverage string, iDate string, iAge uint, iGender string, iRiskTerm uint, iPremTerm uint, iMortality string, iSA float64, iPremMethod string, iDiscType string, iDiscMethod string, iFrqMethod string, iFrequency string) (oAnnualPrem float64, oBasePrem float64) {
+
+	prem, _ := GetAnnualRate(iCompany, iCoverage, iAge, iGender, iRiskTerm, iPremTerm, iPremMethod, iDate, iMortality)
+	oAnnualPrem = RoundFloat((prem * float64(iSA) / 10000), 2)
+	discount := RoundFloat(CalcSaPremDiscount(iCompany, iDiscType, iDiscMethod, oAnnualPrem, uint(iSA), iDate), 2)
+	prem1 := oAnnualPrem - discount
+	oBasePrem = CalcFrequencyPrem(iCompany, iDate, iFrqMethod, iFrequency, prem1)
+
+	return oAnnualPrem, oBasePrem
 }

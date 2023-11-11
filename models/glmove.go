@@ -25,4 +25,5 @@ type GlMove struct {
 	ExtractedDate     string `gorm:"type:varchar(30)"`
 	HistoryCode       string `gorm:"type:varchar(05)"`
 	ReversalIndicator string `gorm:"type:varchar(01)"`
+	BCoverage         string `gorm:"type:varchar(05)"`
 }

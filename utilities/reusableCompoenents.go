@@ -5928,6 +5928,9 @@ func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface
 //		}
 //		return "N"
 //	}
+//
+// # 99999
+// Validate the Address Table Fields mandatory as required by P0065 Rules
 func ValidateAddress(addressval models.Address, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -5948,7 +5951,7 @@ func ValidateAddress(addressval models.Address, userco uint, userlan uint, iKey 
 			continue
 		}
 
-		if fv == "" || fv == 0 || fv == nil || fv == "Invalid date" {
+		if isFieldZero(fv) == true {
 			shortCode := p0065data.FieldList[i].ErrorCode
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
@@ -5982,7 +5985,7 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 			continue
 		}
 
-		if fv == "" || fv == 0 || fv == nil || fv == "Invalid date" {
+		if isFieldZero(fv) == true {
 			shortCode := p0065data.FieldList[i].ErrorCode
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
@@ -6029,7 +6032,7 @@ func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (
 			continue
 		}
 
-		if fv == "" || fv == 0 || fv == nil || fv == "Invalid date" {
+		if isFieldZero(fv) == true {
 			shortCode := p0065data.FieldList[i].ErrorCode
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
@@ -7027,4 +7030,129 @@ func GetIlpFundByUnits(iCompany uint, iPolicy uint, iBenefit uint, iFundCode str
 	}
 	oUnits := ilpsummaryenq.FundUnits
 	return oUnits, nil
+}
+func ValidatePolicyFields(policyval models.Policy, userco uint, userlan uint, iKey string) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(policyval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	return
+}
+
+// # ????
+// Validate the BenefitFields mandatory as required by P0065 Rules
+func ValidateBenefitFields(benefitval models.Benefit, userco uint, userlan uint, iHistoryCode string, iCoverage string) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	iKey := iHistoryCode + iCoverage
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		iKey = iHistoryCode
+		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(benefitval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	return
+}
+
+// # ????
+// Validate the MrtaFields mandatory as required by P0065 Rules
+func ValidateMrtaFields(mrtaval models.Mrta, userco uint, userlan uint, iHistoryCode string, iCoverage string) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	iKey := iHistoryCode + iCoverage
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		iKey = iHistoryCode
+		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(mrtaval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	return
+}
+
+// ????
+// Validate given field if  zero or blank
+// Input: Field name
+// Output: True when the field is zero or blank and False otherwise...
+//
+// ©  FuturaInsTech
+func isFieldZero(field interface{}) bool {
+	v := reflect.ValueOf(field)
+
+	// Check if the field is a valid type
+	if v.IsValid() {
+		zero := reflect.Zero(v.Type()).Interface()
+		return reflect.DeepEqual(field, zero)
+	}
+
+	return false // Field is not a valid type
 }

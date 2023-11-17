@@ -1957,14 +1957,14 @@ func (m *P0067Data) GetFormattedData(datamap map[string]string) map[string]inter
 // ILP SA Rules
 
 type P0068Data struct {
-	P0068Basis string // R - Range M - Multiplier  P0050
 	RangeArray []P0068Range
 }
 type P0068Range struct {
-	Age    uint
-	FromSA float64
-	ToSA   float64
-	Factor float64
+	P0068Basis string // R - Range M - Multiplier  P0050
+	Age        uint
+	FromSA     float64
+	ToSA       float64
+	Factor     float64
 }
 
 func (m *P0068Data) ParseData(datamap map[string]interface{}) {

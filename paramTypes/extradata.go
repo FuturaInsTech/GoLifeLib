@@ -1953,3 +1953,41 @@ func (m *P0067Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// ILP SA Rules
+
+type P0068Data struct {
+	P0068Basis string // R - Range M - Multiplier  P0050
+	RangeArray []P0068Range
+	MultiArray []P0068Multi
+}
+type P0068Range struct {
+	Age    uint
+	FromSA float64
+	ToSA   float64
+}
+
+type P0068Multi struct {
+	Age    uint
+	Factor float64
+}
+
+func (m *P0068Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0068Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

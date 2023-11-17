@@ -7156,3 +7156,64 @@ func isFieldZero(field interface{}) bool {
 
 	return false // Field is not a valid type
 }
+
+//
+// ????
+// ILP Products Only.  Return SA based on Premium and Frequency
+// Input: Company, Policy No, Coverage Code, History Code, Effective Date, Age (Inception Age), Instalment Premium (Not Annualized), Frequency, SA
+// Output: Error and New Calcualted SA
+//
+// ©  FuturaInsTech
+
+//
+
+func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string, iDate string, iAge uint, iPrem float64, iFreq string, iSA float64) (oErr error, oSA float64) {
+	var p0068data paramTypes.P0068Data
+	var extradatap0068 paramTypes.Extradata = &p0068data
+	iKey := iHistoryCD + iCoverage
+	prem := 0.0
+	switch iFreq {
+	case "M":
+		prem = iPrem * 12
+	case "Q":
+		prem = iPrem * 4
+	case "H":
+		prem = iPrem * 2
+	case "Y":
+		prem = iPrem * 1
+	case "S":
+		prem = iPrem * 1
+	}
+	err := GetItemD(int(iCompany), "P0068", iKey, iDate, &extradatap0068)
+	if err != nil {
+		return err, 0
+
+	}
+	err = errors.New("In Valid SA")
+	if p0068data.P0068Basis == "M" {
+		for i := 0; i < len(p0068data.MultiArray); i++ {
+			if iAge >= p0068data.MultiArray[i].Age {
+				oSA = p0068data.MultiArray[i].Factor * prem
+				return nil, oSA
+			}
+
+		}
+		return err, oSA
+	}
+	if p0068data.P0068Basis == "R" {
+		for i := 0; i < len(p0068data.RangeArray); i++ {
+			if iAge >= p0068data.RangeArray[i].Age {
+				if iSA < p0068data.RangeArray[i].FromSA {
+					oSA = p0068data.RangeArray[i].FromSA
+					return nil, oSA
+				}
+				if iSA > p0068data.RangeArray[i].ToSA {
+					oSA = p0068data.RangeArray[i].ToSA
+					return nil, oSA
+				}
+			}
+		}
+
+	}
+	return err, oSA
+}

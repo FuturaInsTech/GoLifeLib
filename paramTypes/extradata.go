@@ -1982,7 +1982,38 @@ func (m *P0068Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0068Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
 
+}
+
+// Extended Lapse Rule
+
+type P0069Data struct {
+	P0069 []P0069Lapse
+}
+type P0069Lapse struct {
+	Months            uint
+	ToBeStatus        string // P0024
+	SaProportion      string // P0050 Y/N (Trad Only)
+	LiquidatedIlpFund string // P0050 Y/N (ILP  Only)
+	RecoverFromFund   string // P0050 Y/N (ILP  Only)
+}
+
+func (m *P0069Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0069Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 	return nil
 
 }

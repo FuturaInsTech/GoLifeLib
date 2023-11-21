@@ -7198,10 +7198,6 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 				return nil, oSA
 			}
 		}
-		return err, oSA
-	}
-
-	for i := 0; i < len(p0068data.RangeArray); i++ {
 		if p0068data.RangeArray[i].P0068Basis == "R" {
 			if iAge <= p0068data.RangeArray[i].Age {
 				if iSA < p0068data.RangeArray[i].FromSA {
@@ -7215,5 +7211,6 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 			}
 		}
 	}
+
 	return err, oSA
 }

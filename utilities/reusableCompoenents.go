@@ -7190,21 +7190,20 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 
 	}
 	err = errors.New("In Valid SA")
-
+	// Multiplier Logic
 	for i := 0; i < len(p0068data.RangeArray); i++ {
-		if p0068data.RangeArray[i].P0068Basis == "S" {
-			if iAge >= p0068data.RangeArray[i].Age {
+		if p0068data.RangeArray[i].P0068Basis == "M" {
+			if p0068data.RangeArray[i].Age <= iAge {
 				oSA = p0068data.RangeArray[i].Factor * prem
 				return nil, oSA
 			}
-
 		}
 		return err, oSA
 	}
 
 	for i := 0; i < len(p0068data.RangeArray); i++ {
-		if p0068data.RangeArray[i].P0068Basis == "M" {
-			if iAge >= p0068data.RangeArray[i].Age {
+		if p0068data.RangeArray[i].P0068Basis == "R" {
+			if p0068data.RangeArray[i].Age <= iAge {
 				if iSA < p0068data.RangeArray[i].FromSA {
 					oSA = p0068data.RangeArray[i].FromSA
 					return nil, oSA
@@ -7215,8 +7214,6 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 				}
 			}
 		}
-
 	}
-
 	return err, oSA
 }

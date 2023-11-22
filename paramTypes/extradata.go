@@ -1997,6 +1997,7 @@ type P0069Lapse struct {
 	SaProportion      string // P0050 Y/N (Trad Only)
 	LiquidatedIlpFund string // P0050 Y/N (ILP  Only)
 	RecoverFromFund   string // P0050 Y/N (ILP  Only)
+	LiquidFundCode    string // P0050 FUNDCODE
 }
 
 func (m *P0069Data) ParseData(datamap map[string]interface{}) {

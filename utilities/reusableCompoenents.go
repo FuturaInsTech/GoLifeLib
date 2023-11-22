@@ -7214,3 +7214,85 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 
 	return err, oSA
 }
+
+// ???
+// ILP Products Only.  Switch Fund to In Active Fund During lapsation
+// Input: Company, Policy No, Benefit ID, Tranno, TargetFund, Effective Date
+// Output: Error // Write Records in ILPSWITCHHEADER and ILPSWITCHFUNDS
+//
+// ©  FuturaInsTech
+func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTargetFund string, iEffectiveDate string) (oerror error) {
+	var ilpswitchheader models.IlpSwitchHeader
+	var ilpswitchfunds models.IlpSwitchFund
+
+	var ilpsummary []models.IlpSummary
+
+	result := initializers.DB.Find(&ilpsummary, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit, iTargetFund)
+	if result != nil {
+		return errors.New("Funds Not Found")
+	}
+	// Switch 100 % from All funds and transfer it to Target Fund
+
+	ilpswitchheader.BenefitID = iBenefit
+	ilpswitchheader.CompanyID = iCompany
+	ilpswitchheader.EffectiveDate = iEffectiveDate
+	ilpswitchheader.FundSwitchBasis = "P"
+	ilpswitchheader.PolicyID = iPolicy
+	ilpswitchheader.Tranno = iTranno
+	iTotalAmount := 0.0
+	initializers.DB.Create(&ilpswitchheader)
+
+	for i := 0; i < len(ilpsummary); i++ {
+		ilpswitchfunds.BenefitID = ilpsummary[i].BenefitID
+		ilpswitchfunds.CompanyID = ilpsummary[i].CompanyID
+		ilpswitchfunds.FundCode = ilpsummary[i].FundCode
+		ilpswitchfunds.FundCurr = ilpsummary[i].FundCurr
+		ilpswitchfunds.FundType = ilpsummary[i].FundType
+		ilpswitchfunds.PolicyID = ilpsummary[i].PolicyID
+		ilpswitchfunds.Tranno = iTranno
+		ilpswitchfunds.EffectiveDate = iEffectiveDate
+		ilpswitchfunds.FundPercentage = -100
+		_, ilpswitchfunds.FundPrice, _ = GetFundCPrice(iCompany, ilpsummary[i].FundCode, iEffectiveDate)
+		_, iFundAmount, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, ilpsummary[i].FundCode, iEffectiveDate)
+		iFundAmount = RoundFloat(iFundAmount, 2) * -1
+		ilpswitchfunds.FundAmount = iFundAmount
+		ilpswitchfunds.FundUnits = ilpsummary[i].FundUnits * -1
+		ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+		iTotalAmount = iFundAmount
+		initializers.DB.Create(&ilpswitchfunds)
+	}
+	// Write Target
+	iKey := iTargetFund
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	err := GetItemD(int(iCompany), "P0061", iKey, iEffectiveDate, &extradatap0061)
+
+	if err != nil {
+		shortCode := "GL442"
+		longDesc, _ := GetErrorDesc(iCompany, 1, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+
+	}
+
+	ilpswitchfunds.BenefitID = iBenefit
+	ilpswitchfunds.CompanyID = iCompany
+	ilpswitchfunds.FundCode = iTargetFund
+	ilpswitchfunds.FundCurr = p0061data.FundCurr
+	ilpswitchfunds.FundType = p0061data.FundType
+	ilpswitchfunds.PolicyID = iPolicy
+	ilpswitchfunds.Tranno = iTranno
+	ilpswitchfunds.EffectiveDate = iEffectiveDate
+	ilpswitchfunds.FundPercentage = 100
+	ilpswitchfunds.FundPrice, _, _ = GetFundCPrice(iCompany, iTargetFund, iEffectiveDate)
+	iFundAmount, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iTargetFund, iEffectiveDate)
+	iFundAmount = RoundFloat(iFundAmount, 2) * -1
+	ilpswitchfunds.FundAmount = iFundAmount
+	ilpswitchfunds.FundUnits = RoundFloat(iTotalAmount/ilpswitchfunds.FundPrice*-1, 5)
+	ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+	iTotalAmount = iFundAmount
+	ilpswitchfunds.FundAmount = RoundFloat(iTotalAmount, 2) * -1
+	initializers.DB.Create(&ilpswitchfunds)
+	return nil
+}

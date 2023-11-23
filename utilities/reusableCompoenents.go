@@ -3949,6 +3949,15 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "23":
 					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
 					resultMap["GLData"] = oData
+
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
+					resultMap["SwitchData"] = oData
+
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
+					resultMap["PolicyHistoryData"] = oData
+
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -7311,4 +7320,79 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	initializers.DB.Create(&ilpsum)
 
 	return nil
+}
+func GetPHistoryData(iCompany uint, iPolicy uint, iHistoryCode string, iDate string) []interface{} {
+	var policyhistory []models.PHistory
+	initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	policyhistoryarray := make([]interface{}, 0)
+
+	for k := 0; k < len(policyhistory); k++ {
+		resultOut := map[string]interface{}{
+			"PolicyID":      policyhistory[k].PolicyID,
+			"CompanyID":     policyhistory[k].CompanyID,
+			"HistoryCode":   policyhistory[k].HistoryCode,
+			"EffectiveDate": DateConvert(policyhistory[k].EffectiveDate),
+			"CurrentDate":   DateConvert(policyhistory[k].CurrentDate),
+			"PrevData":      policyhistory[k].PrevData,
+			"ID":            IDtoPrint(policyhistory[k].ID),
+		}
+
+		policyhistoryarray = append(policyhistoryarray, resultOut)
+	}
+	return policyhistoryarray
+}
+
+func GetIlpFundSwitchData(iCompany uint, iPolicy uint, iTranno uint) interface{} {
+	ilpswitchfundarray := make([]interface{}, 0)
+	ilpfundarray := make([]interface{}, 0)
+	var policyenq models.Policy
+	initializers.DB.First(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	var ilpswitchheader []models.IlpSwitchHeader
+
+	initializers.DB.Where("company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno).Order("tranno").Find(&ilpswitchheader)
+
+	for k := 0; k < len(ilpswitchheader); k++ {
+		resultOut := map[string]interface{}{
+			"PolicyID":      ilpswitchheader[k].PolicyID,
+			"BenefitID":     ilpswitchheader[k].BenefitID,
+			"CompanyID":     ilpswitchheader[k].CompanyID,
+			"EffectiveDate": DateConvert(ilpswitchheader[k].EffectiveDate),
+			"ID":            IDtoPrint(ilpswitchheader[k].ID),
+		}
+
+		ilpswitchfundarray = append(ilpswitchfundarray, resultOut)
+	}
+
+	var ilpswitchfund []models.IlpSwitchFund
+	initializers.DB.Where(" policy_id = ? and tranno = ?", iPolicy, iTranno).Order("fund_code").Find(&ilpswitchfund)
+
+	for j := 0; j < len(ilpswitchfund); j++ {
+		resultOut := map[string]interface{}{
+			"PolicyID":           ilpswitchfund[j].PolicyID,
+			"BenefitID":          ilpswitchfund[j].BenefitID,
+			"CompanyID":          ilpswitchfund[j].CompanyID,
+			"EffectiveDate":      DateConvert(ilpswitchfund[j].EffectiveDate),
+			"ID":                 IDtoPrint(ilpswitchfund[j].ID),
+			"FundSwitchHeaderID": ilpswitchfund[j].IlpSwitchHeaderID,
+			"SwitchDirection":    ilpswitchfund[j].SwitchDirection,
+			"SequenceNo":         ilpswitchfund[j].SequenceNo,
+			"FundCode":           ilpswitchfund[j].FundCode,
+			"FundPercentage":     ilpswitchfund[j].FundPercentage,
+			"FundUnits":          ilpswitchfund[j].FundUnits,
+			"FundAmount":         ilpswitchfund[j].FundAmount,
+			"FundType":           ilpswitchfund[j].FundType,
+			"FundCurruncy":       ilpswitchfund[j].FundCurr,
+			"FundPrice":          ilpswitchfund[j].FundPrice,
+		}
+
+		ilpfundarray = append(ilpfundarray, resultOut)
+	}
+	IlpFundSwitchData := map[string]interface{}{
+		"SwitchHeader": ilpswitchfundarray,
+		"SwitchFund":   ilpfundarray,
+	}
+	return IlpFundSwitchData
+
 }

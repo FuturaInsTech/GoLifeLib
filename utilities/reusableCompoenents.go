@@ -7249,7 +7249,7 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	ilpswitchheader.Tranno = iTranno
 	iTotalAmount := 0.0
 	initializers.DB.Create(&ilpswitchheader)
-
+	// We do not need to delete ilpsummary
 	for i := 0; i < len(ilpsummary); i++ {
 		if ilpsummary[i].FundUnits > 0 {
 			ilpswitchfunds.ID = 0

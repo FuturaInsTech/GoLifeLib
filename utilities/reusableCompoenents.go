@@ -7224,11 +7224,10 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTargetFund string, iEffectiveDate string) (oerror error) {
 	var ilpswitchheader models.IlpSwitchHeader
 	var ilpswitchfunds models.IlpSwitchFund
-
 	var ilpsummary []models.IlpSummary
 
-	result := initializers.DB.Find(&ilpsummary, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit, iTargetFund)
-	if result != nil {
+	result := initializers.DB.Find(&ilpsummary, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
 		return errors.New("Funds Not Found")
 	}
 	// Switch 100 % from All funds and transfer it to Target Fund
@@ -7243,23 +7242,27 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	initializers.DB.Create(&ilpswitchheader)
 
 	for i := 0; i < len(ilpsummary); i++ {
-		ilpswitchfunds.BenefitID = ilpsummary[i].BenefitID
-		ilpswitchfunds.CompanyID = ilpsummary[i].CompanyID
-		ilpswitchfunds.FundCode = ilpsummary[i].FundCode
-		ilpswitchfunds.FundCurr = ilpsummary[i].FundCurr
-		ilpswitchfunds.FundType = ilpsummary[i].FundType
-		ilpswitchfunds.PolicyID = ilpsummary[i].PolicyID
-		ilpswitchfunds.Tranno = iTranno
-		ilpswitchfunds.EffectiveDate = iEffectiveDate
-		ilpswitchfunds.FundPercentage = -100
-		_, ilpswitchfunds.FundPrice, _ = GetFundCPrice(iCompany, ilpsummary[i].FundCode, iEffectiveDate)
-		_, iFundAmount, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, ilpsummary[i].FundCode, iEffectiveDate)
-		iFundAmount = RoundFloat(iFundAmount, 2) * -1
-		ilpswitchfunds.FundAmount = iFundAmount
-		ilpswitchfunds.FundUnits = ilpsummary[i].FundUnits * -1
-		ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
-		iTotalAmount = iFundAmount
-		initializers.DB.Create(&ilpswitchfunds)
+		if ilpsummary[i].FundUnits > 0 {
+			ilpswitchfunds.ID = 0
+			ilpswitchfunds.BenefitID = ilpsummary[i].BenefitID
+			ilpswitchfunds.CompanyID = ilpsummary[i].CompanyID
+			ilpswitchfunds.FundCode = ilpsummary[i].FundCode
+			ilpswitchfunds.FundCurr = ilpsummary[i].FundCurr
+			ilpswitchfunds.FundType = ilpsummary[i].FundType
+			ilpswitchfunds.PolicyID = ilpsummary[i].PolicyID
+			ilpswitchfunds.Tranno = iTranno
+			ilpswitchfunds.EffectiveDate = iEffectiveDate
+			ilpswitchfunds.FundPercentage = -100
+			ilpswitchfunds.SwitchDirection = "S"
+			_, ilpswitchfunds.FundPrice, _ = GetFundCPrice(iCompany, ilpsummary[i].FundCode, iEffectiveDate)
+			_, iFundAmount, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, ilpsummary[i].FundCode, iEffectiveDate)
+			iFundAmount = RoundFloat(iFundAmount, 2) * -1
+			ilpswitchfunds.FundAmount = iFundAmount
+			ilpswitchfunds.FundUnits = ilpsummary[i].FundUnits * -1
+			ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+			iTotalAmount = iFundAmount + iTotalAmount
+			initializers.DB.Create(&ilpswitchfunds)
+		}
 	}
 	// Write Target
 	iKey := iTargetFund
@@ -7275,7 +7278,9 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 		return errors.New(shortCode + " : " + longDesc)
 
 	}
-
+	// Delete Fund Summary
+	initializers.DB.Delete(&ilpsummary)
+	ilpswitchfunds.ID = 0
 	ilpswitchfunds.BenefitID = iBenefit
 	ilpswitchfunds.CompanyID = iCompany
 	ilpswitchfunds.FundCode = iTargetFund
@@ -7285,14 +7290,24 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	ilpswitchfunds.Tranno = iTranno
 	ilpswitchfunds.EffectiveDate = iEffectiveDate
 	ilpswitchfunds.FundPercentage = 100
+	ilpswitchfunds.SwitchDirection = "T"
+	ilpswitchfunds.FundAmount = RoundFloat(iTotalAmount, 2) * -1
 	ilpswitchfunds.FundPrice, _, _ = GetFundCPrice(iCompany, iTargetFund, iEffectiveDate)
-	iFundAmount, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iTargetFund, iEffectiveDate)
-	iFundAmount = RoundFloat(iFundAmount, 2) * -1
-	ilpswitchfunds.FundAmount = iFundAmount
 	ilpswitchfunds.FundUnits = RoundFloat(iTotalAmount/ilpswitchfunds.FundPrice*-1, 5)
 	ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
-	iTotalAmount = iFundAmount
-	ilpswitchfunds.FundAmount = RoundFloat(iTotalAmount, 2) * -1
 	initializers.DB.Create(&ilpswitchfunds)
+
+	// Create ILP Summary
+	var ilpsum models.IlpSummary
+
+	ilpsum.PolicyID = ilpswitchfunds.PolicyID
+	ilpsum.BenefitID = ilpswitchfunds.BenefitID
+	ilpsum.FundCode = ilpswitchfunds.FundCode
+	ilpsum.FundType = ilpswitchfunds.FundType
+	ilpsum.FundUnits = ilpswitchfunds.FundUnits
+	ilpsum.FundCurr = ilpswitchfunds.FundCurr
+
+	initializers.DB.Create(&ilpsum)
+
 	return nil
 }

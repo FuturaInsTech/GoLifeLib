@@ -7271,6 +7271,9 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 			ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
 			iTotalAmount = iFundAmount + iTotalAmount
 			initializers.DB.Create(&ilpswitchfunds)
+			// Set Summary Units to Zero.
+			ilpsummary[i].FundUnits = 0
+			initializers.DB.Save(&ilpsummary[i])
 		}
 	}
 	// Write Target
@@ -7287,8 +7290,7 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 		return errors.New(shortCode + " : " + longDesc)
 
 	}
-	// Delete Fund Summary
-	initializers.DB.Delete(&ilpsummary)
+
 	ilpswitchfunds.ID = 0
 	ilpswitchfunds.BenefitID = iBenefit
 	ilpswitchfunds.CompanyID = iCompany

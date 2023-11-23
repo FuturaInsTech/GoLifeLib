@@ -7306,6 +7306,7 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	ilpsum.FundType = ilpswitchfunds.FundType
 	ilpsum.FundUnits = ilpswitchfunds.FundUnits
 	ilpsum.FundCurr = ilpswitchfunds.FundCurr
+	ilpsum.CompanyID = ilpswitchfunds.CompanyID
 
 	initializers.DB.Create(&ilpsum)
 

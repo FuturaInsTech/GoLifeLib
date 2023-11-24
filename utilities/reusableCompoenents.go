@@ -3949,6 +3949,15 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "23":
 					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
 					resultMap["GLData"] = oData
+
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
+					resultMap["SwitchData"] = oData
+
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
+					resultMap["PolicyHistoryData"] = oData
+
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -7224,11 +7233,10 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTargetFund string, iEffectiveDate string) (oerror error) {
 	var ilpswitchheader models.IlpSwitchHeader
 	var ilpswitchfunds models.IlpSwitchFund
-
 	var ilpsummary []models.IlpSummary
 
-	result := initializers.DB.Find(&ilpsummary, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit, iTargetFund)
-	if result != nil {
+	result := initializers.DB.Find(&ilpsummary, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
 		return errors.New("Funds Not Found")
 	}
 	// Switch 100 % from All funds and transfer it to Target Fund
@@ -7241,25 +7249,32 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	ilpswitchheader.Tranno = iTranno
 	iTotalAmount := 0.0
 	initializers.DB.Create(&ilpswitchheader)
-
+	// We do not need to delete ilpsummary
 	for i := 0; i < len(ilpsummary); i++ {
-		ilpswitchfunds.BenefitID = ilpsummary[i].BenefitID
-		ilpswitchfunds.CompanyID = ilpsummary[i].CompanyID
-		ilpswitchfunds.FundCode = ilpsummary[i].FundCode
-		ilpswitchfunds.FundCurr = ilpsummary[i].FundCurr
-		ilpswitchfunds.FundType = ilpsummary[i].FundType
-		ilpswitchfunds.PolicyID = ilpsummary[i].PolicyID
-		ilpswitchfunds.Tranno = iTranno
-		ilpswitchfunds.EffectiveDate = iEffectiveDate
-		ilpswitchfunds.FundPercentage = -100
-		_, ilpswitchfunds.FundPrice, _ = GetFundCPrice(iCompany, ilpsummary[i].FundCode, iEffectiveDate)
-		_, iFundAmount, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, ilpsummary[i].FundCode, iEffectiveDate)
-		iFundAmount = RoundFloat(iFundAmount, 2) * -1
-		ilpswitchfunds.FundAmount = iFundAmount
-		ilpswitchfunds.FundUnits = ilpsummary[i].FundUnits * -1
-		ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
-		iTotalAmount = iFundAmount
-		initializers.DB.Create(&ilpswitchfunds)
+		if ilpsummary[i].FundUnits > 0 {
+			ilpswitchfunds.ID = 0
+			ilpswitchfunds.BenefitID = ilpsummary[i].BenefitID
+			ilpswitchfunds.CompanyID = ilpsummary[i].CompanyID
+			ilpswitchfunds.FundCode = ilpsummary[i].FundCode
+			ilpswitchfunds.FundCurr = ilpsummary[i].FundCurr
+			ilpswitchfunds.FundType = ilpsummary[i].FundType
+			ilpswitchfunds.PolicyID = ilpsummary[i].PolicyID
+			ilpswitchfunds.Tranno = iTranno
+			ilpswitchfunds.EffectiveDate = iEffectiveDate
+			ilpswitchfunds.FundPercentage = -100
+			ilpswitchfunds.SwitchDirection = "S"
+			_, ilpswitchfunds.FundPrice, _ = GetFundCPrice(iCompany, ilpsummary[i].FundCode, iEffectiveDate)
+			_, iFundAmount, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, ilpsummary[i].FundCode, iEffectiveDate)
+			iFundAmount = RoundFloat(iFundAmount, 2) * -1
+			ilpswitchfunds.FundAmount = iFundAmount
+			ilpswitchfunds.FundUnits = ilpsummary[i].FundUnits * -1
+			ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+			iTotalAmount = iFundAmount + iTotalAmount
+			initializers.DB.Create(&ilpswitchfunds)
+			// Set Summary Units to Zero.
+			ilpsummary[i].FundUnits = 0
+			initializers.DB.Save(&ilpsummary[i])
+		}
 	}
 	// Write Target
 	iKey := iTargetFund
@@ -7276,6 +7291,7 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 
 	}
 
+	ilpswitchfunds.ID = 0
 	ilpswitchfunds.BenefitID = iBenefit
 	ilpswitchfunds.CompanyID = iCompany
 	ilpswitchfunds.FundCode = iTargetFund
@@ -7285,14 +7301,100 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	ilpswitchfunds.Tranno = iTranno
 	ilpswitchfunds.EffectiveDate = iEffectiveDate
 	ilpswitchfunds.FundPercentage = 100
+	ilpswitchfunds.SwitchDirection = "T"
+	ilpswitchfunds.FundAmount = RoundFloat(iTotalAmount, 2) * -1
 	ilpswitchfunds.FundPrice, _, _ = GetFundCPrice(iCompany, iTargetFund, iEffectiveDate)
-	iFundAmount, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iTargetFund, iEffectiveDate)
-	iFundAmount = RoundFloat(iFundAmount, 2) * -1
-	ilpswitchfunds.FundAmount = iFundAmount
 	ilpswitchfunds.FundUnits = RoundFloat(iTotalAmount/ilpswitchfunds.FundPrice*-1, 5)
 	ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
-	iTotalAmount = iFundAmount
-	ilpswitchfunds.FundAmount = RoundFloat(iTotalAmount, 2) * -1
 	initializers.DB.Create(&ilpswitchfunds)
+
+	// Create ILP Summary
+	var ilpsum models.IlpSummary
+
+	ilpsum.PolicyID = ilpswitchfunds.PolicyID
+	ilpsum.BenefitID = ilpswitchfunds.BenefitID
+	ilpsum.FundCode = ilpswitchfunds.FundCode
+	ilpsum.FundType = ilpswitchfunds.FundType
+	ilpsum.FundUnits = ilpswitchfunds.FundUnits
+	ilpsum.FundCurr = ilpswitchfunds.FundCurr
+	ilpsum.CompanyID = ilpswitchfunds.CompanyID
+
+	initializers.DB.Create(&ilpsum)
+
 	return nil
+}
+func GetPHistoryData(iCompany uint, iPolicy uint, iHistoryCode string, iDate string) []interface{} {
+	var policyhistory []models.PHistory
+	initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	policyhistoryarray := make([]interface{}, 0)
+
+	for k := 0; k < len(policyhistory); k++ {
+		resultOut := map[string]interface{}{
+			"PolicyID":      policyhistory[k].PolicyID,
+			"CompanyID":     policyhistory[k].CompanyID,
+			"HistoryCode":   policyhistory[k].HistoryCode,
+			"EffectiveDate": DateConvert(policyhistory[k].EffectiveDate),
+			"CurrentDate":   DateConvert(policyhistory[k].CurrentDate),
+			"PrevData":      policyhistory[k].PrevData,
+			"ID":            IDtoPrint(policyhistory[k].ID),
+		}
+
+		policyhistoryarray = append(policyhistoryarray, resultOut)
+	}
+	return policyhistoryarray
+}
+
+func GetIlpFundSwitchData(iCompany uint, iPolicy uint, iTranno uint) interface{} {
+	ilpswitchfundarray := make([]interface{}, 0)
+	ilpfundarray := make([]interface{}, 0)
+	var policyenq models.Policy
+	initializers.DB.First(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	var ilpswitchheader []models.IlpSwitchHeader
+
+	initializers.DB.Where("company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno).Order("tranno").Find(&ilpswitchheader)
+
+	for k := 0; k < len(ilpswitchheader); k++ {
+		resultOut := map[string]interface{}{
+			"PolicyID":      ilpswitchheader[k].PolicyID,
+			"BenefitID":     ilpswitchheader[k].BenefitID,
+			"CompanyID":     ilpswitchheader[k].CompanyID,
+			"EffectiveDate": DateConvert(ilpswitchheader[k].EffectiveDate),
+			"ID":            IDtoPrint(ilpswitchheader[k].ID),
+		}
+
+		ilpswitchfundarray = append(ilpswitchfundarray, resultOut)
+	}
+
+	var ilpswitchfund []models.IlpSwitchFund
+	initializers.DB.Where(" policy_id = ? and tranno = ?", iPolicy, iTranno).Order("fund_code").Find(&ilpswitchfund)
+
+	for j := 0; j < len(ilpswitchfund); j++ {
+		resultOut := map[string]interface{}{
+			"PolicyID":           ilpswitchfund[j].PolicyID,
+			"BenefitID":          ilpswitchfund[j].BenefitID,
+			"CompanyID":          ilpswitchfund[j].CompanyID,
+			"EffectiveDate":      DateConvert(ilpswitchfund[j].EffectiveDate),
+			"ID":                 IDtoPrint(ilpswitchfund[j].ID),
+			"FundSwitchHeaderID": ilpswitchfund[j].IlpSwitchHeaderID,
+			"SwitchDirection":    ilpswitchfund[j].SwitchDirection,
+			"SequenceNo":         ilpswitchfund[j].SequenceNo,
+			"FundCode":           ilpswitchfund[j].FundCode,
+			"FundPercentage":     ilpswitchfund[j].FundPercentage,
+			"FundUnits":          ilpswitchfund[j].FundUnits,
+			"FundAmount":         ilpswitchfund[j].FundAmount,
+			"FundType":           ilpswitchfund[j].FundType,
+			"FundCurruncy":       ilpswitchfund[j].FundCurr,
+			"FundPrice":          ilpswitchfund[j].FundPrice,
+		}
+
+		ilpfundarray = append(ilpfundarray, resultOut)
+	}
+	IlpFundSwitchData := map[string]interface{}{
+		"SwitchHeader": ilpswitchfundarray,
+		"SwitchFund":   ilpfundarray,
+	}
+	return IlpFundSwitchData
+
 }

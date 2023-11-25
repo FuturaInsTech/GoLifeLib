@@ -18,9 +18,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// # 1
 // *********************************************************************************************
-//
+// # 1
 // Find out Difference between two Dates  Date should be in 2029-11-05 00:00:00 +0000 UTC
 //
 // # Outputs are Years, Months, Days, Hours, Minutes, Seconds
@@ -75,8 +74,8 @@ func DateDiff(a, b time.Time, m string) (year, month, day, hour, min, sec int) {
 	return
 }
 
-// # 2
 // *********************************************************************************************
+// # 2
 // From Date Generally DOB
 // To Date Generally RCD
 // In case From Date is Lesser than To Date, it will be swapped internally
@@ -225,8 +224,12 @@ func GetNextDue(iDate string, iFrequency string, iReversal string) (a time.Time)
 	return
 }
 
+// *********************************************************************************************
 // # 6
 // Add Month should ended with month
+// ©  FuturaInsTech
+// *********************************************************************************************
+
 func AddMonth(t time.Time, m int) time.Time {
 	x := t.AddDate(0, m, 0)
 	if d := x.Day(); d != t.Day() {
@@ -605,7 +608,13 @@ func AddYears2Date(iDate string, iYrs int, iMonth int, iDays int) (oDate string)
 }
 
 // # 21
-
+// Convert Map to Strucutre
+//
+// Inputs: Map and Interface
+//
+// # Outputs Error
+//
+// ©  FuturaInsTech
 func ConvertMapToStruct(m map[string]interface{}, s interface{}) error {
 	stValue := reflect.ValueOf(s).Elem()
 	sType := stValue.Type()
@@ -627,7 +636,6 @@ func ConvertMapToStruct(m map[string]interface{}, s interface{}) error {
 // Outputs Annualized Premium as float (124.22)
 //
 // ©  FuturaInsTech
-
 func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
 
 	var q0006data paramTypes.Q0006Data
@@ -701,7 +709,13 @@ func ValidateCoverageQ0011(iCompany uint, iProduct, iCoverage, iDate string) str
 
 // # 24
 // Levels
-
+// AddYears2Date
+//
+// Inputs:
+//
+// # Outputs
+//
+// ©  FuturaInsTech
 func CustomizedPreload(d *gorm.DB) *gorm.DB {
 	return d.Preload("Levels", CustomizedPreload)
 }
@@ -815,12 +829,11 @@ func GetSBByYear(iCompany uint, iCoverage string, iDate string, iSA float64, iTy
 //
 // Inputs: Company, Bonus Method, Status, Coverage Start Date, Year of Policy, Policy Status, SA
 //
-// Date in YYYYMMDD as a string
+// # Date in YYYYMMDD as a string
 //
-// Outputs SB Term and SB Percentage
+// # Outputs SB Term and SB Percentage
 //
 // ©  FuturaInsTech
-
 func GetBonus(iCompany uint, iCoverage string, iStartDate string, iEndDate string, iStatus string, iTerm uint, iSA uint) uint {
 
 	var q0006data paramTypes.Q0006Data
@@ -1989,7 +2002,7 @@ func SBCreate(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iD
 	return nil
 }
 
-// # 52
+// # 52 (Redundant)  It is replaced by Create Communication
 // LetterCreate - To Create Letters
 //
 // Inputs: Company,  Policy, Product, History Code and iDate
@@ -2369,6 +2382,12 @@ func GetTranCode(iCompany uint, iDescription string) (otrancode string) {
 }
 
 // # 60
+// WrapInArray
+// Inputs: Interfaces
+//
+// Outputs: Interfaces
+//
+// ©  FuturaInsTech
 func WrapInArray(obj interface{}) interface{} {
 	sliceType := reflect.SliceOf(reflect.TypeOf(obj))
 	slice := reflect.MakeSlice(sliceType, 1, 1)
@@ -2377,6 +2396,12 @@ func WrapInArray(obj interface{}) interface{} {
 }
 
 // # 61
+// Number Func  Convert Float to string
+// Inputs: Float
+//
+// Outputs: String
+//
+// ©  FuturaInsTech
 func NumberFunc(iAmount float64) (oAmount string) {
 
 	p := message.NewPrinter(language.English)
@@ -2469,6 +2494,13 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 }
 
 // # 65
+// GetMRTABenefit - SA, Interest Rate, Policy Year, Interim Period, Term
+//
+// Inputs: Company,  Coverage and Date String in YYYYMMDD (Current Date), Key is Coverage Code, No of Months, Amount to be charged
+//
+// # Outputs Benefit
+//
+// ©  FuturaInsTech
 func GetMRTABen(iSA float64, iInterest float64, iPolYear float64, iInterimPeriod float64, iTerm float64) float64 {
 	a := math.Pow((1 + ((iInterest / 100) / 12)), ((iPolYear - iInterimPeriod) * 12))
 	b := math.Pow((1 + ((iInterest / 100) / 12)), (iTerm * 12))
@@ -2479,6 +2511,13 @@ func GetMRTABen(iSA float64, iInterest float64, iPolYear float64, iInterimPeriod
 }
 
 // #66
+// GetMrtaPremO - MRTA Premium
+//
+// Inputs: Company,  Coverage , Age Gender , Term, Premium Paying Term, Prem Method, Date String in YYYYMMDD and Mortality
+//
+// # Outputs MRTA Premium and Error
+//
+// ©  FuturaInsTech
 func GetMrtaPremO(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
 
 	var q0006data paramTypes.Q0006Data
@@ -2536,6 +2575,13 @@ func GetMrtaPremO(iCompany uint, iPolicy uint, iCoverage string, iAge uint, iGen
 }
 
 // #67
+// RevGL Move - Reverse GL Move
+//
+// Inputs: Transaction No, User Company and Policy
+//
+// # Outputs Reversal Records
+//
+// ©  FuturaInsTech
 func RevGlMove(tranno, userco, ipolicy float64) error {
 	var glmoveenq []models.GlMove
 	opol := strconv.Itoa(int(ipolicy))
@@ -2575,6 +2621,13 @@ func RevGlMove(tranno, userco, ipolicy float64) error {
 }
 
 // #68
+// Surrender Amount
+//
+// Inputs: Company,  Policy, Coverage , Effective Date, Term, Premium Term, Status, SA, Start Date, Surrender Method, NO of Instalments
+//
+// # Outputs Surrender Amount
+//
+// ©  FuturaInsTech
 func GetSurrenderAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDate string, iTerm uint, iPremTerm uint, iStatus string, iSumAssured float64, iPaidTerm int, iStartDate string, iSurrMethod string, iInstallments int) (oAmount float64) {
 
 	oAmount = 0
@@ -2618,6 +2671,13 @@ func GetSurrenderAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiv
 }
 
 // #69
+// CalculateStampDutyByPolicy - Stamp Duty for a Policy
+//
+// Inputs: Company,  Policy
+//
+// # Outputs Stamp Duty
+//
+// ©  FuturaInsTech
 func CalculateStampDutyByPolicy(iCompanyId uint, iPolicyId uint) float64 {
 
 	tStampDuty := 0.0
@@ -2669,6 +2729,13 @@ func CalculateStampDutyByPolicy(iCompanyId uint, iPolicyId uint) float64 {
 }
 
 // #70
+// NoOfDays - Get No of Days between two dates
+//
+// Inputs: From and To Dates
+//
+// # Outputs Year, Month, Week, Days , hrs , minutes, seconds, millie seconds and nano seconds
+//
+// ©  FuturaInsTech
 func NoOfDays(startDate string, endDate string) (year int64, month int64, week int64, days int64, hrs float64, mm float64, ss float64, nss int64) {
 	a := String2Date(startDate)
 	b := String2Date(endDate)
@@ -2687,74 +2754,19 @@ func NoOfDays(startDate string, endDate string) (year int64, month int64, week i
 }
 
 // #80
+// Get Business Date
 //
-//		func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
-//			var businessdate models.BusinessDate
-//			// Get with User
-//			result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id <>  null and department <> ?", iCompany, iUser, iDepartment, "")
-//			if result.Error == nil {
-//				// If User Not Found, get with Department
-//				result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and department <> ? and user_id = null", iCompany, iDepartment, "")
-//				if result.Error == nil {
-//					// If Department Not Found, get with comapny
-//					result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id = null", iCompany, "")
-//					if result.Error == nil {
-//						if result.RowsAffected == 0 {
-//							return Date2String(time.Now())
-//						} else {
-//							oDate := businessdate.Date
-//							return oDate
-//						}
-//					} else {
-//						oDate := businessdate.Date
-//						return oDate
-//					}
-//				} else {
-//					oDate := businessdate.Date
-//					return oDate
-//				}
-//			}
-//			return Date2String(time.Now())
-//		}
+// Inputs: Company,  User and Departemet
 //
-//	Check Company, User and Department.  If User is 0
-//	Check Company, Department.  If Department is blank
-//	Check Company
-// func GetBusinessDate(iCompany uint, iUser uint, iDepartment string) (oDate string) {
-// 	var businessdate models.BusinessDate
-// 	// Get with User
-// 	result := initializers.DB.Find(&businessdate, "company_id = ? and user_id = ? and department = ? and user_id IS NOT NULL and department <> ?", iCompany, iUser, iDepartment, "")
-// 	if result.RowsAffected == 0 {
-// 		// If User Not Found, get with Department
-// 		result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL ", iCompany, iDepartment)
-// 		if result.RowsAffected == 0 {
-// 			// If Department Not Found, get with comapny
-// 			result = initializers.DB.Find(&businessdate, "company_id = ? and department = ? and user_id IS NULL", iCompany, "")
-// 			if result.RowsAffected == 0 {
-// 				return Date2String(time.Now())
-
-// 			} else {
-// 				oDate := businessdate.Date
-// 				return oDate
-// 			}
-// 		} else {
-// 			oDate := businessdate.Date
-// 			return oDate
-// 		}
-
-// 	} else {
-// 		oDate := businessdate.Date
-// 		return oDate
-// 	}
-
-// }
+// # Outputs Business Date
+//
+// ©  FuturaInsTech
 // 01 - NB
 // 02 - Cash and Payment
 // 03 - Maturity
 // 04 - Death Claim
 // 05 - Customer Service
 // 06
-
 func GetBusinessDate(iCompany uint, iUser uint, iDepartment uint) (oDate string) {
 	var businessdate models.BusinessDate
 	// Get with User
@@ -2842,12 +2854,11 @@ func TDFLapsD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 //
 // Inputs: Company, Policy
 //
-// It has to loop through TDFPOLICIES and update earliest due in Tdfh
+// # It has to loop through TDFPOLICIES and update earliest due in Tdfh
 //
 // # Outputs  Old Record is Soft Deleted and New Record is Created in TDFH
 //
 // ©  FuturaInsTech
-
 func TdfhUpdate(iCompany uint, iPolicy uint) error {
 	var tdfhupd models.Tdfh
 	var tdfpolicyenq []models.TDFPolicy
@@ -2930,11 +2941,14 @@ func TDFCollD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate
 	}
 }
 
-// #84
+// #84 Get Future Date (Redundant)  GetNextDue Could be used
+//
+// Inputs: From Date, Todate and Frequency
+//
+// # Outputs  New Date
+//
+// ©  FuturaInsTech
 func GetFutureDue(iFromDate string, iToDate string, iFreq string) (oDate string) {
-	// iFrom is Paid To Date
-	// iTo is Current Date
-	// Frequency is Policy Freqency
 	a := iFromDate
 	for {
 		nxtDate := GetNextDue(a, iFreq, "")
@@ -2949,6 +2963,12 @@ func GetFutureDue(iFromDate string, iToDate string, iFreq string) (oDate string)
 }
 
 // #85
+// GetMaturityAmount - Get Maturity Amount
+// Inputs: Company, Policy, Coverage, Effective Date
+//
+// # Outputs  Maturity Amount
+//
+// ©  FuturaInsTech
 func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiveDate string) (oAmount float64) {
 	var benefit models.Benefit
 	result := initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and b_coverage = ?", iCompany, iPolicy, iCoverage)
@@ -3010,6 +3030,12 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 }
 
 // #86
+// GetCompany Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Company Details as an Interface
+//
+// ©  FuturaInsTech
 func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iDate string) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
@@ -3038,6 +3064,12 @@ func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // #87
+// GetClient Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Client Details as an Interface
+//
+// ©  FuturaInsTech
 func GetClientData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	clientarray := make([]interface{}, 0)
 	var client models.Client
@@ -3062,6 +3094,12 @@ func GetClientData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 }
 
 // #88
+// GetAddressData - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Address Details as an Interface
+//
+// ©  FuturaInsTech
 func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	addressarray := make([]interface{}, 0)
 	var address models.Address
@@ -3084,7 +3122,12 @@ func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // #89
-
+// GetPolicyData - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Policy Details as an Interface
+//
+// ©  FuturaInsTech
 func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
@@ -3167,6 +3210,12 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 }
 
 // #90
+// GetBenefitData - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Benefit Details as an Interface
+//
+// ©  FuturaInsTech
 func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var policyenq models.Policy
 	var benefit []models.Benefit
@@ -3227,6 +3276,12 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // #91
+// GetSurvivalBenefit - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Survival Details as an Interface
+//
+// ©  FuturaInsTech
 func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var survb []models.SurvB
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -3264,6 +3319,12 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 }
 
 // #92
+// GetMRTAData - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  MRTA Details as an Interface
+//
+// ©  FuturaInsTech
 func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var mrtaenq []models.Mrta
 	initializers.DB.Find(&mrtaenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -3291,6 +3352,12 @@ func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 }
 
 // #93
+// GetReceiptData - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Receipt Details as an Interface
+//
+// ©  FuturaInsTech
 func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var receiptenq models.Receipt
 	initializers.DB.Find(&receiptenq, "company_id = ? and id = ?", iCompany, iReceipt)
@@ -3322,6 +3389,12 @@ func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // #94
+// GetSAChangeData - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  SA Change Details as an Interface
+//
+// ©  FuturaInsTech
 func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var sachangeenq []models.SaChange
 	initializers.DB.Find(&sachangeenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -3355,6 +3428,12 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 }
 
 // #95
+// GetCompAddData - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Component Add Details as an Interface
+//
+// ©  FuturaInsTech
 func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var addcomp []models.Addcomponent
 	initializers.DB.Find(&addcomp, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -3389,6 +3468,12 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 }
 
 // #96
+// GetSurrenderH Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Surrender Header  and Details as an Interface
+//
+// ©  FuturaInsTech
 func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) interface{} {
 	var surrhenq models.SurrH
 
@@ -3456,7 +3541,7 @@ func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 
 }
 
-// // #97
+// #97  (Redundant )
 // func GetSurrDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 
 // 	var surrdenq []models.SurrD
@@ -3492,6 +3577,12 @@ func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 // }
 
 // #97
+// GetNominee Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Nominee Details as an Interface
+//
+// ©  FuturaInsTech
 func GetNomiData(iCompany uint, iPolicy uint) []interface{} {
 
 	var nomenq []models.Nominee
@@ -3523,6 +3614,13 @@ func GetNomiData(iCompany uint, iPolicy uint) []interface{} {
 
 }
 
+// # 98 (Redundant) Not in Use
+// GetDeath Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Death Details as an Interface
+//
+// ©  FuturaInsTech
 // Not Required
 func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
 	var surrhenq models.SurrH
@@ -3535,6 +3633,11 @@ func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 }
 
 // #98
+// GetMatH Data - Printing Purpose Only (both header and detail)
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Maturity Header and Details Interface
+// ©  FuturaInsTech
 func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) interface{} {
 	var mathenq models.MaturityH
 
@@ -3600,42 +3703,12 @@ func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 
 }
 
-// func GetMatDData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
-
-// 	var matdenq []models.MaturityD
-
-// 	initializers.DB.Find(&matdenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-// 	matdarray := make([]interface{}, 0)
-
-// 	for k := 0; k < len(matdenq); k++ {
-// 		_, oCoverage, _ := GetParamDesc(iCompany, "Q0005", matdenq[k].BCoverage, 1)
-// 		resultOut := map[string]interface{}{
-// 			"MaturityHID":         IDtoPrint(matdenq[k].MaturityHID),
-// 			"PolicyID":            matdenq[k].PolicyID,
-// 			"ClientID":            matdenq[k].ClientID,
-// 			"BenifitID":           matdenq[k].BenefitID,
-// 			"BCoverage":           oCoverage,
-// 			"BSumAssured":         matdenq[k].BSumAssured,
-// 			"MaturityAmount":      matdenq[k].MaturityAmount,
-// 			"RevBonus":            matdenq[k].RevBonus,
-// 			"AddlBonus":           matdenq[k].AddlBonus,
-// 			"TerminalBonus":       matdenq[k].TerminalBonus,
-// 			"InterimBonus":        matdenq[k].InterimBonus,
-// 			"LoyaltyBonus":        matdenq[k].LoyaltyBonus,
-// 			"OtherAmount":         matdenq[k].OtherAmount,
-// 			"AccumDividend":       matdenq[k].AccumDividend,
-// 			"AccumDivInt":         matdenq[k].AccumDivInt,
-// 			"TotalFundValue":      matdenq[k].TotalFundValue,
-// 			"TotalMaturityAmount": matdenq[k].TotalMaturityAmount,
-// 		}
-// 		matdarray = append(matdarray, resultOut)
-// 	}
-
-// 	return matdarray
-
-// }
-
 // #99
+// GetSurvBPay Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Survival Benefit Payment Interface
+// ©  FuturaInsTech
 func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 	var survbenq models.SurvB
 	initializers.DB.Find(&survbenq, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
@@ -3655,6 +3728,11 @@ func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 }
 
 // #100
+// GetBonsusValues Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Bonus Values
+// ©  FuturaInsTech
 func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 
 	bonusarray := make([]interface{}, 0)
@@ -3691,6 +3769,11 @@ func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 }
 
 // #101
+// GetAgency Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt, Agency and Date
+//
+// # Outputs  Agency
+// ©  FuturaInsTech
 func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint, iAgency uint) []interface{} {
 
 	agencyarray := make([]interface{}, 0)
@@ -3728,6 +3811,11 @@ func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceip
 }
 
 // #102
+// GetExpi Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Expiry Interface Information
+// ©  FuturaInsTech
 func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
 	var benefit []models.Benefit
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
@@ -3992,7 +4080,6 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 // #  Return is Name
 //
 // ©  FuturaInsTech
-
 func GetName(iCompany uint, iClient uint) string {
 	var clientenq models.Client
 	oName := ""
@@ -4007,6 +4094,11 @@ func GetName(iCompany uint, iClient uint) string {
 
 // #106
 // New Function to do Amount in Words in Receipts
+//
+// Inputs: Company, Amount, Currency
+//
+// # Outputs  Values in Words
+// ©  FuturaInsTech
 func AmountinWords(iCompany uint, amount float64, curr string) (aiw string, csym string) {
 	iBusinssdate := GetBusinessDate(iCompany, 1, 2)
 
@@ -4035,6 +4127,11 @@ func AmountinWords(iCompany uint, amount float64, curr string) (aiw string, csym
 
 // #107
 // Function to convert INR amounts in words
+//
+// Inputs: For INR (Lakhs)
+//
+// # Outputs  Values in Words
+// ©  FuturaInsTech
 func WordsinLakhs(camt float64, csym string, cname string, ccoin string) (aiw string) {
 	// Function to convert a number to its corresponding words
 
@@ -4104,6 +4201,11 @@ func WordsinLakhs(camt float64, csym string, cname string, ccoin string) (aiw st
 
 // #108
 // Function to convert USD,SGD,EURO,GBP... amounts in words
+//
+// Inputs: For USD (Millions)
+//
+// # Outputs  Values in Words
+// ©  FuturaInsTech
 func WordsinMillions(camt float64, csym string, cname string, ccoin string) (aiw string) {
 	// Define word representations for numbers from 0 to 19
 	ones := []string{"", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"}
@@ -4180,6 +4282,9 @@ func WordsinMillions(camt float64, csym string, cname string, ccoin string) (aiw
 
 // #109
 // Function to convert all digits of given number in words
+// Inputs: For INR (Hundreds)
+// # Outputs  Values in Words
+// ©  FuturaInsTech
 func HundredsInWords(num int, ones, tens []string) (aiw string) {
 	if num == 0 {
 		return ""
@@ -4217,7 +4322,6 @@ func HundredsInWords(num int, ones, tens []string) (aiw string) {
 //
 // ©  FuturaInsTech
 // *********************************************************************************************
-
 func GetPremDueDates(iStartDate string, freq string) string {
 	var months []string
 	var dueDay string
@@ -4273,7 +4377,6 @@ func GetPremDueDates(iStartDate string, freq string) string {
 //
 // ©  FuturaInsTech
 // ***
-
 func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string, iIFSC string, iBankAc string) (oreceipt uint, oerror error) {
 	iBusinssdate := GetBusinessDate(iCompany, 1, 2)
 
@@ -4566,7 +4669,6 @@ func TDFIBD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string
 	}
 }
 
-// /////////////////////////////////////////////////////////////////
 // # 115
 // CalRBonus - Calculate Bonus due on Annniversary Date OR Bonus Date
 //
@@ -5091,14 +5193,13 @@ func GetaFundValueByBenefit(iCompany uint, iPolicy uint, iBenefit uint, iFundCod
 
 // #126
 //
-// GetILPAlloc - Get ILP Allocation Based on From and To Date
+// # GetILPAlloc - Get ILP Allocation Based on From and To Date
 //
 // Inputs: Company, Policy, Frequency, Start Date of Policy, Premium Adjusted Date, Coverage Code, Allocation Method, Gender, Amount Collected
 //
 // # Outputs  Allocated , Non Allocated and Error
 //
 // ©  FuturaInsTech
-
 func GetILPAlloc(iCompany uint, iPolicy uint, iFreq string, iStartDate string, iEndDate string, iCoverage string, iAllocMethod string, iGender string, iAmount float64) (float64, float64, error) {
 	var p0060data paramTypes.P0060Data
 	var extradatap0060 paramTypes.Extradata = &p0060data
@@ -5134,7 +5235,6 @@ func GetILPAlloc(iCompany uint, iPolicy uint, iFreq string, iStartDate string, i
 // # Outputs  Allocated , Non Allocated and Error
 //
 // ©  FuturaInsTech
-
 func PostBuySell(iFunction string, iCompany uint, iPolicy uint, iContractCurr string, iHistoryCode string, iCoverage string, iStartDate string, iEffDate string, iBenefit uint, iAmount float64, iTranno uint) error {
 	var p0059data paramTypes.P0059Data
 	var extradatap0059 paramTypes.Extradata = &p0059data
@@ -5483,7 +5583,6 @@ func CalcMortPrem(iCompany uint, iPolicy uint, iBenefit uint, iHistoryCode strin
 // # Outputs  Policy Fee for the Frequency, Next Due Date and Error
 //
 // ©  FuturaInsTech
-
 func CalcUlPolicyFee(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string) (float64, string, error) {
 
 	iKey := iFeeMethod
@@ -5672,7 +5771,6 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 // # Outputs  Error Description
 //
 // ©  FuturaInsTech
-
 func CheckPendingILP(iCompany uint, iPolicy uint, iLanguage uint) string {
 
 	var ilptransenq models.IlpTransaction
@@ -5694,7 +5792,6 @@ func CheckPendingILP(iCompany uint, iPolicy uint, iLanguage uint) string {
 // # Outputs  Premium and Error Description
 //
 // ©  FuturaInsTech
-
 func GetMrtaPrem(iCompany uint, iCoverage string, iSA float64, iAge uint, iGender string, iTerm uint, iPremTerm uint, iInterest float64, iInterimPeriod uint, iDate string) (float64, error) {
 
 	var q0006data paramTypes.Q0006Data
@@ -5884,9 +5981,7 @@ func PostTopAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 //
 // Outputs : Fund Array consist of fund code, fund category, fund type and fund currency and error code
 //
-//
 // ©  FuturaInsTech
-
 func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface{}, error) {
 
 	fundlist := make([]interface{}, 0)
@@ -5921,25 +6016,14 @@ func GetAllowedFunds(iCompany uint, iCoverage string, iDate string) ([]interface
 	return fundlist, nil
 }
 
-// func ValidateFieldsBharani(iCompany uint, historyCode string, fieldName string) string {
-
-// 	var p0065data paramTypes.P0065Data
-// 	var extradata paramTypes.Extradata = &p0065data
-// 	iDate := ""
-// 	GetItemD(int(iCompany), "P0065", historyCode, iDate, &extradata)
-
-//		for i := 0; i < len(p0065data.FieldList); i++ {
-//			if fieldName == p0065data.FieldList[i].Field {
-//				if p0065data.FieldList[i].Mandatory == "Y" {
-//					return p0065data.FieldList[i].Mandatory
-//				}
-//			}
-//		}
-//		return "N"
-//	}
-//
-// # 99999
+// # 135
 // Validate the Address Table Fields mandatory as required by P0065 Rules
+//
+// Inputs: Address Model, Company, Language, Key (Program name)
+//
+// Outputs : Error
+//
+// ©  FuturaInsTech
 func ValidateAddress(addressval models.Address, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -5971,8 +6055,14 @@ func ValidateAddress(addressval models.Address, userco uint, userlan uint, iKey 
 	return
 }
 
-// # 99999
+// # 136
 // Validate the Client Table Fields mandatory as required by P0065 Rules
+//
+// Inputs: Cleint Mode, Company, Language, Key (Program name)
+//
+// Outputs : Error
+//
+// ©  FuturaInsTech
 func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -6018,8 +6108,14 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 	return
 }
 
-// # 99999
+// # 137
 // Validate the Bank Table Fields mandatory as required by P0065 Rules
+//
+// Inputs: Bank Model, Company, Language, Key (Program name)
+//
+// Outputs : Error
+//
+// ©  FuturaInsTech
 func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -6052,7 +6148,7 @@ func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (
 	return
 }
 
-// # ????
+// # 138
 //
 // # GetIlpFundUnits - To return the current available Units in a Fund
 //
@@ -6072,6 +6168,13 @@ func GetIlpFundUnits(iCompany uint, iPolicy uint, iBenefit uint, iFundCode strin
 	return oUnits, nil
 }
 
+// # 139
+// Get ILP Summary Data Printing Purpose Only
+// Inputs: Company and Policy
+//
+// Outputs : Summary Data as interface
+//
+// ©  FuturaInsTech
 func GetIlpSummaryData(iCompany uint, iPolicy uint) interface{} {
 	var ilpsummary []models.IlpSummary
 	initializers.DB.Find(&ilpsummary, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -6107,6 +6210,13 @@ func GetIlpSummaryData(iCompany uint, iPolicy uint) interface{} {
 	return ilpsumcombinedvalue
 }
 
+// # 140
+// Get GL Data Printing Purpose Only
+// Inputs: Company  Policy, From and To Date, History Code, GL Code,GL Sign
+//
+// Outputs : GL Data as interface
+//
+// ©  FuturaInsTech
 func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) interface{} {
 	var benefitenq []models.Benefit
 
@@ -6233,6 +6343,13 @@ func GetGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string, iG
 
 }
 
+// # 141
+// GetPremTaxGLData
+// Extract PremTax Data  (Printing Purpose Only)
+// Input:  Company, Policy, From and To Date
+// Output: Interface
+//
+// ©  FuturaInsTech
 func GetPremTaxGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate string) interface{} {
 	var benefitenq []models.Benefit
 	var codesql string = ""
@@ -6419,7 +6536,7 @@ func GetPremTaxGLData(iCompany uint, iPolicy uint, iFromDate string, iToDate str
 
 }
 
-// # ???
+// # 142
 // *********************************************************************************************
 // Method : GetNewPremium
 //
@@ -6438,7 +6555,7 @@ func GetNewPremium(iCompany uint, iCoverage string, iDate string, iAge uint, iGe
 	return oAnnualPrem, oBasePrem
 }
 
-// #  ????
+// #  143
 // GetFundCPrice - Fetch the Available Fund Price approved to use as Current Price in calculations
 //
 // Inputs: Company, Fund Code, Processing Date
@@ -6459,8 +6576,7 @@ func GetFundCPrice(iCompany uint, iFundCode string, iDate string) (float64, floa
 	return iBidPrice, iOfferPrice, iPriceDateUsed
 }
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// # ????
+// # 144
 //
 // # PostUlpDeductionByFundAmount - Post ILP Deductions by alloctype for a Specific Fund
 //
@@ -6572,7 +6688,7 @@ func PostUlpDeductionByFundAmount(iCompany uint, iPolicy uint, iBenefit uint, iF
 	return nil
 }
 
-// # ????
+// # 145
 //
 // PostUlpDeductionByAmount - Post ILP Deductions by alloctype (used in Surrender & PartSurrender Penalty & GST Postings )
 //
@@ -6685,7 +6801,7 @@ func PostUlpDeductionByAmount(iCompany uint, iPolicy uint, iBenefit uint, iAmoun
 	return nil
 }
 
-// # ????
+// # 146
 //
 // # GetIlpTranctionData - ILP transaction Data extraction for Communications
 //
@@ -6739,7 +6855,7 @@ func GetIlpTranctionData(iCompany uint, iPolicy uint, iHistoryCode string, iDate
 	return ilptranctionarray
 }
 
-// # ????
+// # 147
 //
 // # GetIlpAnnsummaryData - ILP Anniversary Summary Data extraction for Communications
 //
@@ -6794,7 +6910,7 @@ func GetIlpAnnsummaryData(iCompany uint, iPolicy uint, iHistoryCode string) inte
 	return ilpannsumdata
 }
 
-// # ????
+// # 148
 //
 // # PostUlpDeductionByFundUnits - Post ILP Deductions by alloctype for a Specific Fund
 //
@@ -6907,7 +7023,7 @@ func PostUlpDeductionByFundUnits(iCompany uint, iPolicy uint, iBenefit uint, iFu
 	return nil
 }
 
-// # ????
+// # 149
 //
 // PostUlpDeductionByUnits - Post ILP Deductions by alloctype (used in PartSurrender Penalty & GST Postings )
 //
@@ -7021,7 +7137,7 @@ func PostUlpDeductionByUnits(iCompany uint, iPolicy uint, iBenefit uint, iSurrPe
 	return nil
 }
 
-// # ????
+// # 150
 //
 // # GetIlpFundUnits - To return the current available Units in a Fund
 //
@@ -7040,6 +7156,13 @@ func GetIlpFundByUnits(iCompany uint, iPolicy uint, iBenefit uint, iFundCode str
 	oUnits := ilpsummaryenq.FundUnits
 	return oUnits, nil
 }
+
+// # 151
+// Validate the ValidatePolicyFields mandatory as required by P0065 Rules
+// Input: Policy Model, Company, User Language, Transaction Code and Coverage Code
+// Output: Error
+//
+// ©  FuturaInsTech
 func ValidatePolicyFields(policyval models.Policy, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -7072,8 +7195,12 @@ func ValidatePolicyFields(policyval models.Policy, userco uint, userlan uint, iK
 	return
 }
 
-// # ????
+// # 152
 // Validate the BenefitFields mandatory as required by P0065 Rules
+// Input: Benefit Model, Company, User Language, Transaction Code and Coverage Code
+// Output: Error
+//
+// ©  FuturaInsTech
 func ValidateBenefitFields(benefitval models.Benefit, userco uint, userlan uint, iHistoryCode string, iCoverage string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -7110,8 +7237,14 @@ func ValidateBenefitFields(benefitval models.Benefit, userco uint, userlan uint,
 	return
 }
 
-// # ????
+// # 153
 // Validate the MrtaFields mandatory as required by P0065 Rules
+// ???
+//
+// Input: MRTA Model, Company, User Language, Transaction Code and Coverage Code
+// Output: Error
+//
+// ©  FuturaInsTech
 func ValidateMrtaFields(mrtaval models.Mrta, userco uint, userlan uint, iHistoryCode string, iCoverage string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -7148,7 +7281,7 @@ func ValidateMrtaFields(mrtaval models.Mrta, userco uint, userlan uint, iHistory
 	return
 }
 
-// ????
+// # 154
 // Validate given field if  zero or blank
 // Input: Field name
 // Output: True when the field is zero or blank and False otherwise...
@@ -7166,16 +7299,12 @@ func isFieldZero(field interface{}) bool {
 	return false // Field is not a valid type
 }
 
-//
-// ????
+// # 155
 // ILP Products Only.  Return SA based on Premium and Frequency
 // Input: Company, Policy No, Coverage Code, History Code, Effective Date, Age (Inception Age), Instalment Premium (Not Annualized), Frequency, SA
 // Output: Error and New Calcualted SA
 //
 // ©  FuturaInsTech
-
-//
-
 func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string, iDate string, iAge uint, iPrem float64, iFreq string, iSA float64) (oErr error, oSA float64) {
 	var p0068data paramTypes.P0068Data
 	var extradatap0068 paramTypes.Extradata = &p0068data
@@ -7224,7 +7353,7 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 	return err, oSA
 }
 
-// ???
+// # 156
 // ILP Products Only.  Switch Fund to In Active Fund During lapsation
 // Input: Company, Policy No, Benefit ID, Tranno, TargetFund, Effective Date
 // Output: Error // Write Records in ILPSWITCHHEADER and ILPSWITCHFUNDS
@@ -7249,7 +7378,7 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 	ilpswitchheader.Tranno = iTranno
 	iTotalAmount := 0.0
 	initializers.DB.Create(&ilpswitchheader)
-
+	// We do not need to delete ilpsummary
 	for i := 0; i < len(ilpsummary); i++ {
 		if ilpsummary[i].FundUnits > 0 {
 			ilpswitchfunds.ID = 0
@@ -7323,6 +7452,13 @@ func FundSwitch(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTarge
 
 	return nil
 }
+
+// #157
+// GetPHistoryData  (Printing Purpose)
+// Input: Company, Policy No, Transaction Code and Effective Date
+// Output: An Interface Record (History Information)
+//
+// ©  FuturaInsTech
 func GetPHistoryData(iCompany uint, iPolicy uint, iHistoryCode string, iDate string) []interface{} {
 	var policyhistory []models.PHistory
 	initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -7345,6 +7481,12 @@ func GetPHistoryData(iCompany uint, iPolicy uint, iHistoryCode string, iDate str
 	return policyhistoryarray
 }
 
+// #158
+// ILP Products Only.  GetIlpFundSwitchData (Printing Purpose)
+// Input: Company, Policy No, Tranno
+// Output: An Interface Record
+//
+// ©  FuturaInsTech
 func GetIlpFundSwitchData(iCompany uint, iPolicy uint, iTranno uint) interface{} {
 	ilpswitchfundarray := make([]interface{}, 0)
 	ilpfundarray := make([]interface{}, 0)
@@ -7397,4 +7539,69 @@ func GetIlpFundSwitchData(iCompany uint, iPolicy uint, iTranno uint) interface{}
 	}
 	return IlpFundSwitchData
 
+}
+
+// #159
+// ILP Products Only.  Calculate Switch Fee
+// Input: Company, Policy No, Fee Method, Benefit Start Date
+// Output: Error , Fee Amount, Fee Percentage
+//
+// ©  FuturaInsTech
+func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDate string) (oError error, oAmount float64, oPercentage float64) {
+
+	var p0070data paramTypes.P0070Data
+	var extradatap0070 paramTypes.Extradata = &p0070data
+	iKey := iFeeMethod
+	err := GetItemD(int(iCompany), "P0070", iKey, iEffectiveDate, &extradatap0070)
+
+	if err != nil {
+		shortCode := "GL535"
+		longDesc, _ := GetErrorDesc(iCompany, 1, shortCode)
+		return errors.New(shortCode + " : " + longDesc), 0, 0
+
+	}
+	// Get Next Policy Anniversary
+	iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+	iPolicyAnniversary := iEffectiveDate
+
+	for {
+
+		a := GetNextDue(iPolicyAnniversary, "Y", "")
+		iPolicyAnniversary = Date2String(a)
+
+		if iPolicyAnniversary >= iBusinessDate {
+			break
+		}
+
+	}
+	b := GetNextDue(iPolicyAnniversary, "Y", "R")
+	iPolicyAnniversary = Date2String(b)
+	// Get No of Free Done in Policy Anniversary
+	var policyhistory []models.PHistory
+	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0)
+	switchcount := 0
+	if results.Error == nil {
+		switchcount = 0
+	} else {
+		switchcount = len(policyhistory)
+		switchcount = switchcount + 1
+	}
+	// Percentage
+	if p0070data.SwitchFeeBasis == "P" {
+		if p0070data.FreeSwitches < uint(switchcount) {
+			return nil, 0, 0
+		} else {
+			return nil, 0, p0070data.FeePercentage
+		}
+	}
+	// Fixed Amount
+	if p0070data.SwitchFeeBasis == "F" {
+		if p0070data.FreeSwitches < uint(switchcount) {
+			return nil, 0, 0
+		} else {
+			return nil, p0070data.FeeAmount, 0
+		}
+	}
+
+	return oError, 0, 0
 }

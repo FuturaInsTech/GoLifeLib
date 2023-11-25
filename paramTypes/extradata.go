@@ -2018,3 +2018,31 @@ func (m *P0069Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Fund Switch Rules
+
+type P0070Data struct {
+	SwitchFeeBasis string // P0050 - Fixed/Percentage
+	FreeSwitches   uint
+	FeeAmount      float64
+	FeePercentage  float64
+}
+
+func (m *P0070Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0070Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}

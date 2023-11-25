@@ -91,8 +91,9 @@ type IlpSwitchHeader struct {
 	types.CModel
 	PolicyID        uint
 	BenefitID       uint
-	EffectiveDate   string `gorm:"type:varchar(8)"`
-	FundSwitchBasis string `gorm:"type:varchar(1)"` //P0050 Unit or Amount or Percentage
+	EffectiveDate   string  `gorm:"type:varchar(8)"`
+	FundSwitchBasis string  `gorm:"type:varchar(1)"` //P0050 Unit or Amount or Percentage
+	SwitchFee       float64 `gorm:"type:decimal(10,2)"`
 	IlpSwitchFunds  []IlpSwitchFund
 }
 

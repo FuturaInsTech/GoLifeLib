@@ -7346,6 +7346,7 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 					oSA = p0068data.RangeArray[i].ToSA
 					return nil, oSA
 				}
+				return nil, iSA
 			}
 		}
 	}
@@ -7563,6 +7564,10 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	// Get Next Policy Anniversary
 	iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 	iPolicyAnniversary := iEffectiveDate
+	// 20200328
+	// a = 2024:03:28:00:00:00:00:00:00
+	// 20230328
+	//
 
 	for {
 
@@ -7578,13 +7583,13 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	iPolicyAnniversary = Date2String(b)
 	// Get No of Free Done in Policy Anniversary
 	var policyhistory []models.PHistory
-	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0)
+	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
 	switchcount := 0
-	if results.Error == nil {
+	if results.Error != nil {
 		switchcount = 0
 	} else {
 		switchcount = len(policyhistory)
-		switchcount = switchcount + 1
+
 	}
 	// Percentage
 	if p0070data.SwitchFeeBasis == "P" {

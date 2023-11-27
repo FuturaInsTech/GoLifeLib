@@ -7346,6 +7346,7 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 					oSA = p0068data.RangeArray[i].ToSA
 					return nil, oSA
 				}
+				return nil, iSA
 			}
 		}
 	}

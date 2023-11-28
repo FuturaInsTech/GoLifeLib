@@ -7994,3 +7994,64 @@ func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
 	}
 	return nil
 }
+
+// # 38
+// GetMaxTranno - Get Transaction No and History Code
+//
+// Inputs: Company,  Policy No, Method, Effective Date, User
+//
+// # Outputs History Code and New Tranno
+//
+// # It update PHISTORY Table
+//
+// ©  FuturaInsTech
+func GetMaxTrannoN(iCompany uint, iPolicy uint, iMethod string, iEffDate string, iuser uint64, historyMap map[string]interface{}, txn *gorm.DB) (error, string, uint) {
+	var permission models.Permission
+	var result *gorm.DB
+
+	result = initializers.DB.First(&permission, "company_id = ? and method = ?", iCompany, iMethod)
+	if result.Error != nil {
+		return result.Error, iMethod, 0
+	}
+	iHistoryCode := permission.TransactionID
+	var transaction models.Transaction
+	result = initializers.DB.Find(&transaction, "ID = ?", iHistoryCode)
+	if result.Error != nil {
+		return result.Error, iMethod, 0
+	}
+	iHistoryCD := transaction.Method
+	var phistory models.PHistory
+	var maxtranno float64 = 0
+
+	fmt.Println(iCompany, iPolicy, iHistoryCD, iEffDate)
+
+	result1 := initializers.DB.Table("p_histories").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(tranno)")
+
+	if result1.Error != nil {
+		fmt.Println(result1.Error)
+
+	}
+	err := result1.Row().Scan(&maxtranno)
+	fmt.Println("Error ", err)
+	phistory.CompanyID = iCompany
+	phistory.Tranno = uint(maxtranno) + 1
+	phistory.PolicyID = iPolicy
+	phistory.HistoryCode = iHistoryCD
+	phistory.EffectiveDate = iEffDate
+	phistory.Is_reversed = false
+	phistory.IsValid = "1"
+	if historyMap != nil {
+		phistory.PrevData = historyMap
+	}
+	a := time.Now()
+	b := Date2String(a)
+	phistory.CurrentDate = b
+	phistory.UpdatedID = iuser
+	result1 = txn.Create(&phistory)
+	if result1.Error != nil {
+		return result1.Error, phistory.HistoryCode, phistory.Tranno
+	}
+
+	return nil, phistory.HistoryCode, phistory.Tranno
+
+}

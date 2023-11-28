@@ -7605,7 +7605,7 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	}
 	// Percentage
 	if p0070data.SwitchFeeBasis == "P" {
-		if p0070data.FreeSwitches < uint(switchcount) {
+		if uint(switchcount) <= p0070data.FreeSwitches {
 			return nil, 0, 0
 		} else {
 			return nil, 0, p0070data.FeePercentage
@@ -7613,7 +7613,7 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	}
 	// Fixed Amount
 	if p0070data.SwitchFeeBasis == "F" {
-		if p0070data.FreeSwitches < uint(switchcount) {
+		if uint(switchcount) <= p0070data.FreeSwitches {
 			return nil, 0, 0
 		} else {
 			return nil, p0070data.FeeAmount, 0

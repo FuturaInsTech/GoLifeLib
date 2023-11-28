@@ -3886,7 +3886,7 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint) error {
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
@@ -4047,6 +4047,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "25":
 					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
 					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
+					resultMap["IlpFundData"] = oData
 
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
@@ -4515,7 +4518,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	iAgency := policyenq.AgencyID
 
-	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "")
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0)
 	if err != nil {
 		return 0, errors.New(err.Error())
 	}
@@ -7756,7 +7759,7 @@ func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iCon
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB) error {
+func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint) error {
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
@@ -7917,6 +7920,9 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "25":
 					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
 					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
+					resultMap["IlpFundData"] = oData
 
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData

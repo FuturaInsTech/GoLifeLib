@@ -7931,7 +7931,7 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 			communication.PDFPath = p0034data.Letters[i].PdfLocation
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
 
-			results := initializers.DB.Create(&communication)
+			results := txn.Create(&communication)
 
 			if results.Error != nil {
 				return results.Error
@@ -7976,7 +7976,7 @@ func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
 			tdfhupd.EffectiveDate = iDate
 			result = txn.Create(&tdfhupd)
 			if result.Error != nil {
-				return errors.New("Error")
+				return results.Error
 			}
 		} else {
 			result = initializers.DB.Delete(&tdfhupd)
@@ -7987,7 +7987,7 @@ func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
 			tdfhupd.ID = 0
 			result = txn.Create(&tdfhupd)
 			if result.Error != nil {
-				return errors.New("Error")
+				return results.Error
 			}
 		}
 

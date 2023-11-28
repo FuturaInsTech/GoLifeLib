@@ -1,6 +1,7 @@
 package utilities
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -8054,4 +8055,95 @@ func GetMaxTrannoN(iCompany uint, iPolicy uint, iMethod string, iEffDate string,
 
 	return nil, phistory.HistoryCode, phistory.Tranno
 
+}
+
+// # 161
+// GetP0050ItemCodeDesc - Get the Description of an item's Code
+//
+// Inputs: Company, ParamItem and Language
+//
+// # Outputs:  Description
+//
+// ©  FuturaInsTech
+func GetP0050ItemCodeDesc(iCompany uint, iItem string, iLanguage uint, iCode string) string {
+	var paramdata models.Param
+	var paramdatamap map[string]interface{}
+
+	var idescription string = ""
+	var iParam = "P0050"
+	results := initializers.DB.Where("company_id = ? AND name = ? and item = ? and is_valid = ?", iCompany, iParam, iItem, 1).Find(&paramdata)
+	if results.Error != nil || results.RowsAffected == 0 {
+		return ""
+	}
+
+	datamap, _ := json.Marshal(paramdata.Data)
+	json.Unmarshal(datamap, &paramdatamap)
+
+	// use the iCode and return its corresponding Description
+	type jsondata struct {
+		Code        string
+		Description string
+	}
+	var jd []jsondata
+
+	datamap, _ = json.Marshal(paramdatamap["dataPairs"])
+	json.Unmarshal(datamap, &jd)
+
+	for i := 0; i < len(jd); i++ {
+		if jd[i].Code == iCode {
+			idescription = jd[i].Description
+			break
+		}
+	}
+
+	return idescription
+}
+
+// # 162
+// GetIlpFundData - Get ILP Fund DAta  (Printing Purpose Only)
+//
+// Inputs: Company,
+//
+// # Outputs:
+//
+// ©  FuturaInsTech
+func GetIlpFundData(iCompany uint, iPolicy uint, iBenefit uint, iDate string) interface{} {
+	var ilpfund []models.IlpFund
+	initializers.DB.Find(&ilpfund, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+
+	var ibenfit models.Benefit
+	initializers.DB.Find(&ibenfit, "company_id = ? and policy_id = ? and id = ?", iCompany, iPolicy, iBenefit)
+
+	ilpfundtarray := make([]interface{}, 0)
+
+	for k := 0; k < len(ilpfund); k++ {
+		var p0061data paramTypes.P0061Data
+		var extradatap0061 paramTypes.Extradata = &p0061data
+
+		err := GetItemD(int(iCompany), "P0061", ilpfund[k].FundCode, iDate, &extradatap0061)
+
+		if err != nil {
+			shortCode := "GL442"
+			longDesc, _ := GetErrorDesc(iCompany, 1, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+
+		}
+
+		resultOut := map[string]interface{}{
+			"ID":             IDtoPrint(ilpfund[k].ID),
+			"CompanyID":      IDtoPrint(ilpfund[k].CompanyID),
+			"BenefitID":      IDtoPrint(ilpfund[k].BenefitID),
+			"PolicyID":       IDtoPrint(ilpfund[k].PolicyID),
+			"FundCategory":   p0061data.FundCategory + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDCATEGORY", 1, p0061data.FundCategory),
+			"FundName":       ilpfund[k].FundCode + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDCODE", 1, ilpfund[k].FundCode),
+			"FundType":       ilpfund[k].FundType + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDTYPE", 1, ilpfund[k].FundType),
+			"FundCurr":       ilpfund[k].FundCurr + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDCURR", 1, ilpfund[k].FundCurr),
+			"BenefitName":    ibenfit.BCoverage + " - " + GetP0050ItemCodeDesc(iCompany, "COVR", 1, ibenfit.BCoverage),
+			"FundPercentage": ilpfund[k].FundPercentage,
+		}
+		ilpfundtarray = append(ilpfundtarray, resultOut)
+
+	}
+
+	return ilpfundtarray
 }

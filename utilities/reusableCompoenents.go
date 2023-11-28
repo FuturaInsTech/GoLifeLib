@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -6092,7 +6093,14 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 
 	}
 
-	if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
+	// if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
+	// 	shortCode := "GL477"
+	// 	longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+	// 	return errors.New(shortCode + " : " + longDesc)
+	// }
+
+	validemail := isValidEmail(clientval.ClientEmail)
+	if !validemail {
 		shortCode := "GL477"
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
@@ -7609,4 +7617,23 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	}
 
 	return oError, 0, 0
+}
+
+// # 160
+// # To Validate Email.
+func isValidEmail(email string) bool {
+	// Define a regular expression pattern for a standard email format
+	// This pattern is a simplified version and may not catch all edge cases
+	// For a more comprehensive pattern, consider using a library like "github.com/badoux/checkmail"
+	// or a more complex regex.
+
+	//pattern := `/.+@.+\\..+/i`
+	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+
+	// Compile the regex pattern
+	regex := regexp.MustCompile(pattern)
+
+	// Use the MatchString function to check if the email matches the pattern
+	return regex.MatchString(email)
+
 }

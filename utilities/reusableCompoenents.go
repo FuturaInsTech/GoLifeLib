@@ -3437,6 +3437,58 @@ func TDFCollD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate
 		return "", nil
 	}
 }
+func TDFCollDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate string, txn *gorm.DB) (string, error) {
+	//iBusinssdate := GetBusinessDate(iCompany, 1, "02")
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		return "", result.Error
+	}
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = policy.Tranno
+		tdfpolicy.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			return "", result.Error
+		}
+
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+
+			return "", result.Error
+		}
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = policy.Tranno
+
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+
+			return "", result.Error
+		}
+		return "", nil
+	}
+}
 
 // #84 Get Future Date (Redundant)  GetNextDue Could be used
 //

@@ -3296,10 +3296,14 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := initializers.DB.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
 		return "", result.Error
 	}
 
@@ -3308,6 +3312,7 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 
 	if err != nil {
+		txn.Rollback()
 		return "", err
 	}
 	iLapsedDate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
@@ -3322,12 +3327,14 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		tdfpolicy.Seqno = tdfrule.Seqno
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		return "", nil
 	} else {
 		result = txn.Delete(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		var tdfpolicy models.TDFPolicy
@@ -3340,10 +3347,12 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		tdfpolicy.Tranno = iTranno
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		return "", nil
 	}
+
 }
 
 // #82

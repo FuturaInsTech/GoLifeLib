@@ -6582,6 +6582,127 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 	return nil
 }
 
+func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+		ilptrancrt.FundCurr = p0061data.FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
+		ilptrancrt.AccountCode = p0059data.AccountCode
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+
+	}
+	var tdfpolicyupd models.TDFPolicy
+	iType := "FUNDM"
+	if iHistoryCode == "H0132" {
+		iType = "FUNDM"
+	} else if iHistoryCode == "H0133" {
+		iType = "FUNDF"
+	}
+	var tdfrule models.TDFRule
+	result = txn.Find(&tdfrule, "company_id = ? and tdf_type  = ?", iCompany, iType)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	result = txn.Find(&tdfpolicyupd, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iType)
+
+	if result.RowsAffected == 0 {
+		tdfpolicyupd.CompanyID = iCompany
+		tdfpolicyupd.PolicyID = iPolicy
+		tdfpolicyupd.EffectiveDate = iStartDate
+		tdfpolicyupd.TDFType = iType
+		tdfpolicyupd.Tranno = iTranno
+		tdfpolicyupd.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicyupd)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+	}
+	return nil
+}
+
 // # 132
 // CheckPendingILP - Check Pending ILP Transaction on a Policy
 //

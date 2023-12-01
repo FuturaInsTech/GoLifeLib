@@ -5616,6 +5616,138 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	return nil
 }
 
+func PostAllocationN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iFrequency string, iStartDate string, iEffDate string, iGender string, iAllocMethod string, iTranno uint, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0060data paramTypes.P0060Data
+	var extradatap0060 paramTypes.Extradata = &p0060data
+	iDate := iStartDate
+	iKey := iAllocMethod + iGender
+	err := GetItemD(int(iCompany), "P0060", iKey, iDate, &extradatap0060)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey = iHistoryCode + iBenefitCode
+	err = GetItemD(int(iCompany), "P0059", iKey, iDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+	iAllocationDate := ""
+	if iEffDate == iStartDate {
+		a := GetNextDue(iStartDate, iFrequency, "")
+		iAllocationDate = Date2String(a)
+	}
+	iNoofMonths := NewNoOfInstalments(iStartDate, iAllocationDate)
+	iAllocPercentage := 0.00
+	for i := 0; i < len(p0060data.AlBand); i++ {
+		if uint(iNoofMonths) <= p0060data.AlBand[i].Months {
+			iAllocPercentage = p0060data.AlBand[i].Percentage
+			break
+		}
+	}
+	iInvested := RoundFloat(iAmount*(iAllocPercentage/100), 2)
+	iNonInvested := RoundFloat(iAmount*((100-iAllocPercentage)/100), 2)
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	for j := 0; j < len(ilpfundenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+
+		var ilptrancrt models.IlpTransaction
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpfundenq[j].FundCode
+		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
+		ilptrancrt.AccountCode = "Invested" // ranga
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+	}
+	// Non Invested Amount Updation
+
+	var ilptrancrt models.IlpTransaction
+	// Move Variables
+	ilptrancrt.CompanyID = iCompany
+	ilptrancrt.PolicyID = iPolicy
+	ilptrancrt.BenefitID = iBenefit
+	ilptrancrt.FundCode = "NONIN"
+	ilptrancrt.FundType = "NI"
+	ilptrancrt.TransactionDate = iEffDate
+	ilptrancrt.FundEffDate = iEffDate
+	ilptrancrt.FundAmount = iNonInvested
+	ilptrancrt.FundCurr = ""
+	ilptrancrt.FundUnits = 0
+	ilptrancrt.FundPrice = 0
+	ilptrancrt.CurrentOrFuture = "C"
+	ilptrancrt.OriginalAmount = iNonInvested
+	ilptrancrt.ContractCurry = policyenq.PContractCurr
+	ilptrancrt.HistoryCode = iHistoryCode
+	ilptrancrt.InvNonInvFlag = "NI"
+	ilptrancrt.AllocationCategory = "NI"
+	ilptrancrt.InvNonInvPercentage = 0
+	ilptrancrt.Tranno = iTranno
+
+	ilptrancrt.AccountCode = "NonInvested"
+
+	ilptrancrt.CurrencyRate = 1.00
+	ilptrancrt.MortalityIndicator = ""
+	ilptrancrt.SurrenderPercentage = 0
+	ilptrancrt.Seqno = uint(p0059data.SeqNo)
+	ilptrancrt.UlProcessFlag = "C"
+	result = txn.Create(&ilptrancrt)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	return nil
+}
+
 // # 121
 // TDFFUNDP - Time Driven Function - Update Fund Price
 //
@@ -8970,3 +9102,216 @@ func GetIlpFundData(iCompany uint, iPolicy uint, iBenefit uint, iDate string) in
 
 	return ilpfundtarray
 }
+
+///////////////////////////////////////////////////////////////
+
+// # ????
+// Validate the PolicyFields mandatory as required by P0065 Rules
+func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode string) (err error) {
+	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
+
+	var clientenq models.Client
+	initializers.DB.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var agencyenq models.Agency
+	initializers.DB.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+	err = GetItemD(int(policyenq.CompanyID), "Q0005", policyenq.PProduct, policyenq.PRCD, &extradataq0005)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	//#001 RCD is less than PropsalDate
+	if policyenq.PRCD < policyenq.ProposalDate {
+		shortCode := "GL539" // RCD is less than PropsalDate
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#002 UW Date is less than PropsalDate
+	if policyenq.PUWDate < policyenq.ProposalDate {
+		shortCode := "GL540" // UW Date is less than PropsalDate
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#003 Frequency is Inalid
+	var iFreqFound bool = false
+	for i := 0; i < len(q0005data.Frequencies); i++ {
+		if policyenq.PFreq == q0005data.Frequencies[i] {
+			iFreqFound = true
+			break
+		}
+	}
+	if !iFreqFound {
+		shortCode := "GL541" // Frequency is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#004 Contract Curr is Inalid
+	var iCCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PContractCurr == q0005data.ContractCurr[i] {
+			iCCurrFound = true
+			break
+		}
+	}
+	if !iCCurrFound {
+		shortCode := "GL542" // Contract Curr is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#005 Billing Curr is Inalid
+	var iBCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PBillCurr == q0005data.BillingCurr[i] {
+			iBCurrFound = true
+			break
+		}
+	}
+	if !iBCurrFound {
+		shortCode := "GL543" // Billing Curr is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#006 Backdataing not Allowed
+	if policyenq.PRCD < businessdate &&
+		q0005data.BackDateAllowed == "N" {
+		shortCode := "GL544" // Backdataing not Allowed
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#007 Agency Channel Not Allowed
+	var iAgencyChannelFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if agencyenq.AgencyChannel == q0005data.AgencyChannel[i] {
+			iAgencyChannelFound = true
+			break
+		}
+	}
+	if !iAgencyChannelFound {
+		shortCode := "GL545" // Agency Channel Not Allowed
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#008 Client is Invalid
+	if clientenq.ClientStatus != "AC" {
+		shortCode := "GL546" // Invalid Client
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#009 Deceased Client
+	if !isFieldZero(clientenq.ClientDod) {
+		shortCode := "GL547" // Deceased Client
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	return
+}
+
+///////////////////////////////////////////////////////////////
+
+// # ????
+// Validate the PolicyFields mandatory as required by P0065 Rules
+func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode string) (err error) {
+	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
+
+	var clientenq models.Client
+	initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err = GetItemD(int(benefitenq.CompanyID), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	//#001 Age Not Allowed
+	var iAllowedAge bool = false
+	for i := 0; i < len(q0006data.AgeRange); i++ {
+		if benefitenq.BAge == q0006data.AgeRange[i] {
+			iAllowedAge = true
+			break
+		}
+	}
+	if !iAllowedAge {
+		shortCode := "GL548" // Age Not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#002 Policy Term not Allowed
+	var iAllowedPolTerm bool = false
+	for i := 0; i < len(q0006data.TermRange); i++ {
+		if benefitenq.BAge == q0006data.TermRange[i] {
+			iAllowedPolTerm = true
+			break
+		}
+	}
+	if !iAllowedPolTerm {
+		shortCode := "GL549" // Policy Term not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#003 Premium Paying Term not Allowed
+	var iAllowedPPT bool = false
+	for i := 0; i < len(q0006data.PptRange); i++ {
+		if benefitenq.BAge == q0006data.PptRange[i] {
+			iAllowedPPT = true
+			break
+		}
+	}
+	if !iAllowedPPT {
+		shortCode := "GL550" // Premium Paying Term not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#004 Risk cess Age not Allowed
+	benriskcessage := benefitenq.BAge + benefitenq.BTerm
+	if benriskcessage < q0006data.MinRiskCessAge ||
+		benriskcessage > q0006data.MaxRiskCessAge {
+		shortCode := "GL551" // Risk cess Age not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#005 Premium cess Age not Allowed
+	benpremcessage := benefitenq.BAge + benefitenq.BPTerm
+	if benpremcessage < q0006data.MinPremCessAge ||
+		benpremcessage > q0006data.MaxPremCessAge {
+		shortCode := "GL552" // Premium cess Age not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#006 Min Sum Assured not met
+	if uint(benefitenq.BSumAssured) < q0006data.MinSA {
+		shortCode := "GL553" // Min Sum Assured not met
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	return
+}
+
+///////////////////////////////////////////////////////////////

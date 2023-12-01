@@ -1559,20 +1559,34 @@ func TDFBillDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRev
 	var tdfrule models.TDFRule
 	var benefitenq []models.Benefit
 	odate := "00000000"
-	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	result := txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
 	for i := 0; i < len(benefitenq); i++ {
 		if benefitenq[i].BPremCessDate > odate {
 			odate = benefitenq[i].BPremCessDate
 		}
 	}
 
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := initializers.DB.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	result = txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
 	if iRevFlag == "R" {
 		var q0005data paramTypes.Q0005Data
 		var extradataq0005 paramTypes.Extradata = &q0005data
 		err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 		if err != nil {
+			txn.Rollback()
 			return "", err
 		}
 
@@ -1581,6 +1595,7 @@ func TDFBillDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRev
 	}
 
 	if result.Error != nil {
+		txn.Rollback()
 		return "", result.Error
 	}
 
@@ -1588,7 +1603,7 @@ func TDFBillDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRev
 		return "Date Exceeded", errors.New("Premium Cessation Date is Exceeded")
 	}
 
-	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 	if results.Error != nil {
 		tdfpolicy.CompanyID = iCompany
 		tdfpolicy.PolicyID = iPolicy
@@ -1598,12 +1613,14 @@ func TDFBillDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRev
 		tdfpolicy.Seqno = tdfrule.Seqno
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		return "", nil
 	} else {
 		result = txn.Delete(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		var tdfpolicy models.TDFPolicy
@@ -1617,6 +1634,7 @@ func TDFBillDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRev
 
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		return "", nil

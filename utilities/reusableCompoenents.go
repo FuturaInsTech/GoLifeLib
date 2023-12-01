@@ -3296,10 +3296,14 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := initializers.DB.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
 		return "", result.Error
 	}
 
@@ -3308,6 +3312,7 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
 
 	if err != nil {
+		txn.Rollback()
 		return "", err
 	}
 	iLapsedDate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
@@ -3322,12 +3327,14 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		tdfpolicy.Seqno = tdfrule.Seqno
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		return "", nil
 	} else {
 		result = txn.Delete(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		var tdfpolicy models.TDFPolicy
@@ -3340,10 +3347,12 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		tdfpolicy.Tranno = iTranno
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 		return "", nil
 	}
+
 }
 
 // #82
@@ -9236,11 +9245,12 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
 	var tdfhupd models.Tdfh
 	var tdfpolicyenq []models.TDFPolicy
+
 	iDate := "29991231"
 
-	results := initializers.DB.Find(&tdfpolicyenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	results := txn.Find(&tdfpolicyenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	if results.Error != nil {
-
+		txn.Rollback()
 		return results.Error
 	}
 	for i := 0; i < len(tdfpolicyenq); i++ {
@@ -9248,7 +9258,7 @@ func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
 			iDate = tdfpolicyenq[i].EffectiveDate
 		}
 	}
-	result := initializers.DB.Find(&tdfhupd, "company_id =? and policy_id = ?", iCompany, iPolicy)
+	result := txn.Find(&tdfhupd, "company_id =? and policy_id = ?", iCompany, iPolicy)
 
 	if result.Error == nil {
 		if result.RowsAffected == 0 {
@@ -9257,10 +9267,11 @@ func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
 			tdfhupd.EffectiveDate = iDate
 			result = txn.Create(&tdfhupd)
 			if result.Error != nil {
+				txn.Rollback()
 				return results.Error
 			}
 		} else {
-			result = initializers.DB.Delete(&tdfhupd)
+			result = txn.Delete(&tdfhupd)
 			var tdfhupd models.Tdfh
 			tdfhupd.CompanyID = iCompany
 			tdfhupd.PolicyID = iPolicy
@@ -9268,6 +9279,7 @@ func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
 			tdfhupd.ID = 0
 			result = txn.Create(&tdfhupd)
 			if result.Error != nil {
+				txn.Rollback()
 				return results.Error
 			}
 		}

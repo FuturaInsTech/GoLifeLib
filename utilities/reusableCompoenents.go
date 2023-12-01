@@ -1690,14 +1690,20 @@ func TDFAnniDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-
-	result := initializers.DB.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 	if result.Error != nil {
 		return "", result.Error
 	}
-	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
-
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
 	if results.Error != nil {
 		tdfpolicy.CompanyID = iCompany
 		tdfpolicy.PolicyID = iPolicy
@@ -1707,6 +1713,7 @@ func TDFAnniDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		tdfpolicy.Tranno = iTranno
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 
@@ -1714,6 +1721,7 @@ func TDFAnniDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	} else {
 		result = txn.Delete(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 
@@ -1728,6 +1736,7 @@ func TDFAnniDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 
 		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
+			txn.Rollback()
 			return "", result.Error
 		}
 
@@ -1944,9 +1953,14 @@ func TDFExpiDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	var benefits []models.Benefit
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
+	if result.Error != nil {
+		txn.Rollback()
 		return "", result.Error
 	}
 	oDate := ""
@@ -1958,6 +1972,7 @@ func TDFExpiDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 			var extradataq0006 paramTypes.Extradata = &q0006data
 			err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
 			if err != nil {
+				txn.Rollback()
 				return "", err
 			}
 			if q0006data.MatMethod == "" {
@@ -1971,7 +1986,7 @@ func TDFExpiDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		}
 	}
 	if oDate != "" {
-		results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 		if results.Error != nil {
 			tdfpolicy.CompanyID = iCompany
 			tdfpolicy.PolicyID = iPolicy
@@ -1981,6 +1996,7 @@ func TDFExpiDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 			tdfpolicy.Tranno = iTranno
 			result = txn.Create(&tdfpolicy)
 			if result.Error != nil {
+				txn.Rollback()
 				return "", result.Error
 			}
 
@@ -1988,6 +2004,7 @@ func TDFExpiDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		} else {
 			result = txn.Delete(&tdfpolicy)
 			if result.Error != nil {
+				txn.Rollback()
 				return "", result.Error
 			}
 
@@ -2002,6 +2019,7 @@ func TDFExpiDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 
 			result = txn.Create(&tdfpolicy)
 			if result.Error != nil {
+				txn.Rollback()
 				return "", result.Error
 			}
 
@@ -2080,9 +2098,14 @@ func TDFExpiDSN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 	var benefits []models.Benefit
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "SP")
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "SP")
+	if result.Error != nil {
+		txn.Rollback()
 		return "", result.Error
 	}
 	oDate := ""
@@ -2104,7 +2127,7 @@ func TDFExpiDSN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 		}
 	}
 	if oDate != "" {
-		results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 
 		if results.Error != nil {
 			tdfpolicy.CompanyID = iCompany
@@ -2116,6 +2139,7 @@ func TDFExpiDSN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 			result = txn.Create(&tdfpolicy)
 
 			if result.Error != nil {
+				txn.Rollback()
 				return "", result.Error
 			}
 			return "", nil
@@ -2123,6 +2147,7 @@ func TDFExpiDSN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 			result = txn.Delete(&tdfpolicy)
 
 			if result.Error != nil {
+				txn.Rollback()
 				return "", result.Error
 			}
 			var tdfpolicy models.TDFPolicy
@@ -2137,6 +2162,7 @@ func TDFExpiDSN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 			result = txn.Create(&tdfpolicy)
 
 			if result.Error != nil {
+				txn.Rollback()
 				return "", result.Error
 			}
 			return "", nil

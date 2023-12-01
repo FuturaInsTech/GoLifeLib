@@ -5220,6 +5220,60 @@ func TDFIBD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string
 		return "", nil
 	}
 }
+func TDFIBDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var incomeb models.IBenefit
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&incomeb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	result = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+
+	if result.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = incomeb.NextPayDate
+		tdfpolicy.Tranno = iTranno
+		result = initializers.DB.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+	} else {
+		result = initializers.DB.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = incomeb.NextPayDate
+		tdfpolicy.Tranno = iTranno
+		result = initializers.DB.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	}
+	return "", nil
+}
 
 // # 115
 // CalRBonus - Calculate Bonus due on Annniversary Date OR Bonus Date

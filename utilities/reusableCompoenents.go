@@ -6208,6 +6208,83 @@ func TDFFundM(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 	return "", nil
 }
+func TDFFundMN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var benefitenq []models.Benefit
+	odate := "00000000"
+
+	result := txn.Find(&policy, "company_id = ? and id  = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	result = txn.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	for i := 0; i < len(benefitenq); i++ {
+		if benefitenq[i].IlpMortalityDate > odate {
+			odate = benefitenq[i].IlpMortalityDate
+		}
+	}
+
+	result = initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	if odate != "00000000" {
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+			tdfpolicy.Seqno = tdfrule.Seqno
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+
+		} else {
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+
+			result = initializers.DB.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			return "", nil
+		}
+	}
+	return "", nil
+}
 
 // # 128
 // TDFFUNDF - Time Driven Function - ILP Fee
@@ -6266,6 +6343,79 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 			tdfpolicy.Tranno = iTranno
 
 			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
+func TDFFundFN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var benefitenq []models.Benefit
+	odate := "00000000"
+
+	result := txn.Find(&policy, "company_id = ? and id  = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	result = txn.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	for i := 0; i < len(benefitenq); i++ {
+		if benefitenq[i].IlpFeeDate > odate {
+			odate = benefitenq[i].IlpFeeDate
+		}
+	}
+
+	result = txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+
+	if odate != "00000000" {
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+			tdfpolicy.Seqno = tdfrule.Seqno
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			return "", nil
+		} else {
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
 			return "", nil
 		}
 	}

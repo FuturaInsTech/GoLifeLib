@@ -3462,6 +3462,62 @@ func TdfhUpdate(iCompany uint, iPolicy uint) error {
 	return nil
 }
 
+// #82
+// TdfhUpdateN - Time Driven Function - Update TDF Header File
+//
+// Inputs: Company, Policy  (New Version with Rollback)
+//
+// # It has to loop through TDFPOLICIES and update earliest due in Tdfh
+//
+// # Outputs  Old Record is Soft Deleted and New Record is Created in TDFH
+//
+// ©  FuturaInsTech
+func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
+	var tdfhupd models.Tdfh
+	var tdfpolicyenq []models.TDFPolicy
+
+	iDate := "29991231"
+
+	results := txn.Find(&tdfpolicyenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if results.Error != nil {
+		txn.Rollback()
+		return results.Error
+	}
+	for i := 0; i < len(tdfpolicyenq); i++ {
+		if tdfpolicyenq[i].EffectiveDate <= iDate {
+			iDate = tdfpolicyenq[i].EffectiveDate
+		}
+	}
+	result := txn.Find(&tdfhupd, "company_id =? and policy_id = ?", iCompany, iPolicy)
+
+	if result.Error == nil {
+		if result.RowsAffected == 0 {
+			tdfhupd.CompanyID = iCompany
+			tdfhupd.PolicyID = iPolicy
+			tdfhupd.EffectiveDate = iDate
+			result = txn.Create(&tdfhupd)
+			if result.Error != nil {
+				txn.Rollback()
+				return results.Error
+			}
+		} else {
+			result = txn.Delete(&tdfhupd)
+			var tdfhupd models.Tdfh
+			tdfhupd.CompanyID = iCompany
+			tdfhupd.PolicyID = iPolicy
+			tdfhupd.EffectiveDate = iDate
+			tdfhupd.ID = 0
+			result = txn.Create(&tdfhupd)
+			if result.Error != nil {
+				txn.Rollback()
+				return results.Error
+			}
+		}
+
+	}
+	return nil
+}
+
 // #83
 // TDFColl - Time Driven Function - Create Collection Record in TDF
 //
@@ -9288,62 +9344,6 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 			}
 
 		}
-	}
-	return nil
-}
-
-// #82
-// TdfhUpdate - Time Driven Function - Update TDF Header File
-//
-// Inputs: Company, Policy  (New Version with Rollback)
-//
-// # It has to loop through TDFPOLICIES and update earliest due in Tdfh
-//
-// # Outputs  Old Record is Soft Deleted and New Record is Created in TDFH
-//
-// ©  FuturaInsTech
-func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
-	var tdfhupd models.Tdfh
-	var tdfpolicyenq []models.TDFPolicy
-
-	iDate := "29991231"
-
-	results := txn.Find(&tdfpolicyenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-	if results.Error != nil {
-		txn.Rollback()
-		return results.Error
-	}
-	for i := 0; i < len(tdfpolicyenq); i++ {
-		if tdfpolicyenq[i].EffectiveDate <= iDate {
-			iDate = tdfpolicyenq[i].EffectiveDate
-		}
-	}
-	result := txn.Find(&tdfhupd, "company_id =? and policy_id = ?", iCompany, iPolicy)
-
-	if result.Error == nil {
-		if result.RowsAffected == 0 {
-			tdfhupd.CompanyID = iCompany
-			tdfhupd.PolicyID = iPolicy
-			tdfhupd.EffectiveDate = iDate
-			result = txn.Create(&tdfhupd)
-			if result.Error != nil {
-				txn.Rollback()
-				return results.Error
-			}
-		} else {
-			result = txn.Delete(&tdfhupd)
-			var tdfhupd models.Tdfh
-			tdfhupd.CompanyID = iCompany
-			tdfhupd.PolicyID = iPolicy
-			tdfhupd.EffectiveDate = iDate
-			tdfhupd.ID = 0
-			result = txn.Create(&tdfhupd)
-			if result.Error != nil {
-				txn.Rollback()
-				return results.Error
-			}
-		}
-
 	}
 	return nil
 }

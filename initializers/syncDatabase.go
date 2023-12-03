@@ -70,7 +70,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.Payer{})
 	// DB.AutoMigrate(&models.SaChange{})
 	// DB.AutoMigrate(&models.Assignee{})
-	// DB.AutoMigrate((&models.Addcomponent{}))
+	DB.AutoMigrate((&models.Addcomponent{}))
 	// DB.AutoMigrate(&models.Mrta{})
 	// DB.AutoMigrate((&models.SurrH{}))
 	// DB.AutoMigrate(&models.SurrD{})

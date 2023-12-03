@@ -9500,9 +9500,7 @@ func GetIlpFundData(iCompany uint, iPolicy uint, iBenefit uint, iDate string) in
 	return ilpfundtarray
 }
 
-///////////////////////////////////////////////////////////////
-
-// # ????
+// # 163
 // Validate the PolicyFields mandatory as required by P0065 Rules
 func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode string) (err error) {
 	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
@@ -9621,9 +9619,7 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	return
 }
 
-///////////////////////////////////////////////////////////////
-
-// # ????
+// # 164
 // Validate the PolicyFields mandatory as required by P0065 Rules
 func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode string) (err error) {
 	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
@@ -9658,7 +9654,7 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 	//#002 Policy Term not Allowed
 	var iAllowedPolTerm bool = false
 	for i := 0; i < len(q0006data.TermRange); i++ {
-		if benefitenq.BAge == q0006data.TermRange[i] {
+		if benefitenq.BTerm == q0006data.TermRange[i] {
 			iAllowedPolTerm = true
 			break
 		}
@@ -9672,7 +9668,7 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 	//#003 Premium Paying Term not Allowed
 	var iAllowedPPT bool = false
 	for i := 0; i < len(q0006data.PptRange); i++ {
-		if benefitenq.BAge == q0006data.PptRange[i] {
+		if benefitenq.BPTerm == q0006data.PptRange[i] {
 			iAllowedPPT = true
 			break
 		}
@@ -9710,5 +9706,3 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 
 	return
 }
-
-///////////////////////////////////////////////////////////////

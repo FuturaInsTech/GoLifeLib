@@ -2046,3 +2046,31 @@ func (m *P0070Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+type P0071Data struct {
+	Funds      string // P0050 - Fixed/Percentage
+	Extra      string
+	Hospital   string
+	Funeral    string
+	Annuity    string
+	Disability string
+}
+
+func (m *P0071Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0071Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}

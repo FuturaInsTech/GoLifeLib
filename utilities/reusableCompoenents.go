@@ -1,10 +1,12 @@
 package utilities
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -1551,6 +1553,94 @@ func TDFBillD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 	}
 }
 
+func TDFBillDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevFlag string, txn *gorm.DB) (string, error) {
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var benefitenq []models.Benefit
+	odate := "00000000"
+	result := txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	for i := 0; i < len(benefitenq); i++ {
+		if benefitenq[i].BPremCessDate > odate {
+			odate = benefitenq[i].BPremCessDate
+		}
+	}
+
+	result = txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	if iRevFlag == "R" {
+		var q0005data paramTypes.Q0005Data
+		var extradataq0005 paramTypes.Extradata = &q0005data
+		err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
+		if err != nil {
+			txn.Rollback()
+			return "", err
+		}
+
+		nxtBtdate := AddLeadDays(policy.PaidToDate, (-1 * q0005data.BillingLeadDays))
+		policy.NxtBTDate = nxtBtdate
+	}
+
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	if policy.PaidToDate >= odate {
+		return "Date Exceeded", errors.New("Premium Cessation Date is Exceeded")
+	}
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = policy.NxtBTDate
+		tdfpolicy.Tranno = iTranno
+		tdfpolicy.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = policy.NxtBTDate
+		tdfpolicy.Tranno = iTranno
+
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	}
+}
+
 // # 45
 // TDFAnniD - Time Driven Function - Update Anniversary Date
 //
@@ -1596,6 +1686,64 @@ func TDFAnniD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 }
 
+func TDFAnniDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return "", result.Error
+	}
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = policy.AnnivDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = policy.AnnivDate
+		tdfpolicy.Tranno = iTranno
+
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		return "", nil
+	}
+}
+
 // # 46
 // TDFReraD - Time Driven Function - ReRate Date Updation
 //
@@ -1606,6 +1754,72 @@ func TDFAnniD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 // ©  FuturaInsTech
 // It is commented now.. It will be uncommented after Premium Increase Logic is added
 func TDFReraD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string, error) {
+	// var benefits []models.Benefit
+	// var tdfpolicy models.TDFPolicy
+	// var tdfrule models.TDFRule
+	// var extraenq []models.Extra
+
+	// oDate := ""
+
+	// results := initializers.DB.Find(&extraenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	// if results.Error == nil {
+	// 	if results.RowsAffected > 1 {
+	// 		for i := 0; i < len(extraenq); i++ {
+	// 			if oDate == "" {
+	// 				oDate = extraenq[i].ToDate
+	// 			}
+	// 		}
+	// 	}
+
+	// }
+	// initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	// result := initializers.DB.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
+	// if result.Error != nil {
+	// 	return "", result.Error
+	// }
+
+	// for i := 0; i < len(benefits); i++ {
+	// 	if benefits[i].BPremCessDate > benefits[i].BRerate {
+	// 		if oDate == "" {
+	// 			oDate = benefits[i].BRerate
+	// 		}
+
+	// 		if benefits[i].BRerate < oDate {
+	// 			oDate = benefits[i].BRerate
+	// 		}
+	// 	}
+
+	// }
+	// if oDate != "" {
+	// 	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	// 	if results.Error != nil {
+	// 		tdfpolicy.CompanyID = iCompany
+	// 		tdfpolicy.PolicyID = iPolicy
+	// 		tdfpolicy.Seqno = tdfrule.Seqno
+	// 		tdfpolicy.TDFType = iFunction
+	// 		tdfpolicy.EffectiveDate = oDate
+	// 		tdfpolicy.Tranno = iTranno
+	// 		initializers.DB.Create(&tdfpolicy)
+	// 		return "", nil
+	// 	} else {
+	// 		initializers.DB.Delete(&tdfpolicy)
+	// 		var tdfpolicy models.TDFPolicy
+	// 		tdfpolicy.CompanyID = iCompany
+	// 		tdfpolicy.PolicyID = iPolicy
+	// 		tdfpolicy.Seqno = tdfrule.Seqno
+	// 		tdfpolicy.TDFType = iFunction
+	// 		tdfpolicy.ID = 0
+	// 		tdfpolicy.EffectiveDate = oDate
+	// 		tdfpolicy.Tranno = iTranno
+
+	// 		initializers.DB.Create(&tdfpolicy)
+	// 		return "", nil
+	// 	}
+	// }
+	return "", nil
+}
+
+func TDFReraDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string, error) {
 	// var benefits []models.Benefit
 	// var tdfpolicy models.TDFPolicy
 	// var tdfrule models.TDFRule
@@ -1735,6 +1949,86 @@ func TDFExpiD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	return "", nil
 }
 
+func TDFExpiDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var benefits []models.Benefit
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	oDate := ""
+	for i := 0; i < len(benefits); i++ {
+		if benefits[i].BStatus != "EX" {
+			iCoverage := benefits[i].BCoverage
+			iDate := benefits[i].BStartDate
+			var q0006data paramTypes.Q0006Data
+			var extradataq0006 paramTypes.Extradata = &q0006data
+			err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+			if err != nil {
+				txn.Rollback()
+				return "", err
+			}
+			if q0006data.MatMethod == "" {
+				if oDate == "" {
+					oDate = benefits[i].BRiskCessDate
+				}
+				if benefits[i].BRiskCessDate < oDate {
+					oDate = benefits[i].BRiskCessDate
+				}
+			}
+		}
+	}
+	if oDate != "" {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+
+			return "", nil
+		} else {
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
 // # 48
 // TDFExpidS - Time Driven Function - Expiry Date Updation
 //
@@ -1794,6 +2088,83 @@ func TDFExpiDS(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 			tdfpolicy.Tranno = iTranno
 
 			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
+func TDFExpiDSN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var benefits []models.Benefit
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "SP")
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	oDate := ""
+	for i := 0; i < len(benefits); i++ {
+		if benefits[i].BStatus != "EX" {
+			iCoverage := benefits[i].BCoverage
+			iDate := benefits[i].BStartDate
+			var q0006data paramTypes.Q0006Data
+			var extradataq0006 paramTypes.Extradata = &q0006data
+			GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+			if q0006data.MatMethod == "" {
+				if oDate == "" {
+					oDate = benefits[i].BRiskCessDate
+				}
+				if benefits[i].BRiskCessDate < oDate {
+					oDate = benefits[i].BRiskCessDate
+				}
+			}
+		}
+	}
+	if oDate != "" {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			result = txn.Create(&tdfpolicy)
+
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			return "", nil
+		} else {
+			result = txn.Delete(&tdfpolicy)
+
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+
+			result = txn.Create(&tdfpolicy)
+
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
 			return "", nil
 		}
 	}
@@ -1862,6 +2233,80 @@ func TDFMatD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (strin
 	return "", nil
 }
 
+func TDFMatDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var benefits []models.Benefit
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.Find(&benefits, "company_id = ? and policy_id = ? and b_status = ? ", iCompany, iPolicy, "IF")
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	oDate := ""
+	for i := 0; i < len(benefits); i++ {
+		iCoverage := benefits[i].BCoverage
+		iDate := benefits[i].BStartDate
+		var q0006data paramTypes.Q0006Data
+		var extradataq0006 paramTypes.Extradata = &q0006data
+		GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+		if q0006data.MatMethod != "" {
+			if oDate == "" {
+				oDate = benefits[i].BRiskCessDate
+			}
+			if benefits[i].BRiskCessDate < oDate {
+				oDate = benefits[i].BRiskCessDate
+			}
+		}
+	}
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if oDate != "" {
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			result = txn.Create(&tdfpolicy)
+
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			return "", nil
+		} else {
+			result = txn.Delete(&tdfpolicy)
+
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+
+			result = txn.Create(&tdfpolicy)
+
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
 // # 50
 // TDFSurbD - Time Driven Function - Survival Benefit Date Updation
 //
@@ -1904,6 +2349,64 @@ func TDFSurvbD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (str
 		tdfpolicy.EffectiveDate = survb.EffectiveDate
 		tdfpolicy.Tranno = iTranno
 		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	}
+}
+
+func TDFSurvbDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var survb models.SurvB
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+
+	}
+	result = txn.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
+
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+
+	if result.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = survb.EffectiveDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = survb.EffectiveDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
 		return "", nil
 	}
 }
@@ -2849,6 +3352,69 @@ func TDFLapsD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 }
 
+func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+	err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
+
+	if err != nil {
+		txn.Rollback()
+		return "", err
+	}
+	iLapsedDate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
+
+	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = iLapsedDate
+		tdfpolicy.Tranno = iTranno
+		tdfpolicy.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = iLapsedDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	}
+
+}
+
 // #82
 // TdfhUpdate - Time Driven Function - Update TDF Header File
 //
@@ -2896,6 +3462,62 @@ func TdfhUpdate(iCompany uint, iPolicy uint) error {
 	return nil
 }
 
+// #82
+// TdfhUpdateN - Time Driven Function - Update TDF Header File
+//
+// Inputs: Company, Policy  (New Version with Rollback)
+//
+// # It has to loop through TDFPOLICIES and update earliest due in Tdfh
+//
+// # Outputs  Old Record is Soft Deleted and New Record is Created in TDFH
+//
+// ©  FuturaInsTech
+func TdfhUpdateN(iCompany uint, iPolicy uint, txn *gorm.DB) error {
+	var tdfhupd models.Tdfh
+	var tdfpolicyenq []models.TDFPolicy
+
+	iDate := "29991231"
+
+	results := txn.Find(&tdfpolicyenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if results.Error != nil {
+		txn.Rollback()
+		return results.Error
+	}
+	for i := 0; i < len(tdfpolicyenq); i++ {
+		if tdfpolicyenq[i].EffectiveDate <= iDate {
+			iDate = tdfpolicyenq[i].EffectiveDate
+		}
+	}
+	result := txn.Find(&tdfhupd, "company_id =? and policy_id = ?", iCompany, iPolicy)
+
+	if result.Error == nil {
+		if result.RowsAffected == 0 {
+			tdfhupd.CompanyID = iCompany
+			tdfhupd.PolicyID = iPolicy
+			tdfhupd.EffectiveDate = iDate
+			result = txn.Create(&tdfhupd)
+			if result.Error != nil {
+				txn.Rollback()
+				return results.Error
+			}
+		} else {
+			result = txn.Delete(&tdfhupd)
+			var tdfhupd models.Tdfh
+			tdfhupd.CompanyID = iCompany
+			tdfhupd.PolicyID = iPolicy
+			tdfhupd.EffectiveDate = iDate
+			tdfhupd.ID = 0
+			result = txn.Create(&tdfhupd)
+			if result.Error != nil {
+				txn.Rollback()
+				return results.Error
+			}
+		}
+
+	}
+	return nil
+}
+
 // #83
 // TDFColl - Time Driven Function - Create Collection Record in TDF
 //
@@ -2937,6 +3559,58 @@ func TDFCollD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate
 		tdfpolicy.Tranno = policy.Tranno
 
 		initializers.DB.Create(&tdfpolicy)
+		return "", nil
+	}
+}
+func TDFCollDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate string, txn *gorm.DB) (string, error) {
+	//iBusinssdate := GetBusinessDate(iCompany, 1, "02")
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		return "", result.Error
+	}
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = policy.Tranno
+		tdfpolicy.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			return "", result.Error
+		}
+
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+
+			return "", result.Error
+		}
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = policy.Tranno
+
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+
+			return "", result.Error
+		}
 		return "", nil
 	}
 }
@@ -3884,7 +4558,7 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint) error {
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
@@ -4045,6 +4719,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "25":
 					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
 					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
+					resultMap["IlpFundData"] = oData
 
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
@@ -4513,7 +5190,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	iAgency := policyenq.AgencyID
 
-	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "")
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0)
 	if err != nil {
 		return 0, errors.New(err.Error())
 	}
@@ -4668,6 +5345,60 @@ func TDFIBD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (string
 		return "", nil
 	}
 }
+func TDFIBDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var incomeb models.IBenefit
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&incomeb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	result = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+
+	if result.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = incomeb.NextPayDate
+		tdfpolicy.Tranno = iTranno
+		result = initializers.DB.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+	} else {
+		result = initializers.DB.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = incomeb.NextPayDate
+		tdfpolicy.Tranno = iTranno
+		result = initializers.DB.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	}
+	return "", nil
+}
 
 // # 115
 // CalRBonus - Calculate Bonus due on Annniversary Date OR Bonus Date
@@ -4776,7 +5507,7 @@ func StringDateDiff(as, bs string, m string) (year, month, day, hour, min, sec i
 }
 
 // # 118
-// TDFExpidD - Time Driven Function - Expiry Date Updation
+// TDFExtrD - Time Driven Function - Expiry Date Updation
 //
 // Inputs: Company, Policy, Functio EXTRD, Transaction No.
 //
@@ -4839,6 +5570,77 @@ func TDFExtrD(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 			tdfpolicy.Tranno = iTranno
 
 			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
+func TDFExtrDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var extraenq []models.Extra
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var policyenq models.Policy
+	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	result := initializers.DB.Find(&extraenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		if result.RowsAffected == 0 {
+			return "", result.Error
+		}
+	}
+	oDate := ""
+	for i := 0; i < len(extraenq); i++ {
+		if oDate == "" {
+			oDate = extraenq[i].ToDate
+		}
+		if extraenq[i].ToDate < oDate {
+			oDate = extraenq[i].ToDate
+		}
+	}
+	// Subtract Billing Lead Days as well
+	result = initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+	err := GetItemD(int(iCompany), "Q0005", policyenq.PProduct, policyenq.PRCD, &extradataq0005)
+	if err != nil {
+		return "", err
+	}
+	if oDate != "" {
+		oDate = AddLeadDays(oDate, (-1 * q0005data.BillingLeadDays))
+	}
+
+	if oDate != "" {
+		results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				return "", result.Error
+			}
+			return "", nil
+		} else {
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				return "", result.Error
+			}
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			result = txn.Create(&tdfpolicy)
+
+			if result.Error != nil {
+				return "", result.Error
+			}
 			return "", nil
 		}
 	}
@@ -4993,6 +5795,138 @@ func PostAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64,
 	return nil
 }
 
+func PostAllocationN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iFrequency string, iStartDate string, iEffDate string, iGender string, iAllocMethod string, iTranno uint, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0060data paramTypes.P0060Data
+	var extradatap0060 paramTypes.Extradata = &p0060data
+	iDate := iStartDate
+	iKey := iAllocMethod + iGender
+	err := GetItemD(int(iCompany), "P0060", iKey, iDate, &extradatap0060)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey = iHistoryCode + iBenefitCode
+	err = GetItemD(int(iCompany), "P0059", iKey, iDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+	iAllocationDate := ""
+	if iEffDate == iStartDate {
+		a := GetNextDue(iStartDate, iFrequency, "")
+		iAllocationDate = Date2String(a)
+	}
+	iNoofMonths := NewNoOfInstalments(iStartDate, iAllocationDate)
+	iAllocPercentage := 0.00
+	for i := 0; i < len(p0060data.AlBand); i++ {
+		if uint(iNoofMonths) <= p0060data.AlBand[i].Months {
+			iAllocPercentage = p0060data.AlBand[i].Percentage
+			break
+		}
+	}
+	iInvested := RoundFloat(iAmount*(iAllocPercentage/100), 2)
+	iNonInvested := RoundFloat(iAmount*((100-iAllocPercentage)/100), 2)
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	for j := 0; j < len(ilpfundenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+
+		var ilptrancrt models.IlpTransaction
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpfundenq[j].FundCode
+		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
+		ilptrancrt.AccountCode = "Invested" // ranga
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+	}
+	// Non Invested Amount Updation
+
+	var ilptrancrt models.IlpTransaction
+	// Move Variables
+	ilptrancrt.CompanyID = iCompany
+	ilptrancrt.PolicyID = iPolicy
+	ilptrancrt.BenefitID = iBenefit
+	ilptrancrt.FundCode = "NONIN"
+	ilptrancrt.FundType = "NI"
+	ilptrancrt.TransactionDate = iEffDate
+	ilptrancrt.FundEffDate = iEffDate
+	ilptrancrt.FundAmount = iNonInvested
+	ilptrancrt.FundCurr = ""
+	ilptrancrt.FundUnits = 0
+	ilptrancrt.FundPrice = 0
+	ilptrancrt.CurrentOrFuture = "C"
+	ilptrancrt.OriginalAmount = iNonInvested
+	ilptrancrt.ContractCurry = policyenq.PContractCurr
+	ilptrancrt.HistoryCode = iHistoryCode
+	ilptrancrt.InvNonInvFlag = "NI"
+	ilptrancrt.AllocationCategory = "NI"
+	ilptrancrt.InvNonInvPercentage = 0
+	ilptrancrt.Tranno = iTranno
+
+	ilptrancrt.AccountCode = "NonInvested"
+
+	ilptrancrt.CurrencyRate = 1.00
+	ilptrancrt.MortalityIndicator = ""
+	ilptrancrt.SurrenderPercentage = 0
+	ilptrancrt.Seqno = uint(p0059data.SeqNo)
+	ilptrancrt.UlProcessFlag = "C"
+	result = txn.Create(&ilptrancrt)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	return nil
+}
+
 // # 121
 // TDFFUNDP - Time Driven Function - Update Fund Price
 //
@@ -5049,6 +5983,70 @@ func TDFFundP(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 			tdfpolicy.Tranno = iTranno
 
 			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
+func TDFFundPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevFlag string, txn *gorm.DB) (string, error) {
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var ilptransenq []models.IlpTransaction
+	odate := "00000000"
+
+	result := txn.Where("company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P").Order("fund_eff_date").Find(&ilptransenq)
+	if result.Error != nil {
+		return "", result.Error
+	}
+
+	for i := 0; i < len(ilptransenq); i++ {
+		if ilptransenq[i].FundEffDate > odate {
+			odate = ilptransenq[i].FundEffDate
+		}
+	}
+
+	result = txn.Find(&policy, "company_id = ? and id  = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return "", result.Error
+	}
+
+	result = txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+
+	if result.Error != nil {
+		return "", result.Error
+	}
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if odate != "00000000" {
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+			tdfpolicy.Seqno = tdfrule.Seqno
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				return "", result.Error
+			}
+			return "", nil
+		} else {
+			initializers.DB.Delete(&tdfpolicy)
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				return "", result.Error
+			}
 			return "", nil
 		}
 	}
@@ -5389,6 +6387,83 @@ func TDFFundM(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 	}
 	return "", nil
 }
+func TDFFundMN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var benefitenq []models.Benefit
+	odate := "00000000"
+
+	result := txn.Find(&policy, "company_id = ? and id  = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	result = txn.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	for i := 0; i < len(benefitenq); i++ {
+		if benefitenq[i].IlpMortalityDate > odate {
+			odate = benefitenq[i].IlpMortalityDate
+		}
+	}
+
+	result = initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	if odate != "00000000" {
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+			tdfpolicy.Seqno = tdfrule.Seqno
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+
+		} else {
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+
+			result = initializers.DB.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			return "", nil
+		}
+	}
+	return "", nil
+}
 
 // # 128
 // TDFFUNDF - Time Driven Function - ILP Fee
@@ -5447,6 +6522,79 @@ func TDFFundF(iCompany uint, iPolicy uint, iFunction string, iTranno uint) (stri
 			tdfpolicy.Tranno = iTranno
 
 			initializers.DB.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
+func TDFFundFN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var benefitenq []models.Benefit
+	odate := "00000000"
+
+	result := txn.Find(&policy, "company_id = ? and id  = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	result = txn.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	for i := 0; i < len(benefitenq); i++ {
+		if benefitenq[i].IlpFeeDate > odate {
+			odate = benefitenq[i].IlpFeeDate
+		}
+	}
+
+	result = txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+
+	if odate != "00000000" {
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+			tdfpolicy.Seqno = tdfrule.Seqno
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			return "", nil
+		} else {
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = odate
+			tdfpolicy.Tranno = iTranno
+
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				txn.Rollback()
+				return "", result.Error
+			}
 			return "", nil
 		}
 	}
@@ -5763,6 +6911,127 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 	return nil
 }
 
+func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+		ilptrancrt.FundCurr = p0061data.FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
+		ilptrancrt.AccountCode = p0059data.AccountCode
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+
+	}
+	var tdfpolicyupd models.TDFPolicy
+	iType := "FUNDM"
+	if iHistoryCode == "H0132" {
+		iType = "FUNDM"
+	} else if iHistoryCode == "H0133" {
+		iType = "FUNDF"
+	}
+	var tdfrule models.TDFRule
+	result = txn.Find(&tdfrule, "company_id = ? and tdf_type  = ?", iCompany, iType)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	result = txn.Find(&tdfpolicyupd, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iType)
+
+	if result.RowsAffected == 0 {
+		tdfpolicyupd.CompanyID = iCompany
+		tdfpolicyupd.PolicyID = iPolicy
+		tdfpolicyupd.EffectiveDate = iStartDate
+		tdfpolicyupd.TDFType = iType
+		tdfpolicyupd.Tranno = iTranno
+		tdfpolicyupd.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicyupd)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+	}
+	return nil
+}
+
 // # 132
 // CheckPendingILP - Check Pending ILP Transaction on a Policy
 //
@@ -5974,6 +7243,141 @@ func PostTopAllocation(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 
 }
 
+func PostTopAllocationN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iFrequency string, iStartDate string, iEffDate string, iGender string, iAllocMethod string, iTranno uint, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	var p0060data paramTypes.P0060Data
+	var extradatap0060 paramTypes.Extradata = &p0060data
+	iDate := iStartDate
+	iKey := iAllocMethod + iGender
+	err := GetItemD(int(iCompany), "P0060", iKey, iDate, &extradatap0060)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey = iHistoryCode + iBenefitCode
+	err = GetItemD(int(iCompany), "P0059", iKey, iDate, &extradatap0059)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	if iEffDate == iStartDate {
+		a := GetNextDue(iStartDate, iFrequency, "")
+		iEffDate = Date2String(a)
+	}
+	iNoofMonths := NewNoOfInstalments(iStartDate, iEffDate)
+	iAllocPercentage := 0.00
+	for i := 0; i < len(p0060data.AlBand); i++ {
+		if uint(iNoofMonths) <= p0060data.AlBand[i].Months {
+			iAllocPercentage = p0060data.AlBand[i].Percentage
+			break
+		}
+	}
+	iInvested := RoundFloat(iAmount*(iAllocPercentage/100), 2)
+	iNonInvested := RoundFloat(iAmount*((100-iAllocPercentage)/100), 2)
+
+	var ilpfundenq []models.IlpFund
+	// Select  Top-up Funds ONly
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ? and history_code= ?", iCompany, iPolicy, iBenefit, iHistoryCode)
+	if result.Error != nil {
+		return errors.New(err.Error())
+	}
+
+	for j := 0; j < len(ilpfundenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+
+		var ilptrancrt models.IlpTransaction
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpfundenq[j].FundCode
+		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
+		ilptrancrt.AccountCode = "Invested" // ranga
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+	}
+	// Non Invested Amount Updation
+
+	var ilptrancrt models.IlpTransaction
+	// Move Variables
+	ilptrancrt.CompanyID = iCompany
+	ilptrancrt.PolicyID = iPolicy
+	ilptrancrt.BenefitID = iBenefit
+	ilptrancrt.FundCode = "NONIN"
+	ilptrancrt.FundType = "NI"
+	ilptrancrt.TransactionDate = iEffDate
+	ilptrancrt.FundEffDate = iEffDate
+	ilptrancrt.FundAmount = iNonInvested
+	ilptrancrt.FundCurr = ""
+	ilptrancrt.FundUnits = 0
+	ilptrancrt.FundPrice = 0
+	ilptrancrt.CurrentOrFuture = "C"
+	ilptrancrt.OriginalAmount = iNonInvested
+	ilptrancrt.ContractCurry = policyenq.PContractCurr
+	ilptrancrt.HistoryCode = iHistoryCode
+	ilptrancrt.InvNonInvFlag = "NI"
+	ilptrancrt.AllocationCategory = "NI"
+	ilptrancrt.InvNonInvPercentage = 0
+	ilptrancrt.Tranno = iTranno
+
+	ilptrancrt.AccountCode = "NonInvested"
+
+	ilptrancrt.CurrencyRate = 1.00 // ranga
+	ilptrancrt.MortalityIndicator = ""
+	ilptrancrt.SurrenderPercentage = 0
+	ilptrancrt.Seqno = uint(p0059data.SeqNo)
+	ilptrancrt.UlProcessFlag = "C"
+	result = txn.Create(&ilptrancrt)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Delete Newly Cleared Fund Rules which is created for Top-up
+	result = txn.Delete(ilpfundenq)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+
+}
+
 // # 134
 // GetAllowedFunds - This function return all allowed funds for a particular benefit
 //
@@ -6092,7 +7496,14 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 
 	}
 
-	if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
+	// if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
+	// 	shortCode := "GL477"
+	// 	longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+	// 	return errors.New(shortCode + " : " + longDesc)
+	// }
+
+	validemail := isValidEmail(clientval.ClientEmail)
+	if !validemail {
 		shortCode := "GL477"
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
@@ -7346,6 +8757,7 @@ func CalcILPSA(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string,
 					oSA = p0068data.RangeArray[i].ToSA
 					return nil, oSA
 				}
+				return nil, iSA
 			}
 		}
 	}
@@ -7563,6 +8975,10 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	// Get Next Policy Anniversary
 	iBusinessDate := GetBusinessDate(iCompany, 0, 0)
 	iPolicyAnniversary := iEffectiveDate
+	// 20200328
+	// a = 2024:03:28:00:00:00:00:00:00
+	// 20230328
+	//
 
 	for {
 
@@ -7578,17 +8994,17 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	iPolicyAnniversary = Date2String(b)
 	// Get No of Free Done in Policy Anniversary
 	var policyhistory []models.PHistory
-	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0)
+	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
 	switchcount := 0
-	if results.Error == nil {
+	if results.Error != nil {
 		switchcount = 0
 	} else {
 		switchcount = len(policyhistory)
-		switchcount = switchcount + 1
+
 	}
 	// Percentage
 	if p0070data.SwitchFeeBasis == "P" {
-		if p0070data.FreeSwitches < uint(switchcount) {
+		if uint(switchcount) <= p0070data.FreeSwitches {
 			return nil, 0, 0
 		} else {
 			return nil, 0, p0070data.FeePercentage
@@ -7596,7 +9012,7 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	}
 	// Fixed Amount
 	if p0070data.SwitchFeeBasis == "F" {
-		if p0070data.FreeSwitches < uint(switchcount) {
+		if uint(switchcount) <= p0070data.FreeSwitches {
 			return nil, 0, 0
 		} else {
 			return nil, p0070data.FeeAmount, 0
@@ -7604,4 +9020,754 @@ func CalcSwitchFee(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDat
 	}
 
 	return oError, 0, 0
+}
+
+// # 160
+// # To Validate Email.
+func isValidEmail(email string) bool {
+	// Define a regular expression pattern for a standard email format
+	// This pattern is a simplified version and may not catch all edge cases
+	// For a more comprehensive pattern, consider using a library like "github.com/badoux/checkmail"
+	// or a more complex regex.
+
+	//pattern := `/.+@.+\\..+/i`
+	pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+
+	// Compile the regex pattern
+	regex := regexp.MustCompile(pattern)
+
+	// Use the MatchString function to check if the email matches the pattern
+	return regex.MatchString(email)
+
+}
+
+// # 39
+// Post GL - Get Transaction No and History Code (New Version with Rollback)
+//
+// ©  FuturaInsTech
+func PostGlMoveN(iCompany uint, iContractCurry string, iEffectiveDate string,
+	iTranno int, iGlAmount float64, iAccAmount float64, iAccountCodeID uint, iGlRdocno uint,
+	iGlRldgAcct string, iSeqnno uint64, iGlSign string, iAccountCode string, iHistoryCode string, iRevInd string, iCoverage string, txn *gorm.DB) error {
+
+	iAccAmount = RoundFloat(iAccAmount, 2)
+
+	var glmove models.GlMove
+	var company models.Company
+	glmove.ContractCurry = iContractCurry
+	glmove.ContractAmount = iAccAmount
+	initializers.DB.Find(&company, "id = ?", iCompany)
+	var currency models.Currency
+	// fmt.Println("Currency Code is .... ", company.CurrencyID)
+	initializers.DB.Find(&currency, "id = ?", company.CurrencyID)
+	iGlCurry := currency.CurrencyShortName
+	glmove.CurrencyRate = 1
+	if glmove.GlCurry != glmove.ContractCurry {
+		var p0031data paramTypes.P0031Data
+		var extradata paramTypes.Extradata = &p0031data
+		iKey := iContractCurry + "2" + iGlCurry
+		// fmt.Println("i key ", iKey)
+		err := GetItemD(int(iCompany), "P0031", iKey, iEffectiveDate, &extradata)
+		if err != nil {
+			fmt.Println("I am inside Error in Exchange ")
+			glmove.CurrencyRate = 1
+		} else {
+			for i := 0; i < len(p0031data.CurrencyRates); i++ {
+				// fmt.Println("Exchange Rates", p0031data.CurrencyRates[i].Action, p0031data.CurrencyRates[i].Action)
+			}
+			glmove.CurrencyRate = p0031data.CurrencyRates[0].Rate
+			// fmt.Println("I am outside Error in Exchange ")
+
+		}
+	}
+
+	// fmt.Println("Exchange Rate &&&&&&&&&&&&&&&&&&&&", glmove.CurrencyRate)
+
+	glmove.AccountCode = iAccountCode
+	glmove.AccountCodeID = iAccountCodeID
+	glmove.CompanyID = iCompany
+	glmove.EffectiveDate = iEffectiveDate
+	glmove.GlAmount = iAccAmount * glmove.CurrencyRate
+	glmove.GlCurry = iGlCurry
+	glmove.GlRdocno = strconv.Itoa(int(iGlRdocno))
+	glmove.GlRldgAcct = iGlRldgAcct
+	glmove.GlSign = iGlSign
+	glmove.HistoryCode = iHistoryCode
+	glmove.Tranno = uint(iTranno)
+	glmove.SequenceNo = uint64(iSeqnno)
+	curr_date := time.Now()
+	glmove.CurrentDate = Date2String(curr_date)
+
+	GlRdocno := glmove.GlRdocno
+	glmove.ID = 0
+	glmove.ReversalIndicator = iRevInd
+	glmove.BCoverage = iCoverage
+	txn.Save(&glmove)
+	//tx := initializers.DB.Save(&glmove)
+	//tx.Commit()
+
+	UpdateGlBalN(iCompany, iGlRldgAcct, iAccountCode, iContractCurry, iAccAmount, iGlSign, GlRdocno, txn)
+	return nil
+}
+
+// # 41
+// UpdateGlBal (New Version with Rollback)
+//
+// ©  FuturaInsTech
+func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iContCurry string, iAmount float64, iGLSign string, iGlRdocno string, txn *gorm.DB) (error, float64) {
+	var glbal models.GlBal
+	var temp float64
+	if iGLSign == "-" {
+		temp = iAmount * -1
+
+	} else {
+		temp = iAmount * 1
+	}
+	var company []models.Company
+	initializers.DB.First(&company, "id = ?", iCompany)
+
+	results := initializers.DB.First(&glbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno)
+	if results.Error != nil {
+		return errors.New("Account Code Not Found"), glbal.ContractAmount
+	}
+	if results.RowsAffected == 0 {
+		glbal.ContractAmount = temp
+		glbal.CompanyID = iCompany
+		glbal.GlAccountno = iGlAccountCode
+		glbal.GlRldgAcct = iGlRldgAcct
+		glbal.ContractCurry = iContCurry
+		glbal.GlRdocno = iGlRdocno
+		//initializers.DB.Save(&glbal)
+		txn.Save(&glbal)
+		return nil, glbal.ContractAmount
+	} else {
+		iAmount := glbal.ContractAmount + temp
+		// fmt.Println("I am inside update.....2", iAmount, glbal.ContractAmount)
+		//initializers.DB.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
+		txn.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
+		return nil, glbal.ContractAmount
+	}
+	//results.Commit()
+
+}
+
+// #104
+// Create Communication (New Version with Rollback)
+//
+// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
+// 10 Input Variables
+// # It returns success or failure.  Successful records written in Communciaiton Table
+//
+// ©  FuturaInsTech
+func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint) error {
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
+	iTransaction := iHistoryCode
+	var policy models.Policy
+
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	iKey := iTransaction + policy.PProduct
+	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+
+	if err1 != nil {
+		iKey = iTransaction
+		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		if err1 != nil {
+			return err1
+		}
+	}
+
+	for i := 0; i < len(p0034data.Letters); i++ {
+		if p0034data.Letters[i].Templates != "" {
+			iKey = p0034data.Letters[i].Templates
+			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			if err != nil {
+				return err
+			}
+			var communication models.Communication
+			communication.AgencyID = policy.AgencyID
+			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
+			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
+			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
+			communication.ClientID = policy.ClientID
+			communication.PolicyID = policy.ID
+			communication.CompanyID = uint(iCompany)
+			communication.EmailAllowed = p0033data.EmailAllowed
+			communication.SMSAllowed = p0033data.SMSAllowed
+			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
+			communication.DepartmentHead = p0033data.DepartmentHead
+			communication.DepartmentName = p0033data.DepartmentName
+			communication.CompanyPhone = p0033data.CompanyPhone
+			communication.CompanyEmail = p0033data.CompanyEmail
+			communication.Tranno = policy.Tranno
+			communication.TemplateName = iKey
+			communication.EffectiveDate = policy.PRCD
+			oLetType := ""
+
+			signData := make([]interface{}, 0)
+			resultOut := map[string]interface{}{
+				"Department":     p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentHead,
+				"CoEmail":        p0033data.CompanyEmail,
+				"CoPhone":        p0033data.CompanyPhone,
+			}
+
+			signData = append(signData, resultOut)
+
+			batchData := make([]interface{}, 0)
+			resultOut = map[string]interface{}{
+				"Date":     DateConvert(iDate),
+				"FromDate": DateConvert(iFromDate),
+				"ToDate":   DateConvert(iToDate),
+			}
+
+			batchData = append(batchData, resultOut)
+
+			resultMap := make(map[string]interface{})
+
+			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
+			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
+				oLetType = p0034data.Letters[i].LetType[n]
+				switch {
+				case oLetType == "1":
+					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt, iDate)
+					resultMap["CompanyData"] = oData
+				case oLetType == "2":
+					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["ClientData"] = oData
+				case oLetType == "3":
+					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["AddressData"] = oData
+				case oLetType == "4":
+					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["PolicyData"] = oData
+				case oLetType == "5":
+					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["BenefitData"] = oData
+				case oLetType == "6":
+					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SurBData"] = oData
+				case oLetType == "7":
+					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["MRTAData"] = oData
+				case oLetType == "8":
+					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["ReceiptData"] = oData
+				case oLetType == "9":
+					oData := GetSaChangeData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SAChangeData"] = oData
+				case oLetType == "10":
+					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["ComponantAddData"] = oData
+				case oLetType == "11":
+					oData := GetSurrHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["SurrData"] = oData
+					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["SurrDData"] = oData
+				case oLetType == "12":
+					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["DeathData"] = oData
+				case oLetType == "13":
+					oData := GetMatHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					resultMap["MaturityData"] = oData
+					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["MatDData"] = oData
+				case oLetType == "14":
+					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					resultMap["SurvbPay"] = oData
+				case oLetType == "15":
+					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					resultMap["ExpiryData"] = oData
+				case oLetType == "16":
+					oData := GetBonusVals(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					resultMap["BonusData"] = oData
+				case oLetType == "17":
+					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
+					resultMap["Agency"] = oData
+				case oLetType == "18":
+					oData := GetNomiData(iCompany, iPolicy)
+					resultMap["Nominee"] = oData
+				case oLetType == "19":
+					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign)
+					resultMap["GLData"] = oData
+				case oLetType == "20":
+					oData := GetIlpSummaryData(iCompany, iPolicy)
+					resultMap["IlPSummaryData"] = oData
+				case oLetType == "21":
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode)
+					resultMap["ILPANNSummaryData"] = oData
+				case oLetType == "22":
+					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate)
+					resultMap["ILPTransactionData"] = oData
+				case oLetType == "23":
+					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
+					resultMap["GLData"] = oData
+
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
+					resultMap["SwitchData"] = oData
+
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
+					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
+					resultMap["IlpFundData"] = oData
+
+				case oLetType == "98":
+					resultMap["BatchData"] = batchData
+
+				case oLetType == "99":
+					resultMap["SignData"] = signData
+				default:
+
+				}
+			}
+
+			communication.ExtractedData = resultMap
+			communication.PDFPath = p0034data.Letters[i].PdfLocation
+			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
+
+			results := txn.Create(&communication)
+
+			if results.Error != nil {
+				return results.Error
+			}
+
+		}
+	}
+	return nil
+}
+
+// # 38
+// GetMaxTranno - Get Transaction No and History Code
+//
+// Inputs: Company,  Policy No, Method, Effective Date, User
+//
+// # Outputs History Code and New Tranno
+//
+// # It update PHISTORY Table
+//
+// ©  FuturaInsTech
+func GetMaxTrannoN(iCompany uint, iPolicy uint, iMethod string, iEffDate string, iuser uint64, historyMap map[string]interface{}, txn *gorm.DB) (error, string, uint) {
+	var permission models.Permission
+	var result *gorm.DB
+
+	result = initializers.DB.First(&permission, "company_id = ? and method = ?", iCompany, iMethod)
+	if result.Error != nil {
+		return result.Error, iMethod, 0
+	}
+	iHistoryCode := permission.TransactionID
+	var transaction models.Transaction
+	result = initializers.DB.Find(&transaction, "ID = ?", iHistoryCode)
+	if result.Error != nil {
+		return result.Error, iMethod, 0
+	}
+	iHistoryCD := transaction.Method
+	var phistory models.PHistory
+	var maxtranno float64 = 0
+
+	fmt.Println(iCompany, iPolicy, iHistoryCD, iEffDate)
+
+	result1 := initializers.DB.Table("p_histories").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(tranno)")
+
+	if result1.Error != nil {
+		fmt.Println(result1.Error)
+
+	}
+	err := result1.Row().Scan(&maxtranno)
+	fmt.Println("Error ", err)
+	phistory.CompanyID = iCompany
+	phistory.Tranno = uint(maxtranno) + 1
+	phistory.PolicyID = iPolicy
+	phistory.HistoryCode = iHistoryCD
+	phistory.EffectiveDate = iEffDate
+	phistory.Is_reversed = false
+	phistory.IsValid = "1"
+	if historyMap != nil {
+		phistory.PrevData = historyMap
+	}
+	a := time.Now()
+	b := Date2String(a)
+	phistory.CurrentDate = b
+	phistory.UpdatedID = iuser
+	result1 = txn.Create(&phistory)
+	if result1.Error != nil {
+		return result1.Error, phistory.HistoryCode, phistory.Tranno
+	}
+
+	return nil, phistory.HistoryCode, phistory.Tranno
+
+}
+
+// # 161
+// GetP0050ItemCodeDesc - Get the Description of an item's Code
+//
+// Inputs: Company, ParamItem and Language
+//
+// # Outputs:  Description
+//
+// ©  FuturaInsTech
+func GetP0050ItemCodeDesc(iCompany uint, iItem string, iLanguage uint, iCode string) string {
+	var paramdata models.Param
+	var paramdatamap map[string]interface{}
+
+	var idescription string = ""
+	var iParam = "P0050"
+	results := initializers.DB.Where("company_id = ? AND name = ? and item = ? and is_valid = ?", iCompany, iParam, iItem, 1).Find(&paramdata)
+	if results.Error != nil || results.RowsAffected == 0 {
+		return ""
+	}
+
+	datamap, _ := json.Marshal(paramdata.Data)
+	json.Unmarshal(datamap, &paramdatamap)
+
+	// use the iCode and return its corresponding Description
+	type jsondata struct {
+		Code        string
+		Description string
+	}
+	var jd []jsondata
+
+	datamap, _ = json.Marshal(paramdatamap["dataPairs"])
+	json.Unmarshal(datamap, &jd)
+
+	for i := 0; i < len(jd); i++ {
+		if jd[i].Code == iCode {
+			idescription = jd[i].Description
+			break
+		}
+	}
+
+	return idescription
+}
+
+// # 162
+// GetIlpFundData - Get ILP Fund DAta  (Printing Purpose Only)
+//
+// Inputs: Company,
+//
+// # Outputs:
+//
+// ©  FuturaInsTech
+func GetIlpFundData(iCompany uint, iPolicy uint, iBenefit uint, iDate string) interface{} {
+	var ilpfund []models.IlpFund
+	initializers.DB.Find(&ilpfund, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+
+	var ibenfit models.Benefit
+	initializers.DB.Find(&ibenfit, "company_id = ? and policy_id = ? and id = ?", iCompany, iPolicy, iBenefit)
+
+	ilpfundtarray := make([]interface{}, 0)
+
+	for k := 0; k < len(ilpfund); k++ {
+		var p0061data paramTypes.P0061Data
+		var extradatap0061 paramTypes.Extradata = &p0061data
+
+		err := GetItemD(int(iCompany), "P0061", ilpfund[k].FundCode, iDate, &extradatap0061)
+
+		if err != nil {
+			shortCode := "GL442"
+			longDesc, _ := GetErrorDesc(iCompany, 1, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+
+		}
+
+		resultOut := map[string]interface{}{
+			"ID":             IDtoPrint(ilpfund[k].ID),
+			"CompanyID":      IDtoPrint(ilpfund[k].CompanyID),
+			"BenefitID":      IDtoPrint(ilpfund[k].BenefitID),
+			"PolicyID":       IDtoPrint(ilpfund[k].PolicyID),
+			"FundCategory":   p0061data.FundCategory + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDCATEGORY", 1, p0061data.FundCategory),
+			"FundName":       ilpfund[k].FundCode + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDCODE", 1, ilpfund[k].FundCode),
+			"FundType":       ilpfund[k].FundType + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDTYPE", 1, ilpfund[k].FundType),
+			"FundCurr":       ilpfund[k].FundCurr + " - " + GetP0050ItemCodeDesc(iCompany, "FUNDCURR", 1, ilpfund[k].FundCurr),
+			"BenefitName":    ibenfit.BCoverage + " - " + GetP0050ItemCodeDesc(iCompany, "COVR", 1, ibenfit.BCoverage),
+			"FundPercentage": ilpfund[k].FundPercentage,
+		}
+		ilpfundtarray = append(ilpfundtarray, resultOut)
+
+	}
+
+	return ilpfundtarray
+}
+
+// # 163
+// Validate the PolicyFields mandatory as required by P0065 Rules
+// Inputs: Company,
+//
+// # Outputs:
+//
+// ©  FuturaInsTech
+func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode string) (err error) {
+	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
+
+	var clientenq models.Client
+	initializers.DB.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var agencyenq models.Agency
+	initializers.DB.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+	err = GetItemD(int(policyenq.CompanyID), "Q0005", policyenq.PProduct, policyenq.PRCD, &extradataq0005)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	//#001 RCD is less than PropsalDate
+	if policyenq.PRCD < policyenq.ProposalDate {
+		shortCode := "GL539" // RCD is less than PropsalDate
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#002 UW Date is less than PropsalDate
+	if policyenq.PUWDate < policyenq.ProposalDate {
+		shortCode := "GL540" // UW Date is less than PropsalDate
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#003 Frequency is Inalid
+	var iFreqFound bool = false
+	for i := 0; i < len(q0005data.Frequencies); i++ {
+		if policyenq.PFreq == q0005data.Frequencies[i] {
+			iFreqFound = true
+			break
+		}
+	}
+	if !iFreqFound {
+		shortCode := "GL541" // Frequency is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#004 Contract Curr is Inalid
+	var iCCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PContractCurr == q0005data.ContractCurr[i] {
+			iCCurrFound = true
+			break
+		}
+	}
+	if !iCCurrFound {
+		shortCode := "GL542" // Contract Curr is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#005 Billing Curr is Inalid
+	var iBCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PBillCurr == q0005data.BillingCurr[i] {
+			iBCurrFound = true
+			break
+		}
+	}
+	if !iBCurrFound {
+		shortCode := "GL543" // Billing Curr is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#006 Backdataing not Allowed
+	if policyenq.PRCD < businessdate &&
+		q0005data.BackDateAllowed == "N" {
+		shortCode := "GL544" // Backdataing not Allowed
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#007 Agency Channel Not Allowed
+	var iAgencyChannelFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if agencyenq.AgencyChannel == q0005data.AgencyChannel[i] {
+			iAgencyChannelFound = true
+			break
+		}
+	}
+	if !iAgencyChannelFound {
+		shortCode := "GL545" // Agency Channel Not Allowed
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#008 Client is Invalid
+	if clientenq.ClientStatus != "AC" {
+		shortCode := "GL546" // Invalid Client
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#009 Deceased Client
+	if !isFieldZero(clientenq.ClientDod) {
+		shortCode := "GL547" // Deceased Client
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	return
+}
+
+// # 164
+// Validate the PolicyFields mandatory as required by P0065 Rules
+// Inputs: Company,
+//
+// # Outputs:
+//
+// ©  FuturaInsTech
+func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode string) (err error) {
+	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
+
+	var clientenq models.Client
+	initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err = GetItemD(int(benefitenq.CompanyID), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	//#001 Age Not Allowed
+	var iAllowedAge bool = false
+	for i := 0; i < len(q0006data.AgeRange); i++ {
+		if benefitenq.BAge == q0006data.AgeRange[i] {
+			iAllowedAge = true
+			break
+		}
+	}
+	if !iAllowedAge {
+		shortCode := "GL548" // Age Not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#002 Policy Term not Allowed
+	var iAllowedPolTerm bool = false
+	for i := 0; i < len(q0006data.TermRange); i++ {
+		if benefitenq.BTerm == q0006data.TermRange[i] {
+			iAllowedPolTerm = true
+			break
+		}
+	}
+	if !iAllowedPolTerm {
+		shortCode := "GL549" // Policy Term not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#003 Premium Paying Term not Allowed
+	var iAllowedPPT bool = false
+	for i := 0; i < len(q0006data.PptRange); i++ {
+		if benefitenq.BPTerm == q0006data.PptRange[i] {
+			iAllowedPPT = true
+			break
+		}
+	}
+	if !iAllowedPPT {
+		shortCode := "GL550" // Premium Paying Term not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#004 Risk cess Age not Allowed
+	benriskcessage := benefitenq.BAge + benefitenq.BTerm
+	if benriskcessage < q0006data.MinRiskCessAge ||
+		benriskcessage > q0006data.MaxRiskCessAge {
+		shortCode := "GL551" // Risk cess Age not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#005 Premium cess Age not Allowed
+	benpremcessage := benefitenq.BAge + benefitenq.BPTerm
+	if benpremcessage < q0006data.MinPremCessAge ||
+		benpremcessage > q0006data.MaxPremCessAge {
+		shortCode := "GL552" // Premium cess Age not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	//#006 Min Sum Assured not met
+	if uint(benefitenq.BSumAssured) < q0006data.MinSA {
+		shortCode := "GL553" // Min Sum Assured not met
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New("error :" + shortCode + ":" + longDesc)
+	}
+
+	return
+}
+
+// # 165
+// GetMaxTranno (New Version)
+// Inputs: Company, Policy, Method, Effective Date, user
+//
+// # Outputs: uint
+//
+// ©  FuturaInsTech
+func GetMaxTranno2(iCompany uint, iPolicy uint, iMethod string, iEffDate string, iuser uint64, txn *gorm.DB) (error, uint) {
+
+	var maxtranno = 0
+	var phistories models.PHistory
+
+	result1 := txn.Order("tranno DESC").Find(&phistories, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	if result1.Error != nil {
+		txn.Rollback()
+		return result1.Error, 0
+	}
+	maxtranno = int(phistories.Tranno)
+	return nil, uint(maxtranno)
+}
+
+// # 166
+// Create Hisotry  Records (New Version)
+// Inputs: Company, Policy, Method, Effective Date, Max Tranno, user,Hisotry Map
+//
+// # Outputs: error,
+//
+// ©  FuturaInsTech
+func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string, maxTranno uint, iuser uint64, historyMap map[string]interface{}, txn *gorm.DB) error {
+
+	iHistoryCD := iMethod
+	var phistory models.PHistory
+	phistory.CompanyID = iCompany
+	phistory.Tranno = maxTranno
+	phistory.PolicyID = iPolicy
+	phistory.HistoryCode = iHistoryCD
+	phistory.EffectiveDate = iEffDate
+	phistory.Is_reversed = false
+	phistory.IsValid = "1"
+	if historyMap != nil {
+		phistory.PrevData = historyMap
+	}
+	a := time.Now()
+	b := Date2String(a)
+	phistory.CurrentDate = b
+	phistory.UpdatedID = iuser
+	result := txn.Create(&phistory)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	return nil
 }

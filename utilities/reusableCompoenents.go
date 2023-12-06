@@ -9766,7 +9766,7 @@ func GetMaxTranno1(iCompany uint, iPolicy uint, iMethod string, iEffDate string,
 // # Outputs: error,
 //
 // ©  FuturaInsTech
-func UpdateMaxTrannoN(iCompany uint, iPolicy uint, iMethod string, iEffDate string, maxTranno uint, iuser uint64, historyMap map[string]interface{}, txn *gorm.DB) error {
+func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string, maxTranno uint, iuser uint64, historyMap map[string]interface{}, txn *gorm.DB) error {
 
 	iHistoryCD := iMethod
 	var phistory models.PHistory

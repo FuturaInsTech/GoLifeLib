@@ -2048,12 +2048,11 @@ func (m *P0070Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type P0071Data struct {
-	Funds      string // P0050 - Fixed/Percentage
-	Extra      string
-	Hospital   string
-	Funeral    string
-	Annuity    string
-	Disability string
+	P0071 []P0071Array
+}
+type P0071Array struct {
+	BenDataType string // P0050
+	ManOrOpt    string // P0050
 }
 
 func (m *P0071Data) ParseData(datamap map[string]interface{}) {

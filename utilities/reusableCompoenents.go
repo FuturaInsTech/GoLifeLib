@@ -9502,6 +9502,11 @@ func GetIlpFundData(iCompany uint, iPolicy uint, iBenefit uint, iDate string) in
 
 // # 163
 // Validate the PolicyFields mandatory as required by P0065 Rules
+// Inputs: Company,
+//
+// # Outputs:
+//
+// ©  FuturaInsTech
 func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode string) (err error) {
 	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
 
@@ -9621,6 +9626,11 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 
 // # 164
 // Validate the PolicyFields mandatory as required by P0065 Rules
+// Inputs: Company,
+//
+// # Outputs:
+//
+// ©  FuturaInsTech
 func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode string) (err error) {
 	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
 
@@ -9705,4 +9715,81 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 	}
 
 	return
+}
+
+// # 165
+// GetMaxTranno (New Version)
+// Inputs: Company, Policy, Method, Effective Date, user
+//
+// # Outputs: uint
+//
+// ©  FuturaInsTech
+func GetMaxTranno1(iCompany uint, iPolicy uint, iMethod string, iEffDate string, iuser uint64, txn *gorm.DB) (error, uint) {
+	// var permission models.Permission
+	// var result *gorm.DB
+
+	// result = initializers.DB.First(&permission, "company_id = ? and method = ?", iCompany, iMethod)
+	// if result.Error != nil {
+	// 	return 0, 0
+	// }
+	// iHistoryCode := permission.TransactionID
+	// var transaction models.Transaction
+	// result = initializers.DB.Find(&transaction, "ID = ?", iHistoryCode)
+	// if result.Error != nil {
+	// 	return 0, 0
+	// }
+	// iHistoryCD := transaction.Method
+	var maxtranno float64 = 0
+
+	// fmt.Println(iCompany, iPolicy, iHistoryCD, iEffDate)
+
+	result := initializers.DB.Table("p_histories").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(tranno)")
+
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error, 0
+	}
+
+	err := result.Row().Scan(&maxtranno)
+
+	if err != nil {
+		txn.Rollback()
+		return err, 0
+	}
+	return nil, uint(maxtranno) + 1
+}
+
+// # 166
+// Create Hisotry  Records (New Version)
+// Inputs: Company, Policy, Method, Effective Date, Max Tranno, user,Hisotry Map
+//
+// # Outputs: error,
+//
+// ©  FuturaInsTech
+func UpdateMaxTrannoN(iCompany uint, iPolicy uint, iMethod string, iEffDate string, maxTranno uint, iuser uint64, historyMap map[string]interface{}, txn *gorm.DB) error {
+
+	iHistoryCD := iMethod
+	var phistory models.PHistory
+	var maxtranno float64 = 0
+
+	phistory.CompanyID = iCompany
+	phistory.Tranno = uint(maxtranno) + 1
+	phistory.PolicyID = iPolicy
+	phistory.HistoryCode = iHistoryCD
+	phistory.EffectiveDate = iEffDate
+	phistory.Is_reversed = false
+	phistory.IsValid = "1"
+	if historyMap != nil {
+		phistory.PrevData = historyMap
+	}
+	a := time.Now()
+	b := Date2String(a)
+	phistory.CurrentDate = b
+	phistory.UpdatedID = iuser
+	result := txn.Create(&phistory)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	return nil
 }

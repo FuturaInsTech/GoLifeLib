@@ -9724,39 +9724,19 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 // # Outputs: uint
 //
 // ©  FuturaInsTech
-func GetMaxTranno1(iCompany uint, iPolicy uint, iMethod string, iEffDate string, iuser uint64, txn *gorm.DB) (error, uint) {
-	// var permission models.Permission
-	// var result *gorm.DB
+func GetMaxTranno2(iCompany uint, iPolicy uint, iMethod string, iEffDate string, iuser uint64, txn *gorm.DB) (error, uint) {
 
-	// result = initializers.DB.First(&permission, "company_id = ? and method = ?", iCompany, iMethod)
-	// if result.Error != nil {
-	// 	return 0, 0
-	// }
-	// iHistoryCode := permission.TransactionID
-	// var transaction models.Transaction
-	// result = initializers.DB.Find(&transaction, "ID = ?", iHistoryCode)
-	// if result.Error != nil {
-	// 	return 0, 0
-	// }
-	// iHistoryCD := transaction.Method
-	var maxtranno float64 = 0
+	var maxtranno = 0
+	var phistories models.PHistory
 
-	// fmt.Println(iCompany, iPolicy, iHistoryCD, iEffDate)
+	result1 := txn.Order("tranno DESC").Find(&phistories, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
-	result := initializers.DB.Table("p_histories").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(tranno)")
-
-	if result.Error != nil {
+	if result1.Error != nil {
 		txn.Rollback()
-		return result.Error, 0
+		return result1.Error, 0
 	}
-
-	err := result.Row().Scan(&maxtranno)
-
-	if err != nil {
-		txn.Rollback()
-		return err, 0
-	}
-	return nil, uint(maxtranno) + 1
+	maxtranno = int(phistories.Tranno)
+	return nil, uint(maxtranno)
 }
 
 // # 166
@@ -9770,10 +9750,8 @@ func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string
 
 	iHistoryCD := iMethod
 	var phistory models.PHistory
-	var maxtranno float64 = 0
-
 	phistory.CompanyID = iCompany
-	phistory.Tranno = uint(maxtranno) + 1
+	phistory.Tranno = maxTranno
 	phistory.PolicyID = iPolicy
 	phistory.HistoryCode = iHistoryCD
 	phistory.EffectiveDate = iEffDate

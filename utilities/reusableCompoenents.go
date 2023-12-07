@@ -3377,7 +3377,7 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	}
 	iLapsedDate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
 
-	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 	if results.Error != nil {
 		tdfpolicy.CompanyID = iCompany
 		tdfpolicy.PolicyID = iPolicy

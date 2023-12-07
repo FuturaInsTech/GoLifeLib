@@ -2048,9 +2048,9 @@ func (m *P0070Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type P0071Data struct {
-	P0071 []P0071Array
+	P0071Array []P0071
 }
-type P0071Array struct {
+type P0071 struct {
 	BenDataType string // P0050
 	ManOrOpt    string // P0050
 }

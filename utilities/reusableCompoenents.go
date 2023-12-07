@@ -3690,7 +3690,18 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 	case imatMethod == "MAT007": // Return of Final Survival Benefit Amount
 		// Survival Benefit Amount is already paid through TDF
 		// So Maturity Amount is set to Zero
-		oAmount = 0
+		var survb models.SurvB
+		result := initializers.DB.Find(&survb, "company_id = ? and policy_id = ? and b_coverage = ? and paid_date = ?", iCompany, iPolicy, iCoverage, "")
+		if result.Error != nil {
+			oAmount = 0
+		} else {
+			oAmount = survb.Amount
+		}
+		return oAmount
+	case imatMethod == "MAT008": // Without Deducting Survival Benefit
+		// Survival Benefit Amount is already paid through TDF
+		// So Maturity Amount is set to Zero
+		oAmount = iSA
 		return oAmount
 	case imatMethod == "MAT099": // No Maturity Value
 		oAmount = 0

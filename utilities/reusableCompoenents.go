@@ -3377,7 +3377,7 @@ func TDFLapsDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	}
 	iLapsedDate := AddLeadDays(policy.PaidToDate, q0005data.LapsedDays)
 
-	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 	if results.Error != nil {
 		tdfpolicy.CompanyID = iCompany
 		tdfpolicy.PolicyID = iPolicy
@@ -9507,40 +9507,46 @@ func GetIlpFundData(iCompany uint, iPolicy uint, iBenefit uint, iDate string) in
 // # Outputs:
 //
 // ©  FuturaInsTech
-func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode string) (err error) {
+func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode string) (string error) {
 	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
-
 	var clientenq models.Client
-	initializers.DB.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
-	if err != nil {
-		return errors.New(err.Error())
+	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
+	if result.Error != nil {
+		shortCode := "GL212" // Client Not Found
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+
 	}
 
 	var agencyenq models.Agency
-	initializers.DB.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
-	if err != nil {
-		return errors.New(err.Error())
+	result = initializers.DB.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
+	if result.Error != nil {
+		shortCode := "GL275" // Agent Not Found
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	var q0005data paramTypes.Q0005Data
 	var extradataq0005 paramTypes.Extradata = &q0005data
-	err = GetItemD(int(policyenq.CompanyID), "Q0005", policyenq.PProduct, policyenq.PRCD, &extradataq0005)
+	err := GetItemD(int(policyenq.CompanyID), "Q0005", policyenq.PProduct, policyenq.PRCD, &extradataq0005)
 	if err != nil {
-		return errors.New(err.Error())
+		shortCode := "GL385" // Q0005 not configured
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#001 RCD is less than PropsalDate
 	if policyenq.PRCD < policyenq.ProposalDate {
 		shortCode := "GL539" // RCD is less than PropsalDate
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#002 UW Date is less than PropsalDate
 	if policyenq.PUWDate < policyenq.ProposalDate {
 		shortCode := "GL540" // UW Date is less than PropsalDate
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#003 Frequency is Inalid
@@ -9554,7 +9560,7 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	if !iFreqFound {
 		shortCode := "GL541" // Frequency is Inalid
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#004 Contract Curr is Inalid
@@ -9568,7 +9574,7 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	if !iCCurrFound {
 		shortCode := "GL542" // Contract Curr is Inalid
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#005 Billing Curr is Inalid
@@ -9582,7 +9588,7 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	if !iBCurrFound {
 		shortCode := "GL543" // Billing Curr is Inalid
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#006 Backdataing not Allowed
@@ -9590,12 +9596,12 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 		q0005data.BackDateAllowed == "N" {
 		shortCode := "GL544" // Backdataing not Allowed
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#007 Agency Channel Not Allowed
 	var iAgencyChannelFound bool = false
-	for i := 0; i < len(q0005data.ContractCurr); i++ {
+	for i := 0; i < len(q0005data.AgencyChannel); i++ {
 		if agencyenq.AgencyChannel == q0005data.AgencyChannel[i] {
 			iAgencyChannelFound = true
 			break
@@ -9604,24 +9610,24 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	if !iAgencyChannelFound {
 		shortCode := "GL545" // Agency Channel Not Allowed
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#008 Client is Invalid
 	if clientenq.ClientStatus != "AC" {
 		shortCode := "GL546" // Invalid Client
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#009 Deceased Client
 	if !isFieldZero(clientenq.ClientDod) {
 		shortCode := "GL547" // Deceased Client
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
-	return
+	return nil
 }
 
 // # 164
@@ -9631,20 +9637,23 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 // # Outputs:
 //
 // ©  FuturaInsTech
-func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode string) (err error) {
+func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode string) (string error) {
 	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
-
 	var clientenq models.Client
-	initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
-	if err != nil {
-		return errors.New(err.Error())
+	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
+	if result.Error != nil {
+		shortCode := "GL212" // Client Not Found
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	var q0006data paramTypes.Q0006Data
 	var extradataq0006 paramTypes.Extradata = &q0006data
-	err = GetItemD(int(benefitenq.CompanyID), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
+	err := GetItemD(int(benefitenq.CompanyID), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
 	if err != nil {
-		return errors.New(err.Error())
+		shortCode := "GL172" // Failed to Get Q0006
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#001 Age Not Allowed
@@ -9658,7 +9667,7 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 	if !iAllowedAge {
 		shortCode := "GL548" // Age Not Allowed
 		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#002 Policy Term not Allowed
@@ -9672,7 +9681,7 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 	if !iAllowedPolTerm {
 		shortCode := "GL549" // Policy Term not Allowed
 		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#003 Premium Paying Term not Allowed
@@ -9686,7 +9695,7 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 	if !iAllowedPPT {
 		shortCode := "GL550" // Premium Paying Term not Allowed
 		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#004 Risk cess Age not Allowed
@@ -9695,7 +9704,7 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 		benriskcessage > q0006data.MaxRiskCessAge {
 		shortCode := "GL551" // Risk cess Age not Allowed
 		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#005 Premium cess Age not Allowed
@@ -9704,17 +9713,17 @@ func ValidateBenefitData(benefitenq models.Benefit, langid uint, iHistoryCode st
 		benpremcessage > q0006data.MaxPremCessAge {
 		shortCode := "GL552" // Premium cess Age not Allowed
 		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	//#006 Min Sum Assured not met
 	if uint(benefitenq.BSumAssured) < q0006data.MinSA {
 		shortCode := "GL553" // Min Sum Assured not met
 		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
-		return errors.New("error :" + shortCode + ":" + longDesc)
+		return errors.New(shortCode + ":" + longDesc)
 	}
 
-	return
+	return nil
 }
 
 // # 165

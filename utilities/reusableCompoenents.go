@@ -7499,7 +7499,7 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 			continue
 		}
 
-		if isFieldZero(fv) == true {
+		if isFieldZero(fv) {
 			shortCode := p0065data.FieldList[i].ErrorCode
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
@@ -7507,24 +7507,30 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 
 	}
 
-	// if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
-	// 	shortCode := "GL477"
-	// 	longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-	// 	return errors.New(shortCode + " : " + longDesc)
-	// }
-
 	validemail := isValidEmail(clientval.ClientEmail)
 	if !validemail {
-		shortCode := "GL477"
+		shortCode := "GL477" // Email Format is invalid
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	_, err = strconv.Atoi(clientval.ClientMobile)
 	if err != nil {
-		shortCode := "GL478"
+		shortCode := "GL478" // MobileNumber is not Numeric
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	var clientenq models.Client
+	iNationalId := clientval.NationalId
+	iCompany := clientval.CompanyID
+	result := initializers.DB.First(&clientenq, "company_id = ? and national_id = ?", iCompany, iNationalId)
+	if result.Error == nil {
+		if clientval.ID != clientenq.ID {
+			shortCode := "GL562" // Duplicate National ID
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
 	}
 
 	return
@@ -7565,6 +7571,12 @@ func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (
 			return errors.New(shortCode + " : " + longDesc)
 		}
 
+	}
+
+	if bankval.StartDate > bankval.EndDate {
+		shortCode := "GL562"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	return

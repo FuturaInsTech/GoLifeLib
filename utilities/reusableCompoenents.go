@@ -7534,10 +7534,12 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
-	if clientval.ClientDod <= clientval.ClientDob {
-		shortCode := "GL567" // Date of Birth/Death Incorrect
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return errors.New(shortCode + " : " + longDesc)
+	if clientval.ClientDod != "" {
+		if clientval.ClientDod <= clientval.ClientDob {
+			shortCode := "GL567" // Date of Birth/Death Incorrect
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
 	}
 
 	return

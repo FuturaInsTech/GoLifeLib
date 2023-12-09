@@ -7499,7 +7499,7 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 			continue
 		}
 
-		if isFieldZero(fv) {
+		if isFieldZero(fv) == true {
 			shortCode := p0065data.FieldList[i].ErrorCode
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
@@ -7507,27 +7507,36 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 
 	}
 
+	// if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
+	// 	shortCode := "GL477"
+	// 	longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+	// 	return errors.New(shortCode + " : " + longDesc)
+	// }
+
 	validemail := isValidEmail(clientval.ClientEmail)
 	if !validemail {
-		shortCode := "GL477" // Email Format is invalid
+		shortCode := "GL477"
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	_, err = strconv.Atoi(clientval.ClientMobile)
 	if err != nil {
-		shortCode := "GL478" // MobileNumber is not Numeric
+		shortCode := "GL478"
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
-	var clientenq models.Client
-	iNationalId := clientval.NationalId
-	iCompany := clientval.CompanyID
-	result := initializers.DB.First(&clientenq, "company_id = ? and national_id = ?", iCompany, iNationalId)
-	if result.Error == nil {
-		if clientval.ID != clientenq.ID {
-			shortCode := "GL562" // Duplicate National ID
+	ibusinessdate := GetBusinessDate(userco, 0, 0)
+	if clientval.ClientDob > ibusinessdate {
+		shortCode := "GL566" // Incorrect Date of Birth
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	if clientval.ClientDod != "" {
+		if clientval.ClientDod <= clientval.ClientDob {
+			shortCode := "GL567" // Date of Birth/Death Incorrect
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
 		}

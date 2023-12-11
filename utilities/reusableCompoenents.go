@@ -3890,7 +3890,6 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	}
 	policyarray = append(policyarray, resultOut)
 
-	fmt.Print(policyarray)
 	return policyarray
 }
 
@@ -9655,6 +9654,12 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	//#009 Deceased Client
 	if !isFieldZero(clientenq.ClientDod) {
 		shortCode := "GL547" // Deceased Client
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if policyenq.PRCD > businessdate {
+		shortCode := "GL568" // RCD is greter than businessdate
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
 		return errors.New(shortCode + ":" + longDesc)
 	}

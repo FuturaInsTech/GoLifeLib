@@ -1348,6 +1348,32 @@ func (m *P0044Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
+// p0045data
+
+type P0045Data struct {
+	Gender    string
+	RelatedTo string
+}
+
+func (m *P0045Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0045Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
 // Cause of Death Rule
 // P0043 - Tolerance
 
@@ -2070,6 +2096,39 @@ func (m *P0071Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0071Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+// EBAOTECH TO LIFE ASIA MAPPING RULE
+
+type P0072Data struct {
+	P0072Array []P0072
+}
+type P0072 struct {
+	FieldName          string
+	SourceFieldName    string
+	DefaultFieldValue  string
+	MandatoryInd       string
+	MappingFunction    string
+	ValidationFunction string
+}
+
+func (m *P0072Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0072Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 	return nil
 
 }

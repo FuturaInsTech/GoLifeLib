@@ -7582,7 +7582,7 @@ func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (
 	}
 
 	if bankval.StartDate > bankval.EndDate {
-		shortCode := "GL562"
+		shortCode := "GL563"
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
@@ -9816,4 +9816,62 @@ func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string
 		return result.Error
 	}
 	return nil
+}
+func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey string) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(nomineeval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+	var clientenq models.Client
+	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", nomineeval.CompanyID, nomineeval.ClientID)
+	if result.Error != nil {
+		shortCode := "GL212" // Client Not Found
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+
+	}
+	var p0045data paramTypes.P0045Data
+	var extradatap0045 paramTypes.Extradata = &p0045data
+	err = GetItemD(int(nomineeval.CompanyID), "P0045", nomineeval.NomineeRelationship, "0", &extradatap0045)
+	if err != nil {
+		shortCode := "GL573" // P0045 not configured
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	var iGender bool = false
+	for i := 0; i < len(p0045data.Gender); i++ {
+		if clientenq.Gender == p0045data.Gender {
+			iGender = true
+			break
+		}
+	}
+	if !iGender {
+		shortCode := "GL572" // gender is not same in relationship
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	return
 }

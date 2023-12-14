@@ -9817,6 +9817,7 @@ func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string
 	}
 	return nil
 }
+
 func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -9849,8 +9850,15 @@ func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey 
 		shortCode := "GL212" // Client Not Found
 		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
 		return errors.New(shortCode + ":" + longDesc)
-
 	}
+
+	if clientenq.ClientStatus != "AC" ||
+		clientenq.ClientDod != "" {
+		shortCode := "GL546" // Invalid Client
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
 	var p0045data paramTypes.P0045Data
 	var extradatap0045 paramTypes.Extradata = &p0045data
 	err = GetItemD(int(nomineeval.CompanyID), "P0045", nomineeval.NomineeRelationship, "0", &extradatap0045)

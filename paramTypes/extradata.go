@@ -1496,10 +1496,11 @@ func (m *P0054Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Billing Type
 type P0055Data struct {
-	BankRequired string // Y or N  Client should have bank account Y/N
-	BankCode     string // IFSC No of Insurance Company
-	BankAccount  string // Bank Account No of Insurance Company
-	GlAccount    string // GL Code for Posting for the Billing Type
+	BankRequired    string // Y or N  Client should have bank account Y/N
+	BankCode        string // IFSC No of Insurance Company
+	BankAccount     string // Bank Account No of Insurance Company
+	GlAccount       string // GL Code for Posting for the Billing Type
+	PayingAuthority string // Y or N
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {

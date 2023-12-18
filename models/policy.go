@@ -27,6 +27,7 @@ type Policy struct {
 	InstalmentPrem   float64
 	BillingType      string `gorm:"type:varchar(05)"` // P0055
 	BankID           uint
+	PayingAuthority  uint // Paying Authority Client
 	Benefits         []Benefit
 	PHistories       []PHistory
 	Extras           []Extra

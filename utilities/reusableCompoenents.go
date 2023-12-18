@@ -3690,7 +3690,18 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 	case imatMethod == "MAT007": // Return of Final Survival Benefit Amount
 		// Survival Benefit Amount is already paid through TDF
 		// So Maturity Amount is set to Zero
-		oAmount = 0
+		var survb models.SurvB
+		result := initializers.DB.Find(&survb, "company_id = ? and policy_id = ? and b_coverage = ? and paid_date = ?", iCompany, iPolicy, iCoverage, "")
+		if result.Error != nil {
+			oAmount = 0
+		} else {
+			oAmount = survb.Amount
+		}
+		return oAmount
+	case imatMethod == "MAT008": // Without Deducting Survival Benefit
+		// Survival Benefit Amount is already paid through TDF
+		// So Maturity Amount is set to Zero
+		oAmount = iSA
 		return oAmount
 	case imatMethod == "MAT099": // No Maturity Value
 		oAmount = 0
@@ -3879,7 +3890,6 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	}
 	policyarray = append(policyarray, resultOut)
 
-	fmt.Print(policyarray)
 	return policyarray
 }
 
@@ -7516,6 +7526,21 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
+	ibusinessdate := GetBusinessDate(userco, 0, 0)
+	if clientval.ClientDob > ibusinessdate {
+		shortCode := "GL566" // Incorrect Date of Birth
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	if clientval.ClientDod != "" {
+		if clientval.ClientDod <= clientval.ClientDob {
+			shortCode := "GL567" // Date of Birth/Death Incorrect
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+
 	return
 }
 
@@ -7554,6 +7579,12 @@ func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (
 			return errors.New(shortCode + " : " + longDesc)
 		}
 
+	}
+
+	if bankval.StartDate > bankval.EndDate {
+		shortCode := "GL563"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	return
@@ -9627,6 +9658,12 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 		return errors.New(shortCode + ":" + longDesc)
 	}
 
+	if policyenq.PRCD > businessdate {
+		shortCode := "GL568" // RCD is greter than businessdate
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
 	return nil
 }
 
@@ -9779,4 +9816,70 @@ func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string
 		return result.Error
 	}
 	return nil
+}
+
+func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey string) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(nomineeval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+	var clientenq models.Client
+	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", nomineeval.CompanyID, nomineeval.ClientID)
+	if result.Error != nil {
+		shortCode := "GL212" // Client Not Found
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if clientenq.ClientStatus != "AC" ||
+		clientenq.ClientDod != "" {
+		shortCode := "GL546" // Invalid Client
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	var p0045data paramTypes.P0045Data
+	var extradatap0045 paramTypes.Extradata = &p0045data
+	err = GetItemD(int(nomineeval.CompanyID), "P0045", nomineeval.NomineeRelationship, "0", &extradatap0045)
+	if err != nil {
+		shortCode := "GL573" // P0045 not configured
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	var iGender bool = false
+	for i := 0; i < len(p0045data.Gender); i++ {
+		if clientenq.Gender == p0045data.Gender {
+			iGender = true
+			break
+		}
+	}
+	if !iGender {
+		shortCode := "GL572" // gender is not same in relationship
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	return
 }

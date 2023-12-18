@@ -1348,6 +1348,32 @@ func (m *P0044Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
+// p0045data
+
+type P0045Data struct {
+	Gender    string
+	RelatedTo string
+}
+
+func (m *P0045Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0045Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
 // Cause of Death Rule
 // P0043 - Tolerance
 
@@ -1470,10 +1496,11 @@ func (m *P0054Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Billing Type
 type P0055Data struct {
-	BankRequired string // Y or N  Client should have bank account Y/N
-	BankCode     string // IFSC No of Insurance Company
-	BankAccount  string // Bank Account No of Insurance Company
-	GlAccount    string // GL Code for Posting for the Billing Type
+	BankRequired    string // Y or N  Client should have bank account Y/N
+	BankCode        string // IFSC No of Insurance Company
+	BankAccount     string // Bank Account No of Insurance Company
+	GlAccount       string // GL Code for Posting for the Billing Type
+	PayingAuthority string // Y or N
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {
@@ -2048,9 +2075,9 @@ func (m *P0070Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type P0071Data struct {
-	P0071 []P0071Array
+	P0071Array []P0071
 }
-type P0071Array struct {
+type P0071 struct {
 	BenDataType string // P0050
 	ManOrOpt    string // P0050
 }
@@ -2070,6 +2097,39 @@ func (m *P0071Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0071Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+// EBAOTECH TO LIFE ASIA MAPPING RULE
+
+type P0072Data struct {
+	P0072Array []P0072
+}
+type P0072 struct {
+	FieldName          string
+	SourceFieldName    string
+	DefaultFieldValue  string
+	MandatoryInd       string
+	MappingFunction    string
+	ValidationFunction string
+}
+
+func (m *P0072Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0072Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 	return nil
 
 }

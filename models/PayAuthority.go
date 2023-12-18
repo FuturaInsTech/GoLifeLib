@@ -9,5 +9,4 @@ type PayingAuthority struct {
 	gorm.Model
 	types.CModel
 	ClientID uint
-	Policies []Policy
 }

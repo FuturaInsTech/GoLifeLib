@@ -1500,7 +1500,7 @@ type P0055Data struct {
 	BankCode        string // IFSC No of Insurance Company
 	BankAccount     string // Bank Account No of Insurance Company
 	GlAccount       string // GL Code for Posting for the Billing Type
-	PayingAuthority string // Y or N
+	PayingAuthority string // Y or N through P0050
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {

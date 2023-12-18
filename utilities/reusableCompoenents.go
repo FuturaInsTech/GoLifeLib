@@ -7482,6 +7482,11 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 	var p0065data paramTypes.P0065Data
 	var extradatap0065 paramTypes.Extradata = &p0065data
 
+	iClientType := clientval.ClientType
+	if iClientType == "I" || iClientType == "C" {
+		iKey = iKey + iClientType
+	}
+
 	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
 	if err != nil {
 		return errors.New(err.Error())
@@ -7498,7 +7503,7 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 			continue
 		}
 
-		if isFieldZero(fv) == true {
+		if isFieldZero(fv) {
 			shortCode := p0065data.FieldList[i].ErrorCode
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
@@ -7506,36 +7511,40 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 
 	}
 
-	// if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
-	// 	shortCode := "GL477"
-	// 	longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-	// 	return errors.New(shortCode + " : " + longDesc)
-	// }
-
 	validemail := isValidEmail(clientval.ClientEmail)
 	if !validemail {
-		shortCode := "GL477"
+		shortCode := "GL477" // Email Format is invalid
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	_, err = strconv.Atoi(clientval.ClientMobile)
 	if err != nil {
-		shortCode := "GL478"
+		shortCode := "GL478" // MobileNumber is not Numeric
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	ibusinessdate := GetBusinessDate(userco, 0, 0)
 	if clientval.ClientDob > ibusinessdate {
-		shortCode := "GL566" // Incorrect Date of Birth
+		shortCode := ""
+		if clientval.ClientType == "C" {
+			shortCode = "GL586" // Incorrect Date of Incorporation
+		} else {
+			shortCode = "GL566" // Incorrect Date of Birth
+		}
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	if clientval.ClientDod != "" {
 		if clientval.ClientDod <= clientval.ClientDob {
-			shortCode := "GL567" // Date of Birth/Death Incorrect
+			shortCode := ""
+			if clientval.ClientType == "C" {
+				shortCode = "GL587" // Incorrect Date of Termination
+			} else {
+				shortCode = "GL567" // Date of Birth/Death Incorrect
+			}
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
 		}
@@ -9086,10 +9095,19 @@ func PostGlMoveN(iCompany uint, iContractCurry string, iEffectiveDate string,
 	var company models.Company
 	glmove.ContractCurry = iContractCurry
 	glmove.ContractAmount = iAccAmount
-	initializers.DB.Find(&company, "id = ?", iCompany)
+	result := txn.Find(&company, "id = ?", iCompany)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
 	var currency models.Currency
 	// fmt.Println("Currency Code is .... ", company.CurrencyID)
-	initializers.DB.Find(&currency, "id = ?", company.CurrencyID)
+	result = txn.Find(&currency, "id = ?", company.CurrencyID)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
 	iGlCurry := currency.CurrencyShortName
 	glmove.CurrencyRate = 1
 	if glmove.GlCurry != glmove.ContractCurry {
@@ -9154,9 +9172,12 @@ func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iCon
 		temp = iAmount * 1
 	}
 	var company []models.Company
-	initializers.DB.First(&company, "id = ?", iCompany)
-
-	results := initializers.DB.First(&glbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno)
+	result := txn.First(&company, "id = ?", iCompany)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error, 0
+	}
+	results := txn.First(&glbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno)
 	if results.Error != nil {
 		return errors.New("Account Code Not Found"), glbal.ContractAmount
 	}

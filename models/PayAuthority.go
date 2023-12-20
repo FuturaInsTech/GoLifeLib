@@ -8,5 +8,10 @@ import (
 type PayingAuthority struct {
 	gorm.Model
 	types.CModel
-	ClientID uint
+	ClientID  uint
+	PaName    string
+	PaType    string //P0050
+	StartDate string
+	EndDate   string
+	PaStatus  string // P0050
 }

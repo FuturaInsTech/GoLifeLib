@@ -2694,7 +2694,7 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 	var q0005data paramTypes.Q0005Data
 	var extradataq0005 paramTypes.Extradata = &q0005data
 
-	err = GetItemD(int(iCompany), "Q0005", iCoverage, iDate, &extradataq0005)
+	err = GetItemD(int(iCompany), "Q0005", iProduct, iDate, &extradataq0005)
 	if err != nil {
 		oAmount = 0
 		return

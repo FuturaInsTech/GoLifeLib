@@ -9150,7 +9150,11 @@ func PostGlMoveN(iCompany uint, iContractCurry string, iEffectiveDate string,
 	glmove.ID = 0
 	glmove.ReversalIndicator = iRevInd
 	glmove.BCoverage = iCoverage
-	txn.Save(&glmove)
+	result = txn.Save(&glmove)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
 	//tx := initializers.DB.Save(&glmove)
 	//tx.Commit()
 
@@ -9178,9 +9182,9 @@ func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iCon
 		return result.Error, 0
 	}
 	results := txn.First(&glbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno)
-	if results.Error != nil {
-		return errors.New("Account Code Not Found"), glbal.ContractAmount
-	}
+	// if results.Error != nil {
+	// 	return errors.New("Account Code Not Found"), glbal.ContractAmount
+	// }
 	if results.RowsAffected == 0 {
 		glbal.ContractAmount = temp
 		glbal.CompanyID = iCompany

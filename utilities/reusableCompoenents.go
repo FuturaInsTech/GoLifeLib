@@ -9189,13 +9189,22 @@ func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iCon
 		glbal.ContractCurry = iContCurry
 		glbal.GlRdocno = iGlRdocno
 		//initializers.DB.Save(&glbal)
-		txn.Save(&glbal)
+		result = txn.Create(&glbal)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error, glbal.ContractAmount
+		}
 		return nil, glbal.ContractAmount
 	} else {
 		iAmount := glbal.ContractAmount + temp
 		// fmt.Println("I am inside update.....2", iAmount, glbal.ContractAmount)
 		//initializers.DB.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
-		txn.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
+		result = txn.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error, glbal.ContractAmount
+		}
+
 		return nil, glbal.ContractAmount
 	}
 	//results.Commit()

@@ -33,4 +33,10 @@ type QBenIllValue struct {
 	QPesValamt        float64
 	QNorValamt        float64
 	QOptValamt        float64
+	QPesMc            float64
+	QNorMc            float64
+	QOptMc            float64
+	QPesFee           float64
+	QNorFee           float64
+	QOptFee           float64
 }

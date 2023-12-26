@@ -9852,6 +9852,13 @@ func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string
 	return nil
 }
 
+// # 167
+// Validate Nominee (New Version)
+// Inputs: Nominee Model, Company id, User Language, History Code
+//
+// # Outputs: error,
+//
+// ©  FuturaInsTech
 func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -9911,6 +9918,21 @@ func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey 
 	}
 	if !iGender {
 		shortCode := "GL572" // gender is not same in relationship
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// Owner cannot be Nominee
+	var policyenq models.Policy
+	result = initializers.DB.First(&policyenq, "company_id  = ? and id = ?", nomineeval.CompanyID, nomineeval.PolicyID)
+	if result.Error != nil {
+		shortCode := "GL210" // Policy Not Found
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if nomineeval.ClientID == policyenq.ClientID {
+		shortCode := "GL589" // Owner cannot be Nominee
 		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
 		return errors.New(shortCode + ":" + longDesc)
 	}

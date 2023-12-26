@@ -42,7 +42,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.CampaignComp{})
 	DB.AutoMigrate(&quotation.QHeader{})
 	// DB.AutoMigrate(&quotation.QDetail{})
-	// DB.AutoMigrate(&quotation.QBenIllValue{})
+	DB.AutoMigrate(&quotation.QBenIllValue{})
 	// DB.AutoMigrate(&models.FieldValidator{})
 	// DB.AutoMigrate(&models.Level{})
 	// DB.AutoMigrate(&models.Policy{})

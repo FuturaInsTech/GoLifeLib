@@ -9939,3 +9939,67 @@ func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey 
 
 	return
 }
+
+// # 168
+// Validate Payer (New Version)
+// Inputs: Payer Model, Company id, User Language, History Code
+//
+// # Outputs: error
+//
+// ©  FuturaInsTech
+
+func ValidatePayer(payerval models.Payer, userco uint, userlan uint, iKey string) (string error) {
+	businessdate := GetBusinessDate(payerval.CompanyID, 0, 0)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(payerval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+
+	iPolicy := payerval.PolicyID
+	var policy models.Policy
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", userco, iPolicy)
+	if result.Error != nil {
+		shortCode := "GL175"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+
+	}
+	if payerval.FromDate > businessdate {
+		shortCode := "GL616" // From date is greater than business date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	if payerval.FromDate < policy.PRCD {
+		shortCode := "GL617" // From Date is lesser than RCD Date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payerval.FromDate > payerval.ToDate {
+		shortCode := "GL901" // FromDate greater than ToDate
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	return
+}

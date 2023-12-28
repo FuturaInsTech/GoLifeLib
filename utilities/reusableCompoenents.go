@@ -4721,11 +4721,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "23":
 					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
 					resultMap["GLData"] = oData
-
 				case oLetType == "24":
 					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
 					resultMap["SwitchData"] = oData
-
 				case oLetType == "25":
 					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
 					resultMap["PolicyHistoryData"] = oData
@@ -4740,7 +4738,6 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 					resultMap["PrevBenefit"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
-
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:

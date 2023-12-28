@@ -4732,7 +4732,12 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "26":
 					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
 					resultMap["IlpFundData"] = oData
-
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevBenefit"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -9387,7 +9392,12 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "26":
 					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
 					resultMap["IlpFundData"] = oData
-
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevBenefit"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -10002,4 +10012,42 @@ func ValidatePayer(payerval models.Payer, userco uint, userlan uint, iKey string
 	}
 
 	return
+}
+
+// # 169
+// Get Previous Policy Data (New Version)
+// Inputs: CompanyID, PolicyID, HistoryCode, Tranno
+//
+// # Outputs: JSON Policy Data
+//
+// ©  FuturaInsTech
+func GetPPolicyData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno uint) []interface{} {
+	ppolicyarray := make([]interface{}, 0)
+	var phistory models.PHistory
+	result := initializers.DB.Find(&phistory, "company_id = ? and policy_id = ? and history_code = ?  and tranno =  ?", iCompany, iPolicy, iHistoryCode, iTranno)
+	if result.Error != nil {
+		return nil
+	}
+	previousPolicy := phistory.PrevData["Policy"]
+	ppolicyarray = append(ppolicyarray, previousPolicy)
+	return ppolicyarray
+
+}
+
+// # 170
+// Get Previous Benefits Data (New Version)
+// Inputs: CompanyID, PolicyID, HistoryCode, Tranno
+//
+// # Outputs: JSON Benefits Data
+//
+// ©  FuturaInsTech
+func GetPBenefitData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno uint) interface{} {
+	var phistory models.PHistory
+	result := initializers.DB.Find(&phistory, "company_id = ? and policy_id = ? and history_code = ?  and tranno =  ?", iCompany, iPolicy, iHistoryCode, iTranno)
+	if result.Error != nil {
+		return nil
+	}
+	previousBenefit := phistory.PrevData["Benefits"]
+	return previousBenefit
+
 }

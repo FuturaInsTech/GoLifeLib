@@ -4721,21 +4721,23 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "23":
 					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
 					resultMap["GLData"] = oData
-
 				case oLetType == "24":
 					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
 					resultMap["SwitchData"] = oData
-
 				case oLetType == "25":
 					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
 					resultMap["PolicyHistoryData"] = oData
 				case oLetType == "26":
 					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
 					resultMap["IlpFundData"] = oData
-
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevBenefit"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
-
 				case oLetType == "99":
 					resultMap["SignData"] = signData
 				default:
@@ -9387,7 +9389,12 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "26":
 					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
 					resultMap["IlpFundData"] = oData
-
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevBenefit"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -9858,7 +9865,7 @@ func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string
 //
 // # Outputs: error,
 //
-// ©  FuturaInsTech
+// ©  FuturaInsTech
 func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -9938,4 +9945,106 @@ func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey 
 	}
 
 	return
+}
+
+// # 168
+// Validate Payer (New Version)
+// Inputs: Payer Model, Company id, User Language, History Code
+//
+// # Outputs: error
+//
+// ©  FuturaInsTech
+
+func ValidatePayer(payerval models.Payer, userco uint, userlan uint, iKey string) (string error) {
+	businessdate := GetBusinessDate(payerval.CompanyID, 0, 0)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(payerval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+
+	iPolicy := payerval.PolicyID
+	var policy models.Policy
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", userco, iPolicy)
+	if result.Error != nil {
+		shortCode := "GL175"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+
+	}
+	if payerval.FromDate > businessdate {
+		shortCode := "GL616" // From date is greater than business date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	if payerval.FromDate < policy.PRCD {
+		shortCode := "GL617" // From Date is lesser than RCD Date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payerval.FromDate > payerval.ToDate {
+		shortCode := "GL901" // FromDate greater than ToDate
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	return
+}
+
+// # 169
+// Get Previous Policy Data (New Version)
+// Inputs: CompanyID, PolicyID, HistoryCode, Tranno
+//
+// # Outputs: JSON Policy Data
+//
+// ©  FuturaInsTech
+func GetPPolicyData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno uint) []interface{} {
+	ppolicyarray := make([]interface{}, 0)
+	var phistory models.PHistory
+	result := initializers.DB.Find(&phistory, "company_id = ? and policy_id = ? and history_code = ?  and tranno =  ?", iCompany, iPolicy, iHistoryCode, iTranno)
+	if result.Error != nil {
+		return nil
+	}
+	previousPolicy := phistory.PrevData["Policy"]
+	ppolicyarray = append(ppolicyarray, previousPolicy)
+	return ppolicyarray
+
+}
+
+// # 170
+// Get Previous Benefits Data (New Version)
+// Inputs: CompanyID, PolicyID, HistoryCode, Tranno
+//
+// # Outputs: JSON Benefits Data
+//
+// ©  FuturaInsTech
+func GetPBenefitData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno uint) interface{} {
+	var phistory models.PHistory
+	result := initializers.DB.Find(&phistory, "company_id = ? and policy_id = ? and history_code = ?  and tranno =  ?", iCompany, iPolicy, iHistoryCode, iTranno)
+	if result.Error != nil {
+		return nil
+	}
+	previousBenefit := phistory.PrevData["Benefits"]
+	return previousBenefit
+
 }

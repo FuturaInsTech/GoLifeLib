@@ -10048,3 +10048,25 @@ func GetPBenefitData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno u
 	return previousBenefit
 
 }
+
+// # 171
+// Validate Frequency (New Version)
+// Used to guide the frequency change function align its dates with RCD
+// Inputs: RCD, PaidtoDate, Currency Frequencym New Frequency
+//
+// # Outputs: True or False
+//
+// ©  FuturaInsTech
+func ValidateFreq(PrcdDate string, Ptdate string, Currfreq string, Newfreq string) bool {
+	tdate := PrcdDate
+	for {
+		DueDate := GetNextDue(tdate, Newfreq, "")
+		NextDueDate := Date2String(DueDate)
+		if NextDueDate == Ptdate {
+			return true
+		} else if NextDueDate > Ptdate {
+			return false
+		}
+		tdate = NextDueDate
+	}
+}

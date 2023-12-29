@@ -378,8 +378,8 @@ func UploadParamDataItems(file multipart.File) error {
 
 func GetParamExtraDataFields(paramName string) ([]reflect.StructField, []reflect.StructField, error) {
 
-	var data any
-	var subfield any
+	var data interface{}
+	var subfield interface{}
 
 	switch paramName {
 

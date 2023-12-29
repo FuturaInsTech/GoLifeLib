@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
+	"github.com/FuturaInsTech/GoLifeLib/models"
 )
 
-func GetUserAccess(iuser any, imethod string) (map[string]interface{}, error) {
+func GetUserAccess(iuser interface{}, imethod string) (map[string]interface{}, error) {
 
 	//user, _ := c.Get("user")
 	var sourceMap map[string]interface{}

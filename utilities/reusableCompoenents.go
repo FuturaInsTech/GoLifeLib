@@ -464,7 +464,7 @@ func ValidateFields(iFunction string, iFieldName string, iFieldVal string, iUser
 // # Outputs Error
 //
 // ©  FuturaInsTech
-func ValidateItem(iUserId uint64, iName string, iItem any, iFieldName string, iErros string) error {
+func ValidateItem(iUserId uint64, iName string, iItem string, iFieldName string, iErros string) error {
 	var getUser models.User
 	results := initializers.DB.First(&getUser, "id = ?", iUserId)
 	if results.Error != nil {

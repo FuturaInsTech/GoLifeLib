@@ -10051,8 +10051,8 @@ func GetPBenefitData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno u
 
 // # 171
 // Validate Frequency (New Version)
-// Used to guide the frequency change function align its dates with RCD
-// Inputs: RCD, PaidtoDate, Currency Frequencym New Frequency
+// Return False when current frequency premium dues are pending, else true
+// Inputs: RCD, PTD, Curr Freq, New Freq
 //
 // # Outputs: True or False
 //

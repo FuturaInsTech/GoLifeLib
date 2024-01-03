@@ -9608,10 +9608,12 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	}
 
 	//#001 RCD is less than PropsalDate
-	if policyenq.PRCD < policyenq.ProposalDate {
-		shortCode := "GL539" // RCD is less than PropsalDate
-		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New(shortCode + ":" + longDesc)
+	if q0005data.BackDateAllowed == "N" {
+		if policyenq.PRCD < policyenq.ProposalDate {
+			shortCode := "GL539" // RCD is less than PropsalDate
+			longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+		}
 	}
 
 	//#002 UW Date is less than PropsalDate

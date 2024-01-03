@@ -14,7 +14,6 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
-	"github.com/FuturaInsTech/GoLifeLib/utilities"
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -10086,19 +10085,19 @@ func ValidateAgency(agencyenq models.Agency, userco uint, userlan uint, iDate st
 
 	if agencyenq.AgencySt != "AC" {
 		shortCode := "GL221" // InValid Status
-		longDesc, _ := utilities.GetErrorDesc(userco, userlan, shortCode)
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	if agencyenq.LicenseStartDate > iDate {
 		shortCode := "GL577"
-		longDesc, _ := utilities.GetErrorDesc(userco, userlan, shortCode)
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + ":" + longDesc)
 	}
 
 	if agencyenq.LicenseEndDate < iDate {
 		shortCode := "GL578"
-		longDesc, _ := utilities.GetErrorDesc(userco, userlan, shortCode)
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + ":" + longDesc)
 	}
 	return nil

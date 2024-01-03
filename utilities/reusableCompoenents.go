@@ -14,6 +14,7 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+	"github.com/FuturaInsTech/GoLifeLib/utilities"
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -10071,4 +10072,34 @@ func ValidateFreq(PrcdDate string, Ptdate string, Currfreq string, Newfreq strin
 		}
 		tdate = NextDueDate
 	}
+}
+
+// #172
+// Validate Agency (New Version)
+// Return Error when Agency is not valid
+// Inputs: agency model, user company, user language, validdate
+//
+// # Outputs: nil or error
+//
+// ©  FuturaInsTech
+func ValidateAgency(agencyenq models.Agency, userco uint, userlan uint, iDate string) (string error) {
+
+	if agencyenq.AgencySt != "AC" {
+		shortCode := "GL221" // InValid Status
+		longDesc, _ := utilities.GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if agencyenq.LicenseStartDate > iDate {
+		shortCode := "GL577"
+		longDesc, _ := utilities.GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if agencyenq.LicenseEndDate < iDate {
+		shortCode := "GL578"
+		longDesc, _ := utilities.GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	return nil
 }

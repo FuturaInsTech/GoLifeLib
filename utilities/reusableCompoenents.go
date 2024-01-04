@@ -10127,7 +10127,8 @@ func ValidatePolicyBenefitsData(policyenq models.Policy, benefitenq []models.Ben
 	for i := 0; i < len(benefitenq); i++ {
 		duplicatebenefits = false
 		for j := 0; j < len(benefitenq1); j++ {
-			if benefitenq[i].BCoverage == benefitenq1[j].BCoverage &&
+			if benefitenq[i].ID != benefitenq1[j].ID &&
+				benefitenq[i].BCoverage == benefitenq1[j].BCoverage &&
 				benefitenq[i].ClientID == benefitenq1[j].ClientID {
 				duplicatebenefits = true
 				break

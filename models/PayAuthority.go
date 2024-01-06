@@ -14,5 +14,7 @@ type PayingAuthority struct {
 	StartDate       string `gorm:"type:varchar(08)"`
 	EndDate         string `gorm:"type:varchar(08)"`
 	PaStatus        string `gorm:"type:varchar(02)"` // P0050
+	ExtrationDay    string `gorm:"type:varchar(02)"`
+	PayDay          string `gorm:"type:varchar(02)"`
 	PaBillSummaries []PaBillSummary
 }

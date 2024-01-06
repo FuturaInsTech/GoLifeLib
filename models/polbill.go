@@ -37,5 +37,5 @@ type PolBill struct {
 	Seqno             uint
 	ProcessFlag       string `gorm:"type:varchar(05)"`
 	PayingAuthority   uint
-	BillDueMonth      string
+	BillDueMonth      string `gorm:"type:varchar(06)"`
 }

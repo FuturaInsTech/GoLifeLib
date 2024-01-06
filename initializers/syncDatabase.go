@@ -16,7 +16,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.UserGroup{})
 	// DB.AutoMigrate(&models.ContHeader{})
 	// DB.AutoMigrate(&models.CompanyStatus{})
-	// DB.AutoMigrate(&models.Company{})
+	DB.AutoMigrate(&models.Company{})
 	// DB.AutoMigrate(&models.Transaction{})
 	// DB.AutoMigrate(&models.TDFRule{})
 	// DB.AutoMigrate(&models.Permission{})
@@ -91,6 +91,5 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.IlpSwitchFund{})
 	// DB.AutoMigrate(&models.IlpStatementPrint{})
 	DB.AutoMigrate(&models.PayingAuthority{})
-	DB.AutoMigrate(&models.PaBillSummary{})
 
 }

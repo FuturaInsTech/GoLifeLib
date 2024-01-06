@@ -9,6 +9,8 @@ type PaBillSummary struct {
 	gorm.Model
 	types.CModel
 	PayingAuthorityID  uint
+	PaName             string `gorm:"type:varchar(50)"`
+	PaType             string `gorm:"type:varchar(01)"`
 	PaBillDueMonth     string `gorm:"type:varchar(06)"` // YYYYMM
 	PaBillSeqNo        uint
 	PaBillStatus       string `gorm:"type:varchar(01)"` // P0050

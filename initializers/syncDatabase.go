@@ -2,7 +2,6 @@ package initializers
 
 import (
 	"github.com/FuturaInsTech/GoLifeLib/models"
-	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
 )
 
 // Table Name should start with Capital Letter
@@ -16,7 +15,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.UserGroup{})
 	// DB.AutoMigrate(&models.ContHeader{})
 	// DB.AutoMigrate(&models.CompanyStatus{})
-	DB.AutoMigrate(&models.Company{})
+	//DB.AutoMigrate(&models.Company{})
 	// DB.AutoMigrate(&models.Transaction{})
 	// DB.AutoMigrate(&models.TDFRule{})
 	// DB.AutoMigrate(&models.Permission{})
@@ -40,9 +39,9 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.LeadAllocation{})
 	// DB.AutoMigrate(&models.Campaign{})
 	// DB.AutoMigrate(&models.CampaignComp{})
-	DB.AutoMigrate(&quotation.QHeader{})
+	//DB.AutoMigrate(&quotation.QHeader{})
 	// DB.AutoMigrate(&quotation.QDetail{})
-	DB.AutoMigrate(&quotation.QBenIllValue{})
+	//DB.AutoMigrate(&quotation.QBenIllValue{})
 	// DB.AutoMigrate(&models.FieldValidator{})
 	// DB.AutoMigrate(&models.Level{})
 	// DB.AutoMigrate(&models.Policy{})
@@ -51,7 +50,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.PHistory{})
 	// DB.AutoMigrate(models.GlType{})
 	// DB.AutoMigrate(models.AccountCode{})
-	DB.AutoMigrate(&models.GlMove{})
+	//DB.AutoMigrate(&models.GlMove{})
 	// DB.AutoMigrate(&models.GlBal{})
 	// DB.AutoMigrate(&models.Receipt{})
 	// DB.AutoMigrate(&models.Tdfh{})
@@ -65,12 +64,12 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.MedReq{})
 	// DB.AutoMigrate(&models.Nominee{})
 	// DB.AutoMigrate(&models.DeathH{})
-	DB.AutoMigrate(&models.DeathD{})
+	//DB.AutoMigrate(&models.DeathD{})
 	// DB.AutoMigrate(&quotation.Qcommunication{})
 	// DB.AutoMigrate(&models.Payer{})
 	// DB.AutoMigrate(&models.SaChange{})
 	// DB.AutoMigrate(&models.Assignee{})
-	DB.AutoMigrate((&models.Addcomponent{}))
+	//DB.AutoMigrate((&models.Addcomponent{}))
 	// DB.AutoMigrate(&models.Mrta{})
 	// DB.AutoMigrate((&models.SurrH{}))
 	// DB.AutoMigrate(&models.SurrD{})
@@ -79,7 +78,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.MaturityD{})
 	DB.AutoMigrate(&models.PolBill{})
 	// DB.AutoMigrate(&models.CriticalIllness{})
-	DB.AutoMigrate(&models.TransactionLock{})
+	//DB.AutoMigrate(&models.TransactionLock{})
 	// DB.AutoMigrate(&models.IBenefit{})
 	// DB.AutoMigrate(&models.Payment{})
 	// DB.AutoMigrate(&models.IlpFund{})

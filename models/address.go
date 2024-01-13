@@ -27,4 +27,5 @@ type Address struct {
 	Receipts         []Receipt
 	Payments         []Payment
 	// Agencies         []Agency
+
 }

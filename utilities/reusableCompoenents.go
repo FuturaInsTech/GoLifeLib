@@ -3721,7 +3721,7 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 // # Outputs  Company Details as an Interface
 //
 // ©  FuturaInsTech
-func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iDate string) []interface{} {
+func GetCompanyData(iCompany uint, iDate string) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
 	initializers.DB.Find(&company, "id = ?", iCompany)
@@ -3755,7 +3755,7 @@ func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Client Details as an Interface
 //
 // ©  FuturaInsTech
-func GetClientData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetClientData(iCompany uint, iClient uint) []interface{} {
 	clientarray := make([]interface{}, 0)
 	var client models.Client
 
@@ -3785,7 +3785,7 @@ func GetClientData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 // # Outputs  Address Details as an Interface
 //
 // ©  FuturaInsTech
-func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetAddressData(iCompany uint, iAddress uint) []interface{} {
 	addressarray := make([]interface{}, 0)
 	var address models.Address
 
@@ -3813,7 +3813,7 @@ func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Policy Details as an Interface
 //
 // ©  FuturaInsTech
-func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetPolicyData(iCompany uint, iPolicy uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
 	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
@@ -3900,7 +3900,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 // # Outputs  Benefit Details as an Interface
 //
 // ©  FuturaInsTech
-func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetBenefitData(iCompany uint, iPolicy uint) []interface{} {
 	var policyenq models.Policy
 	var benefit []models.Benefit
 	var clientenq models.Client
@@ -3966,7 +3966,7 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Survival Details as an Interface
 //
 // ©  FuturaInsTech
-func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetSurBData(iCompany uint, iPolicy uint) []interface{} {
 	var survb []models.SurvB
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4009,7 +4009,7 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 // # Outputs  MRTA Details as an Interface
 //
 // ©  FuturaInsTech
-func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetMrtaData(iCompany uint, iPolicy uint) []interface{} {
 	var mrtaenq []models.Mrta
 	initializers.DB.Find(&mrtaenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4042,27 +4042,29 @@ func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 // # Outputs  Receipt Details as an Interface
 //
 // ©  FuturaInsTech
-func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetReceiptData(iCompany uint, iReceipt uint) []interface{} {
 	var receiptenq models.Receipt
 	initializers.DB.Find(&receiptenq, "company_id = ? and id = ?", iCompany, iReceipt)
 	amtinwords, csymbol := AmountinWords(receiptenq.CompanyID, receiptenq.AccAmount, receiptenq.AccCurry)
 	receiptarray := make([]interface{}, 0)
 	resultOut := map[string]interface{}{
-		"ID":                IDtoPrint(receiptenq.ID),
-		"CompanyID":         IDtoPrint(receiptenq.CompanyID),
-		"Branch":            receiptenq.Branch,
-		"AccCurry":          receiptenq.AccCurry,
-		"AccAmount":         NumbertoPrint(receiptenq.AccAmount),
-		"PolicyID":          IDtoPrint(receiptenq.PolicyID),
-		"ClientID":          IDtoPrint(receiptenq.ClientID),
-		"DateOfCollection":  DateConvert(receiptenq.DateOfCollection),
-		"BankAccountNo":     receiptenq.BankAccountNo,
-		"BankReferenceNo":   receiptenq.BankReferenceNo,
-		"TypeOfReceipt":     receiptenq.TypeOfReceipt,
-		"InstalmentPremium": receiptenq.InstalmentPremium,
-		"AddressID":         IDtoPrint(receiptenq.AddressID),
-		"AmountInWords":     amtinwords,
-		"CurrSymbol":        csymbol,
+		"ID":               IDtoPrint(receiptenq.ID),
+		"CompanyID":        IDtoPrint(receiptenq.CompanyID),
+		"Branch":           receiptenq.Branch,
+		"AccCurry":         receiptenq.AccCurry,
+		"AccAmount":        NumbertoPrint(receiptenq.AccAmount),
+		"ReceiptFor":       receiptenq.ReceiptFor,
+		"ReceiptRefNo":     IDtoPrint(receiptenq.ReceiptRefNo),
+		"ReceiptDueDate":   DateConvert(receiptenq.ReceiptDueDate),
+		"ClientID":         IDtoPrint(receiptenq.ClientID),
+		"DateOfCollection": DateConvert(receiptenq.DateOfCollection),
+		"BankAccountNo":    receiptenq.BankAccountNo,
+		"BankReferenceNo":  receiptenq.BankReferenceNo,
+		"TypeOfReceipt":    receiptenq.TypeOfReceipt,
+		"ReceiptAmount":    receiptenq.ReceiptAmount,
+		"AddressID":        IDtoPrint(receiptenq.AddressID),
+		"AmountInWords":    amtinwords,
+		"CurrSymbol":       csymbol,
 		//		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
 		//		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
 		//		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
@@ -4079,7 +4081,7 @@ func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  SA Change Details as an Interface
 //
 // ©  FuturaInsTech
-func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetSaChangeData(iCompany uint, iPolicy uint) []interface{} {
 	var sachangeenq []models.SaChange
 	initializers.DB.Find(&sachangeenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4118,7 +4120,7 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 // # Outputs  Component Add Details as an Interface
 //
 // ©  FuturaInsTech
-func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetCompAddData(iCompany uint, iPolicy uint) []interface{} {
 	var addcomp []models.Addcomponent
 	initializers.DB.Find(&addcomp, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4158,7 +4160,7 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Surrender Header  and Details as an Interface
 //
 // ©  FuturaInsTech
-func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) interface{} {
+func GetSurrHData(iCompany uint, iPolicy uint) interface{} {
 	var surrhenq models.SurrH
 
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -4306,7 +4308,7 @@ func GetNomiData(iCompany uint, iPolicy uint) []interface{} {
 //
 // ©  FuturaInsTech
 // Not Required
-func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetDeathData(iCompany uint, iPolicy uint) []interface{} {
 	var surrhenq models.SurrH
 	var surrdenq []models.SurrD
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -4322,7 +4324,7 @@ func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 //
 // # Outputs  Maturity Header and Details Interface
 // ©  FuturaInsTech
-func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) interface{} {
+func GetMatHData(iCompany uint, iPolicy uint) interface{} {
 	var mathenq models.MaturityH
 
 	initializers.DB.Find(&mathenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -4393,7 +4395,7 @@ func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 //
 // # Outputs  Survival Benefit Payment Interface
 // ©  FuturaInsTech
-func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+func GetSurvBPay(iCompany uint, iPolicy uint, iTranno uint) []interface{} {
 	var survbenq models.SurvB
 	initializers.DB.Find(&survbenq, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
 	survbparray := make([]interface{}, 0)
@@ -4417,7 +4419,7 @@ func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 //
 // # Outputs  Bonus Values
 // ©  FuturaInsTech
-func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+func GetBonusVals(iCompany uint, iPolicy uint) []interface{} {
 
 	bonusarray := make([]interface{}, 0)
 
@@ -4458,7 +4460,7 @@ func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 //
 // # Outputs  Agency
 // ©  FuturaInsTech
-func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint, iAgency uint) []interface{} {
+func GetAgency(iCompany uint, iAgency uint) []interface{} {
 
 	agencyarray := make([]interface{}, 0)
 	var agencyenq models.Agency
@@ -4500,7 +4502,7 @@ func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceip
 //
 // # Outputs  Expiry Interface Information
 // ©  FuturaInsTech
-func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+func GetExpi(iCompany uint, iPolicy uint, iTranno uint) []interface{} {
 	var benefit []models.Benefit
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
 	expiryarray := make([]interface{}, 0)
@@ -4568,29 +4570,93 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint, iPa uint) error {
+
+	var communication models.Communication
+	var iP0033Key string
+	var iP0034Key string
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
 
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
-	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
-	iTransaction := iHistoryCode
+
 	var policy models.Policy
-
-	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-
-	if result.Error != nil {
-		return result.Error
+	if iPolicy != 0 {
+		result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+		if result.Error != nil {
+			return result.Error
+		}
+	}
+	var payingauth models.PayingAuthority
+	if iPa != 0 {
+		result := initializers.DB.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+		if result.Error != nil {
+			return result.Error
+		}
 	}
 
-	iKey := iTransaction + policy.PProduct
-	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+	iReceiptTranCode := "H0034"
+	iReceiptFor := ""
+	if iHistoryCode == iReceiptTranCode {
+		var receipt models.Receipt
+		result := initializers.DB.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+		if result.Error != nil {
+			return result.Error
+		}
+		iReceiptFor = receipt.ReceiptFor
+		iP0034Key = iHistoryCode + iReceiptFor
+	}
+	if iReceiptFor == "" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+		iP0034Key = iHistoryCode + policy.PProduct
+	}
 
+	if iReceiptFor == "01" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+	}
+
+	if iReceiptFor == "02" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = payingauth.ClientID
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPa
+	}
+
+	if iReceiptFor == "03" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = iClient
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iClient
+	}
+
+	err1 := GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
 	if err1 != nil {
-		iKey = iTransaction
-		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		iP0034Key = iHistoryCode
+		err1 = GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
 		if err1 != nil {
 			return err1
 		}
@@ -4598,19 +4664,15 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 
 	for i := 0; i < len(p0034data.Letters); i++ {
 		if p0034data.Letters[i].Templates != "" {
-			iKey = p0034data.Letters[i].Templates
-			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			iP0033Key = p0034data.Letters[i].Templates
+			err := GetItemD(int(iCompany), "P0033", iP0033Key, iDate, &extradatap0033)
 			if err != nil {
 				return err
 			}
-			var communication models.Communication
-			communication.AgencyID = policy.AgencyID
+
 			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
 			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
 			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
-			communication.ClientID = policy.ClientID
-			communication.PolicyID = policy.ID
-			communication.CompanyID = uint(iCompany)
 			communication.EmailAllowed = p0033data.EmailAllowed
 			communication.SMSAllowed = p0033data.SMSAllowed
 			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
@@ -4618,9 +4680,8 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.DepartmentName = p0033data.DepartmentName
 			communication.CompanyPhone = p0033data.CompanyPhone
 			communication.CompanyEmail = p0033data.CompanyEmail
-			communication.Tranno = policy.Tranno
-			communication.TemplateName = iKey
-			communication.EffectiveDate = policy.PRCD
+
+			communication.TemplateName = iP0033Key
 			oLetType := ""
 
 			signData := make([]interface{}, 0)
@@ -4649,59 +4710,59 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt, iDate)
+					oData := GetCompanyData(iCompany, iDate)
 					resultMap["CompanyData"] = oData
 				case oLetType == "2":
-					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetClientData(iCompany, iClient)
 					resultMap["ClientData"] = oData
 				case oLetType == "3":
-					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetAddressData(iCompany, iAddress)
 					resultMap["AddressData"] = oData
 				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetPolicyData(iCompany, iPolicy)
 					resultMap["PolicyData"] = oData
 				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetBenefitData(iCompany, iPolicy)
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetSurBData(iCompany, iPolicy)
 					resultMap["SurBData"] = oData
 				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetMrtaData(iCompany, iPolicy)
 					resultMap["MRTAData"] = oData
 				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetReceiptData(iCompany, iReceipt)
 					resultMap["ReceiptData"] = oData
 				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetSaChangeData(iCompany, iPolicy)
 					resultMap["SAChangeData"] = oData
 				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetCompAddData(iCompany, iPolicy)
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetSurrHData(iCompany, iPolicy)
 					resultMap["SurrData"] = oData
 					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["SurrDData"] = oData
 				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetDeathData(iCompany, iPolicy)
 					resultMap["DeathData"] = oData
 				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetMatHData(iCompany, iPolicy)
 					resultMap["MaturityData"] = oData
 					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["MatDData"] = oData
 				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					oData := GetSurvBPay(iCompany, iPolicy, iTranno)
 					resultMap["SurvbPay"] = oData
 				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					oData := GetExpi(iCompany, iPolicy, iTranno)
 					resultMap["ExpiryData"] = oData
 				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					oData := GetBonusVals(iCompany, iPolicy)
 					resultMap["BonusData"] = oData
 				case oLetType == "17":
-					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
+					oData := GetAgency(iCompany, iAgency)
 					resultMap["Agency"] = oData
 				case oLetType == "18":
 					oData := GetNomiData(iCompany, iPolicy)
@@ -4736,6 +4797,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "28":
 					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
 					resultMap["PrevBenefit"] = oData
+				case oLetType == "29":
+					oData := GetPayingAuthorityData(iCompany, iPa)
+					resultMap["PaData"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 				case oLetType == "99":
@@ -4750,6 +4814,251 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
 
 			results := initializers.DB.Create(&communication)
+
+			if results.Error != nil {
+				return results.Error
+			}
+
+		}
+	}
+	return nil
+}
+
+// #104
+// Create Communication (New Version with Rollback)
+//
+// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
+// 10 Input Variables
+// # It returns success or failure.  Successful records written in Communciaiton Table
+//
+// ©  FuturaInsTech
+func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint) error {
+
+	var communication models.Communication
+	var iKey string
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
+	iTransaction := iHistoryCode
+	iReceiptTranCode := "H0034"
+	iReceiptFor := ""
+
+	if iReceipt != 0 {
+		var receipt models.Receipt
+		result := initializers.DB.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+		if result.Error != nil {
+			return result.Error
+		}
+		iReceiptFor = receipt.ReceiptFor
+	}
+
+	if iPolicy != 0 {
+		var policy models.Policy
+		result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+		if result.Error != nil {
+			return result.Error
+		}
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+		if iTransaction == iReceiptTranCode {
+			iKey = iTransaction + iReceiptFor
+		} else {
+			iKey = iTransaction + policy.PProduct
+		}
+	}
+
+	if iPolicy == 0 && iTransaction == iReceiptTranCode && iPa != 0 {
+		var payingauth models.PayingAuthority
+		result := initializers.DB.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = payingauth.ClientID
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPa
+		iKey = iTransaction + iReceiptFor
+	}
+
+	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+	if err1 != nil {
+		iKey = iTransaction
+		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		if err1 != nil {
+			return err1
+		}
+	}
+
+	for i := 0; i < len(p0034data.Letters); i++ {
+		if p0034data.Letters[i].Templates != "" {
+			iKey = p0034data.Letters[i].Templates
+			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			if err != nil {
+				return err
+			}
+
+			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
+			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
+			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
+			communication.EmailAllowed = p0033data.EmailAllowed
+			communication.SMSAllowed = p0033data.SMSAllowed
+			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
+			communication.DepartmentHead = p0033data.DepartmentHead
+			communication.DepartmentName = p0033data.DepartmentName
+			communication.CompanyPhone = p0033data.CompanyPhone
+			communication.CompanyEmail = p0033data.CompanyEmail
+
+			communication.TemplateName = iKey
+			oLetType := ""
+
+			signData := make([]interface{}, 0)
+			resultOut := map[string]interface{}{
+				"Department":     p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentHead,
+				"CoEmail":        p0033data.CompanyEmail,
+				"CoPhone":        p0033data.CompanyPhone,
+			}
+
+			signData = append(signData, resultOut)
+
+			batchData := make([]interface{}, 0)
+			resultOut = map[string]interface{}{
+				"Date":     DateConvert(iDate),
+				"FromDate": DateConvert(iFromDate),
+				"ToDate":   DateConvert(iToDate),
+			}
+
+			batchData = append(batchData, resultOut)
+
+			resultMap := make(map[string]interface{})
+
+			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
+			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
+				oLetType = p0034data.Letters[i].LetType[n]
+				switch {
+				case oLetType == "1":
+					oData := GetCompanyData(iCompany, iDate)
+					resultMap["CompanyData"] = oData
+				case oLetType == "2":
+					oData := GetClientData(iCompany, iClient)
+					resultMap["ClientData"] = oData
+				case oLetType == "3":
+					oData := GetAddressData(iCompany, iAddress)
+					resultMap["AddressData"] = oData
+				case oLetType == "4":
+					oData := GetPolicyData(iCompany, iPolicy)
+					resultMap["PolicyData"] = oData
+				case oLetType == "5":
+					oData := GetBenefitData(iCompany, iPolicy)
+					resultMap["BenefitData"] = oData
+				case oLetType == "6":
+					oData := GetSurBData(iCompany, iPolicy)
+					resultMap["SurBData"] = oData
+				case oLetType == "7":
+					oData := GetMrtaData(iCompany, iPolicy)
+					resultMap["MRTAData"] = oData
+				case oLetType == "8":
+					oData := GetReceiptData(iCompany, iReceipt)
+					resultMap["ReceiptData"] = oData
+				case oLetType == "9":
+					oData := GetSaChangeData(iCompany, iPolicy)
+					resultMap["SAChangeData"] = oData
+				case oLetType == "10":
+					oData := GetCompAddData(iCompany, iPolicy)
+					resultMap["ComponantAddData"] = oData
+				case oLetType == "11":
+					oData := GetSurrHData(iCompany, iPolicy)
+					resultMap["SurrData"] = oData
+					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["SurrDData"] = oData
+				case oLetType == "12":
+					oData := GetDeathData(iCompany, iPolicy)
+					resultMap["DeathData"] = oData
+				case oLetType == "13":
+					oData := GetMatHData(iCompany, iPolicy)
+					resultMap["MaturityData"] = oData
+					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["MatDData"] = oData
+				case oLetType == "14":
+					oData := GetSurvBPay(iCompany, iPolicy, iTranno)
+					resultMap["SurvbPay"] = oData
+				case oLetType == "15":
+					oData := GetExpi(iCompany, iPolicy, iTranno)
+					resultMap["ExpiryData"] = oData
+				case oLetType == "16":
+					oData := GetBonusVals(iCompany, iPolicy)
+					resultMap["BonusData"] = oData
+				case oLetType == "17":
+					oData := GetAgency(iCompany, iAgency)
+					resultMap["Agency"] = oData
+				case oLetType == "18":
+					oData := GetNomiData(iCompany, iPolicy)
+					resultMap["Nominee"] = oData
+				case oLetType == "19":
+					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign)
+					resultMap["GLData"] = oData
+				case oLetType == "20":
+					oData := GetIlpSummaryData(iCompany, iPolicy)
+					resultMap["IlPSummaryData"] = oData
+				case oLetType == "21":
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode)
+					resultMap["ILPANNSummaryData"] = oData
+				case oLetType == "22":
+					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate)
+					resultMap["ILPTransactionData"] = oData
+				case oLetType == "23":
+					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
+					resultMap["GLData"] = oData
+
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
+					resultMap["SwitchData"] = oData
+
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
+					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
+					resultMap["IlpFundData"] = oData
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
+					fmt.Println(oData) // Dummy to avoid compilation error
+				case oLetType == "29":
+					oData := GetPayingAuthorityData(iCompany, iPa)
+					resultMap["PrevBenefit"] = oData
+				case oLetType == "98":
+					resultMap["BatchData"] = batchData
+
+				case oLetType == "99":
+					resultMap["SignData"] = signData
+				default:
+
+				}
+			}
+
+			communication.ExtractedData = resultMap
+			communication.PDFPath = p0034data.Letters[i].PdfLocation
+			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
+
+			results := txn.Create(&communication)
 
 			if results.Error != nil {
 				return results.Error
@@ -5122,9 +5431,9 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	receiptupd.BankReferenceNo = iRef
 	receiptupd.Branch = "HO"
 	receiptupd.ClientID = policyenq.ClientID
-	receiptupd.PolicyID = iPolicy
-	receiptupd.InstalmentPremium = policyenq.InstalmentPrem
-	receiptupd.PaidToDate = policyenq.PaidToDate
+	receiptupd.ReceiptRefNo = iPolicy
+	receiptupd.ReceiptAmount = policyenq.InstalmentPrem
+	receiptupd.ReceiptDueDate = policyenq.PaidToDate
 	receiptupd.Tranno = policyenq.Tranno
 	receiptupd.TypeOfReceipt = iCollType
 	receiptupd.CompanyID = iCompany
@@ -5202,7 +5511,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	iAgency := policyenq.AgencyID
 
-	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0)
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0, 0)
 	if err != nil {
 		return 0, errors.New(err.Error())
 	}
@@ -9661,209 +9970,6 @@ func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iCon
 
 }
 
-// #104
-// Create Communication (New Version with Rollback)
-//
-// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
-// 10 Input Variables
-// # It returns success or failure.  Successful records written in Communciaiton Table
-//
-// ©  FuturaInsTech
-func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint) error {
-
-	var p0034data paramTypes.P0034Data
-	var extradatap0034 paramTypes.Extradata = &p0034data
-
-	var p0033data paramTypes.P0033Data
-	var extradatap0033 paramTypes.Extradata = &p0033data
-	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
-	iTransaction := iHistoryCode
-	var policy models.Policy
-
-	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	iKey := iTransaction + policy.PProduct
-	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
-
-	if err1 != nil {
-		iKey = iTransaction
-		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
-		if err1 != nil {
-			return err1
-		}
-	}
-
-	for i := 0; i < len(p0034data.Letters); i++ {
-		if p0034data.Letters[i].Templates != "" {
-			iKey = p0034data.Letters[i].Templates
-			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
-			if err != nil {
-				return err
-			}
-			var communication models.Communication
-			communication.AgencyID = policy.AgencyID
-			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
-			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
-			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
-			communication.ClientID = policy.ClientID
-			communication.PolicyID = policy.ID
-			communication.CompanyID = uint(iCompany)
-			communication.EmailAllowed = p0033data.EmailAllowed
-			communication.SMSAllowed = p0033data.SMSAllowed
-			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
-			communication.DepartmentHead = p0033data.DepartmentHead
-			communication.DepartmentName = p0033data.DepartmentName
-			communication.CompanyPhone = p0033data.CompanyPhone
-			communication.CompanyEmail = p0033data.CompanyEmail
-			communication.Tranno = policy.Tranno
-			communication.TemplateName = iKey
-			communication.EffectiveDate = policy.PRCD
-			oLetType := ""
-
-			signData := make([]interface{}, 0)
-			resultOut := map[string]interface{}{
-				"Department":     p0033data.DepartmentName,
-				"DepartmentHead": p0033data.DepartmentHead,
-				"CoEmail":        p0033data.CompanyEmail,
-				"CoPhone":        p0033data.CompanyPhone,
-			}
-
-			signData = append(signData, resultOut)
-
-			batchData := make([]interface{}, 0)
-			resultOut = map[string]interface{}{
-				"Date":     DateConvert(iDate),
-				"FromDate": DateConvert(iFromDate),
-				"ToDate":   DateConvert(iToDate),
-			}
-
-			batchData = append(batchData, resultOut)
-
-			resultMap := make(map[string]interface{})
-
-			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
-			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
-				oLetType = p0034data.Letters[i].LetType[n]
-				switch {
-				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt, iDate)
-					resultMap["CompanyData"] = oData
-				case oLetType == "2":
-					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["ClientData"] = oData
-				case oLetType == "3":
-					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["AddressData"] = oData
-				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["PolicyData"] = oData
-				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["BenefitData"] = oData
-				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurBData"] = oData
-				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["MRTAData"] = oData
-				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["ReceiptData"] = oData
-				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SAChangeData"] = oData
-				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["ComponantAddData"] = oData
-				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurrData"] = oData
-					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					// resultMap["SurrDData"] = oData
-				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["DeathData"] = oData
-				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["MaturityData"] = oData
-					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					// resultMap["MatDData"] = oData
-				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
-					resultMap["SurvbPay"] = oData
-				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
-					resultMap["ExpiryData"] = oData
-				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
-					resultMap["BonusData"] = oData
-				case oLetType == "17":
-					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
-					resultMap["Agency"] = oData
-				case oLetType == "18":
-					oData := GetNomiData(iCompany, iPolicy)
-					resultMap["Nominee"] = oData
-				case oLetType == "19":
-					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign)
-					resultMap["GLData"] = oData
-				case oLetType == "20":
-					oData := GetIlpSummaryData(iCompany, iPolicy)
-					resultMap["IlPSummaryData"] = oData
-				case oLetType == "21":
-					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode)
-					resultMap["ILPANNSummaryData"] = oData
-				case oLetType == "22":
-					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate)
-					resultMap["ILPTransactionData"] = oData
-				case oLetType == "23":
-					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
-					resultMap["GLData"] = oData
-
-				case oLetType == "24":
-					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
-					resultMap["SwitchData"] = oData
-
-				case oLetType == "25":
-					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
-					resultMap["PolicyHistoryData"] = oData
-				case oLetType == "26":
-					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
-					resultMap["IlpFundData"] = oData
-				case oLetType == "27":
-					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
-					resultMap["PrevPolicy"] = oData
-				case oLetType == "28":
-					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
-					resultMap["PrevBenefit"] = oData
-				case oLetType == "98":
-					resultMap["BatchData"] = batchData
-
-				case oLetType == "99":
-					resultMap["SignData"] = signData
-				default:
-
-				}
-			}
-
-			communication.ExtractedData = resultMap
-			communication.PDFPath = p0034data.Letters[i].PdfLocation
-			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
-
-			results := txn.Create(&communication)
-
-			if results.Error != nil {
-				return results.Error
-			}
-
-		}
-	}
-	return nil
-}
-
 // # 38
 // GetMaxTranno - Get Transaction No and History Code
 //
@@ -10661,4 +10767,41 @@ func ValidatePolicyBenefitsData(policyenq models.Policy, benefitenq []models.Ben
 	}
 
 	return nil
+}
+
+// #174
+// GetPayingAuthorityData - Printing Purpose Only
+// Inputs: Company, Pa, Client, Address, Receipt and Date
+//
+// # Outputs  Paying Authority Details as an Interface
+//
+// ©  FuturaInsTech
+func GetPayingAuthorityData(iCompany uint, iPa uint) []interface{} {
+	payingautharray := make([]interface{}, 0)
+	var payingauth models.PayingAuthority
+	result := initializers.DB.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+	if result.Error != nil {
+		return nil
+	}
+	_, oStatus, _ := GetParamDesc(payingauth.CompanyID, "P0021", payingauth.PaStatus, 1)
+	_, oCurr, _ := GetParamDesc(payingauth.CompanyID, "P0023", payingauth.PaCurrency, 1)
+
+	resultOut := map[string]interface{}{
+		"ID":                IDtoPrint(payingauth.ID),
+		"CompanyID":         IDtoPrint(payingauth.CompanyID),
+		"ClientID":          IDtoPrint(payingauth.ClientID),
+		"AddressID":         IDtoPrint(payingauth.AddressID),
+		"PaName":            payingauth.PaName,
+		"PaType":            payingauth.PaType,
+		"StartDate":         DateConvert(payingauth.StartDate),
+		"EndDate":           DateConvert(payingauth.EndDate),
+		"PaStatus":          oStatus,
+		"ExtractionDay":     payingauth.ExtrationDay,
+		"PayDay":            payingauth.PayDay,
+		"PaToleranceAmount": NumbertoPrint(payingauth.PaToleranceAmt),
+		"PaCurrency":        oCurr,
+	}
+	payingautharray = append(payingautharray, resultOut)
+
+	return payingautharray
 }

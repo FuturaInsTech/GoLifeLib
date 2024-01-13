@@ -31,9 +31,9 @@ type Policy struct {
 	Benefits        []Benefit
 	PHistories      []PHistory
 	Extras          []Extra
-	Receipts        []Receipt
-	TDFpolicies     []TDFPolicy
-	SurvBs          []SurvB
+	//Receipts        []Receipt
+	TDFpolicies []TDFPolicy
+	SurvBs      []SurvB
 	//Communications   []Communication
 	AddressID        uint //Api. GetAllAddressByClientID
 	Uwreasons        []Uwreason

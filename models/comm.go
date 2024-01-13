@@ -14,6 +14,8 @@ type Communication struct {
 	Seqno                uint16 `gorm:"asc"`
 	ClientID             uint
 	AgencyID             uint
+	ReceiptFor           string `gorm:"type:varchar(05)"`
+	ReceiptRefNo         uint
 	EffectiveDate        string          `gorm:"type:varchar(08)"`
 	ExtractedDate        string          `gorm:"type:varchar(08)"`
 	ExtractedStaus       string          `gorm:"type:varchar(02)"`

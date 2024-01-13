@@ -9,6 +9,7 @@ type PayingAuthority struct {
 	gorm.Model
 	types.CModel
 	ClientID        uint
+	AddressID       uint
 	PaName          string `gorm:"type:varchar(50)"`
 	PaType          string `gorm:"type:varchar(01)"` //P0050
 	StartDate       string `gorm:"type:varchar(08)"`

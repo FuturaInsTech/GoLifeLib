@@ -10842,3 +10842,52 @@ func GetCoCurrIdName(iCompany uint) (string, string) {
 	}
 	return curry.CurrencyShortName, curry.CurrencyLongName
 }
+
+// #177
+// Intf2Uint
+// Inputs: Interface Variable Value
+//
+// # Outputs  Uint variable Value
+//
+// ©  FuturaInsTech
+func Intf2Uint(i interface{}) uint {
+
+	value, ok := i.(float64)
+	if !ok {
+		return 0
+	}
+	return uint(value)
+}
+
+// #178
+// Intf2Int
+// Inputs: Interface Variable Value
+//
+// # Outputs  Int variable Value
+//
+// ©  FuturaInsTech
+func Intf2Int(i interface{}) int {
+
+	value, ok := i.(float64)
+	if !ok {
+		return 0
+	}
+	return int(value)
+}
+
+// #179
+// Intf2String
+// Inputs: Interface Variable Value
+//
+// # Outputs  String variable Value
+//
+// ©  FuturaInsTech
+func Intf2String(i interface{}) string {
+
+	value, ok := i.(string)
+	if !ok {
+		j := Intf2Int(i)
+		return strconv.Itoa(j)
+	}
+	return value
+}

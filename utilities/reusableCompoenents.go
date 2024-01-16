@@ -10805,3 +10805,19 @@ func GetPayingAuthorityData(iCompany uint, iPa uint) []interface{} {
 
 	return payingautharray
 }
+
+// #175
+// GetCurrencyNamebyId
+// Inputs: curr_id
+//
+// # Outputs  Currency ShortName and Currency LongName
+//
+// ©  FuturaInsTech
+func GetCurrencyName(iCurr uint) (string, string) {
+	var curry models.Currency
+	result := initializers.DB.Find(&curry, "id = ?", iCurr)
+	if result.Error != nil {
+		return "", ""
+	}
+	return curry.CurrencyShortName, curry.CurrencyLongName
+}

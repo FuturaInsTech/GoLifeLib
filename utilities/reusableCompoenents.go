@@ -10821,3 +10821,24 @@ func GetCurrencyName(iCurr uint) (string, string) {
 	}
 	return curry.CurrencyShortName, curry.CurrencyLongName
 }
+
+// #176
+// GetCoCurrIdName
+// Inputs: Company Id
+//
+// # Outputs  Currency ShortName and Currency LongName
+//
+// ©  FuturaInsTech
+func GetCoCurrIdName(iCompany uint) (string, string) {
+	var company models.Company
+	result := initializers.DB.Find(&company, "id = ?", iCompany)
+	if result.Error != nil {
+		return "", ""
+	}
+	var curry models.Currency
+	result = initializers.DB.Find(&curry, "id = ?", company.CurrencyID)
+	if result.Error != nil {
+		return "", ""
+	}
+	return curry.CurrencyShortName, curry.CurrencyLongName
+}

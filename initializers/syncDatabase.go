@@ -90,6 +90,6 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.IlpSwitchFund{})
 	// DB.AutoMigrate(&models.IlpStatementPrint{})
 	DB.AutoMigrate(&models.PayingAuthority{})
-	//DB.AutoMigrate(&models.ClientPa{})
+	DB.AutoMigrate(&models.ClientPa{})
 
 }

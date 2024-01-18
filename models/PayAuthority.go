@@ -44,4 +44,5 @@ type PaBillSummary struct {
 	ReconciledBy       string `gorm:"type:varchar(30)"`
 	ApprovedDate       string `gorm:"type:varchar(8)"`
 	ApprovedBy         string `gorm:"type:varchar(30)"`
+	Notes              string `gorm:"type:varchar(300)"`
 }

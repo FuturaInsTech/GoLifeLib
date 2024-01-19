@@ -10891,3 +10891,24 @@ func Intf2String(i interface{}) string {
 	}
 	return value
 }
+
+// #180
+// SplitDateString
+// Inputs: String Date Value in YYYYMMDD Format
+//
+// # Outputs  Year, Month and Date
+//
+// ©  FuturaInsTech
+func SplitDateString(ds string) (string, string, string) {
+	// Check if the input string has at least 8 characters
+	if len(ds) < 8 {
+		return "", "", ""
+	}
+
+	// Extract year, month, and day using string slicing
+	year := ds[:4]
+	month := ds[4:6]
+	day := ds[6:8]
+
+	return year, month, day
+}

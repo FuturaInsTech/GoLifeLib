@@ -25,7 +25,7 @@ type Client struct {
 	ClientType        string `gorm:"type:varchar(01)"` // C CORPORATE I FOR INDIVIDUAL
 	NationalId        string `gorm:"type:varchar(50);unique"`
 	Nationality       string `gorm:"type:varchar(02)"`
-	ClientPaID        uint
+	ClientWorkID      uint
 	Addresses         []Address
 	Nominees          []Nominee
 	LeadDetails       []LeadDetail
@@ -53,7 +53,7 @@ type Client struct {
 	PayingAuthorities []PayingAuthority
 }
 
-type ClientPa struct {
+type ClientWork struct {
 	gorm.Model
 	types.CModel
 
@@ -65,4 +65,5 @@ type ClientPa struct {
 	Location      string `gorm:"type:varchar(20)"` // Employed at Location
 	StartDate     string `gorm:"type:varchar(08)"` // Employment Start Date
 	EndDate       string `gorm:"type:varchar(08)"` // Employment End Date
+	WorkType      string `gorm:"type:varchar(01)"` // F - FullTime, P - PartTime, C - Contract
 }

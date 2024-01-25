@@ -10912,3 +10912,141 @@ func SplitDateString(ds string) (string, string, string) {
 
 	return year, month, day
 }
+
+// #181
+// Validate BillType(New Version)
+// Return Error when BillType is not valid
+// Inputs: billtype string,payingAuthority uint, user company, user language,
+//
+// # Outputs: nil or error
+//
+// # Only SSI validation implemented
+//
+// ©  FuturaInsTech
+func ValidateBillType(policyenq models.Policy, userco uint, userlan uint, iDate string, iBillType string, iPayingAuthority uint) (string error) {
+
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
+
+	err := GetItemD(int(userco), "P0055", iBillType, iDate, &extradatap0055)
+
+	if err != nil {
+		shortCode := "GL279"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	// Validate SSI Bill Type
+
+	if p0055data.PayingAuthority == "N" &&
+		iBillType == policyenq.BillingType {
+		shortCode := "GL637" // Existing and new bill type shuld not be the same
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if p0055data.PayingAuthority == "Y" &&
+		iBillType == policyenq.BillingType &&
+		iPayingAuthority == policyenq.PayingAuthority {
+
+		shortCode := "GL638" // existing  and new Pa should not be same
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if p0055data.PayingAuthority == "N" {
+		if iPayingAuthority != 0 {
+			shortCode := "GL700" // Paying Authority Is Not Provided
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+
+		}
+	}
+
+	if p0055data.PayingAuthority == "Y" {
+		if iPayingAuthority == 0 {
+			shortCode := "GL701" // Paying Authority Not Required
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+
+		}
+	}
+
+	// validate Paying authority
+	err = ValidatePayingAuthority(userco, userlan, iDate, iPayingAuthority)
+	if err != nil {
+		shortCode := "GL639" // No item found in validate Paying Authority
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// P0055 Bank Extration Types like cBank,DBank,NEFT,UPI validation are to be added
+
+	return nil
+}
+
+// #182
+// Validate Paying Authority(New Version)
+// Return Error when Paying Authority is not valid
+// Inputs: payingAuthority uint, user company, user language,
+//
+// # Outputs: nil or error
+//
+// ©  FuturaInsTech
+func ValidatePayingAuthority(userco uint, userlan uint, iDate string, iPayingAuthority uint) (string error) {
+
+	var payingauth models.PayingAuthority
+	result := initializers.DB.First(&payingauth, "company_id = ? and id = ?", userco, iPayingAuthority)
+	if result.Error != nil {
+		shortCode := "GL671" //Failed to get Paying Authority
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payingauth.PaStatus != "AC" {
+		shortCode := "GL640" // InValid PA Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payingauth.StartDate > iDate {
+		shortCode := "GL641" // PA Start Date Should be Greater than Current Date
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payingauth.EndDate < iDate {
+		shortCode := "GL642" // PA End Date Should be Greater than Current Date
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	return nil
+}
+
+// #183
+// Get ClientWork Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Client Work Details as an Interface
+//
+// ©  FuturaInsTech
+func GetClientWorkData(iCompany uint, iClientWork uint) []interface{} {
+	clientworkarray := make([]interface{}, 0)
+	var clientwork models.ClientWork
+
+	initializers.DB.Find(&clientwork, "company_id = ? and id = ?", iCompany, iClientWork)
+	resultOut := map[string]interface{}{
+		"ID":            IDtoPrint(clientwork.ID),
+		"ClientID":      IDtoPrint(clientwork.ClientID),
+		"EmployerID":    IDtoPrint(clientwork.EmployerID),
+		"PayRollNumber": clientwork.PayRollNumber,
+		"Designation":   clientwork.Designation,
+		"Department":    clientwork.Department,
+		"Location":      clientwork.Location,
+		"StartDate":     DateConvert(clientwork.StartDate),
+		"EndDate":       clientwork.EndDate,
+		"WorkType":      clientwork.WorkType,
+	}
+	clientworkarray = append(clientworkarray, resultOut)
+	return clientworkarray
+}

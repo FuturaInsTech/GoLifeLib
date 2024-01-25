@@ -4570,7 +4570,7 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint, iPa uint) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint, iPa uint, iClientWork uint) error {
 
 	var communication models.Communication
 	var iP0033Key string
@@ -4800,6 +4800,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "29":
 					oData := GetPayingAuthorityData(iCompany, iPa)
 					resultMap["PaData"] = oData
+				case oLetType == "30":
+					oData := GetClientWorkData(iCompany, iClientWork)
+					resultMap["ClientWork"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 				case oLetType == "99":
@@ -4832,7 +4835,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint) error {
+func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint) error {
 
 	var communication models.Communication
 	var iKey string
@@ -5044,6 +5047,9 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "29":
 					oData := GetPayingAuthorityData(iCompany, iPa)
 					resultMap["PrevBenefit"] = oData
+				case oLetType == "30":
+					oData := GetClientWorkData(iCompany, iClientWork)
+					resultMap["ClientWork"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 

@@ -5517,7 +5517,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	iAgency := policyenq.AgencyID
 
-	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0, 0)
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0, 0, 0)
 	if err != nil {
 		return 0, errors.New(err.Error())
 	}

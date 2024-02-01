@@ -11,6 +11,7 @@ type LoanBill struct {
 	PolicyID        uint
 	BenefitID       uint
 	ClientID        uint
+	LoanID          uint // Foreign Key of Loan
 	TranNumber      uint
 	PolStatus       string `gorm:"type:varchar(05)"` //P0024
 	PaidToDate      string `gorm:"type:varchar(08)"`

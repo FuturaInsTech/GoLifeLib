@@ -28,4 +28,5 @@ type Loan struct {
 	NextCapDate     string `gorm:"type:varchar(08)"`
 	LastIntBillDate string `gorm:"type:varchar(08)"`
 	NextIntBillDate string `gorm:"type:varchar(08)"`
+	LoanBills       []LoanBill
 }

@@ -10713,11 +10713,6 @@ func ValidatePolicyBenefitsData(policyenq models.Policy, benefitenq []models.Ben
 			}
 		}
 	}
-	if basicbenefit.ID == 0 {
-		shortCode := "GL620" // Basic Coverage not Found
-		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New(shortCode + ":" + longDesc)
-	}
 
 	// Mandatory Benefits check
 	mandatorybenefits := true

@@ -2367,7 +2367,7 @@ func TDFSurvbDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 	result = txn.First(&survb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
 
 	if result.Error != nil {
-		txn.Rollback()
+		//	txn.Rollback()
 		return "", result.Error
 	}
 	result = txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)

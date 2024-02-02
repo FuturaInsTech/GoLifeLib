@@ -464,7 +464,7 @@ func ValidateFields(iFunction string, iFieldName string, iFieldVal string, iUser
 // # Outputs Error
 //
 // ©  FuturaInsTech
-func ValidateItem(iUserId uint64, iName string, iItem any, iFieldName string, iErros string) error {
+func ValidateItem(iUserId uint64, iName string, iItem string, iFieldName string, iErros string) error {
 	var getUser models.User
 	results := initializers.DB.First(&getUser, "id = ?", iUserId)
 	if results.Error != nil {
@@ -2694,7 +2694,7 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 	var q0005data paramTypes.Q0005Data
 	var extradataq0005 paramTypes.Extradata = &q0005data
 
-	err = GetItemD(int(iCompany), "Q0005", iCoverage, iDate, &extradataq0005)
+	err = GetItemD(int(iCompany), "Q0005", iProduct, iDate, &extradataq0005)
 	if err != nil {
 		oAmount = 0
 		return
@@ -3721,7 +3721,7 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 // # Outputs  Company Details as an Interface
 //
 // ©  FuturaInsTech
-func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iDate string) []interface{} {
+func GetCompanyData(iCompany uint, iDate string) []interface{} {
 	companyarray := make([]interface{}, 0)
 	var company models.Company
 	initializers.DB.Find(&company, "id = ?", iCompany)
@@ -3755,7 +3755,7 @@ func GetCompanyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Client Details as an Interface
 //
 // ©  FuturaInsTech
-func GetClientData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetClientData(iCompany uint, iClient uint) []interface{} {
 	clientarray := make([]interface{}, 0)
 	var client models.Client
 
@@ -3785,7 +3785,7 @@ func GetClientData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 // # Outputs  Address Details as an Interface
 //
 // ©  FuturaInsTech
-func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetAddressData(iCompany uint, iAddress uint) []interface{} {
 	addressarray := make([]interface{}, 0)
 	var address models.Address
 
@@ -3813,7 +3813,7 @@ func GetAddressData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Policy Details as an Interface
 //
 // ©  FuturaInsTech
-func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetPolicyData(iCompany uint, iPolicy uint) []interface{} {
 	policyarray := make([]interface{}, 0)
 	var policy models.Policy
 	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
@@ -3825,6 +3825,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 	_, oProduct, _ := GetParamDesc(policy.CompanyID, "Q0005", policy.PProduct, 1)
 	_, oBillCurr, _ := GetParamDesc(policy.CompanyID, "P0023", policy.PBillCurr, 1)
 	_, oContCurr, _ := GetParamDesc(policy.CompanyID, "P0023", policy.PContractCurr, 1)
+	_, oBillingType, _ := GetParamDesc(policy.CompanyID, "P0055", policy.BillingType, 1)
 
 	var q0005data paramTypes.Q0005Data
 	var extradataq0005 paramTypes.Extradata = &q0005data
@@ -3886,6 +3887,9 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 		"GraceDays":          q0005data.LapsedDays,
 		"PremiumDueDates":    premduedates,
 		"PrevAnnivDate":      DateConvert(iAnnivDate),
+		"BillingType":        oBillingType,
+		"PaingAuthorityId":   IDtoPrint(policy.PayingAuthority),
+
 		// "PUWDate":DateConvert(policy.PUWDate),
 	}
 	policyarray = append(policyarray, resultOut)
@@ -3900,7 +3904,7 @@ func GetPolicyData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRe
 // # Outputs  Benefit Details as an Interface
 //
 // ©  FuturaInsTech
-func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetBenefitData(iCompany uint, iPolicy uint) []interface{} {
 	var policyenq models.Policy
 	var benefit []models.Benefit
 	var clientenq models.Client
@@ -3966,7 +3970,7 @@ func GetBenefitData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Survival Details as an Interface
 //
 // ©  FuturaInsTech
-func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetSurBData(iCompany uint, iPolicy uint) []interface{} {
 	var survb []models.SurvB
 	initializers.DB.Find(&survb, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4009,7 +4013,7 @@ func GetSurBData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 // # Outputs  MRTA Details as an Interface
 //
 // ©  FuturaInsTech
-func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetMrtaData(iCompany uint, iPolicy uint) []interface{} {
 	var mrtaenq []models.Mrta
 	initializers.DB.Find(&mrtaenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4042,27 +4046,29 @@ func GetMrtaData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 // # Outputs  Receipt Details as an Interface
 //
 // ©  FuturaInsTech
-func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetReceiptData(iCompany uint, iReceipt uint) []interface{} {
 	var receiptenq models.Receipt
 	initializers.DB.Find(&receiptenq, "company_id = ? and id = ?", iCompany, iReceipt)
 	amtinwords, csymbol := AmountinWords(receiptenq.CompanyID, receiptenq.AccAmount, receiptenq.AccCurry)
 	receiptarray := make([]interface{}, 0)
 	resultOut := map[string]interface{}{
-		"ID":                IDtoPrint(receiptenq.ID),
-		"CompanyID":         IDtoPrint(receiptenq.CompanyID),
-		"Branch":            receiptenq.Branch,
-		"AccCurry":          receiptenq.AccCurry,
-		"AccAmount":         NumbertoPrint(receiptenq.AccAmount),
-		"PolicyID":          IDtoPrint(receiptenq.PolicyID),
-		"ClientID":          IDtoPrint(receiptenq.ClientID),
-		"DateOfCollection":  DateConvert(receiptenq.DateOfCollection),
-		"BankAccountNo":     receiptenq.BankAccountNo,
-		"BankReferenceNo":   receiptenq.BankReferenceNo,
-		"TypeOfReceipt":     receiptenq.TypeOfReceipt,
-		"InstalmentPremium": receiptenq.InstalmentPremium,
-		"AddressID":         IDtoPrint(receiptenq.AddressID),
-		"AmountInWords":     amtinwords,
-		"CurrSymbol":        csymbol,
+		"ID":               IDtoPrint(receiptenq.ID),
+		"CompanyID":        IDtoPrint(receiptenq.CompanyID),
+		"Branch":           receiptenq.Branch,
+		"AccCurry":         receiptenq.AccCurry,
+		"AccAmount":        NumbertoPrint(receiptenq.AccAmount),
+		"ReceiptFor":       receiptenq.ReceiptFor,
+		"ReceiptRefNo":     IDtoPrint(receiptenq.ReceiptRefNo),
+		"ReceiptDueDate":   DateConvert(receiptenq.ReceiptDueDate),
+		"ClientID":         IDtoPrint(receiptenq.ClientID),
+		"DateOfCollection": DateConvert(receiptenq.DateOfCollection),
+		"BankAccountNo":    receiptenq.BankAccountNo,
+		"BankReferenceNo":  receiptenq.BankReferenceNo,
+		"TypeOfReceipt":    receiptenq.TypeOfReceipt,
+		"ReceiptAmount":    receiptenq.ReceiptAmount,
+		"AddressID":        IDtoPrint(receiptenq.AddressID),
+		"AmountInWords":    amtinwords,
+		"CurrSymbol":       csymbol,
 		//		"PaidToDate":        DateConvert(receiptenq.PaidToDate),
 		//		"ReconciledDate":    DateConvert(receiptenq.ReconciledDate),
 		//		"CurrentDate":       DateConvert(receiptenq.CurrentDate),
@@ -4079,7 +4085,7 @@ func GetReceiptData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  SA Change Details as an Interface
 //
 // ©  FuturaInsTech
-func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetSaChangeData(iCompany uint, iPolicy uint) []interface{} {
 	var sachangeenq []models.SaChange
 	initializers.DB.Find(&sachangeenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4118,7 +4124,7 @@ func GetSaChangeData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, i
 // # Outputs  Component Add Details as an Interface
 //
 // ©  FuturaInsTech
-func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetCompAddData(iCompany uint, iPolicy uint) []interface{} {
 	var addcomp []models.Addcomponent
 	initializers.DB.Find(&addcomp, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
@@ -4158,7 +4164,7 @@ func GetCompAddData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iR
 // # Outputs  Surrender Header  and Details as an Interface
 //
 // ©  FuturaInsTech
-func GetSurrHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) interface{} {
+func GetSurrHData(iCompany uint, iPolicy uint) interface{} {
 	var surrhenq models.SurrH
 
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -4306,7 +4312,7 @@ func GetNomiData(iCompany uint, iPolicy uint) []interface{} {
 //
 // ©  FuturaInsTech
 // Not Required
-func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) []interface{} {
+func GetDeathData(iCompany uint, iPolicy uint) []interface{} {
 	var surrhenq models.SurrH
 	var surrdenq []models.SurrD
 	initializers.DB.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -4322,7 +4328,7 @@ func GetDeathData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 //
 // # Outputs  Maturity Header and Details Interface
 // ©  FuturaInsTech
-func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint) interface{} {
+func GetMatHData(iCompany uint, iPolicy uint) interface{} {
 	var mathenq models.MaturityH
 
 	initializers.DB.Find(&mathenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
@@ -4393,7 +4399,7 @@ func GetMatHData(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 //
 // # Outputs  Survival Benefit Payment Interface
 // ©  FuturaInsTech
-func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+func GetSurvBPay(iCompany uint, iPolicy uint, iTranno uint) []interface{} {
 	var survbenq models.SurvB
 	initializers.DB.Find(&survbenq, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
 	survbparray := make([]interface{}, 0)
@@ -4417,7 +4423,7 @@ func GetSurvBPay(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRece
 //
 // # Outputs  Bonus Values
 // ©  FuturaInsTech
-func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+func GetBonusVals(iCompany uint, iPolicy uint) []interface{} {
 
 	bonusarray := make([]interface{}, 0)
 
@@ -4458,7 +4464,7 @@ func GetBonusVals(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iRec
 //
 // # Outputs  Agency
 // ©  FuturaInsTech
-func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint, iAgency uint) []interface{} {
+func GetAgency(iCompany uint, iAgency uint) []interface{} {
 
 	agencyarray := make([]interface{}, 0)
 	var agencyenq models.Agency
@@ -4500,7 +4506,7 @@ func GetAgency(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceip
 //
 // # Outputs  Expiry Interface Information
 // ©  FuturaInsTech
-func GetExpi(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iTranno uint) []interface{} {
+func GetExpi(iCompany uint, iPolicy uint, iTranno uint) []interface{} {
 	var benefit []models.Benefit
 	initializers.DB.Find(&benefit, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicy, iTranno)
 	expiryarray := make([]interface{}, 0)
@@ -4568,29 +4574,93 @@ func CheckStatus(iCompany uint, iHistoryCD string, iDate string, iStatus string)
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint) error {
+func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint, iPa uint, iClientWork uint) error {
+
+	var communication models.Communication
+	var iP0033Key string
+	var iP0034Key string
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
 
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
-	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
-	iTransaction := iHistoryCode
+
 	var policy models.Policy
-
-	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-
-	if result.Error != nil {
-		return result.Error
+	if iPolicy != 0 {
+		result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+		if result.Error != nil {
+			return result.Error
+		}
+	}
+	var payingauth models.PayingAuthority
+	if iPa != 0 {
+		result := initializers.DB.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+		if result.Error != nil {
+			return result.Error
+		}
 	}
 
-	iKey := iTransaction + policy.PProduct
-	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+	iReceiptTranCode := "H0034"
+	iReceiptFor := ""
+	if iHistoryCode == iReceiptTranCode {
+		var receipt models.Receipt
+		result := initializers.DB.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+		if result.Error != nil {
+			return result.Error
+		}
+		iReceiptFor = receipt.ReceiptFor
+		iP0034Key = iHistoryCode + iReceiptFor
+	}
+	if iReceiptFor == "" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+		iP0034Key = iHistoryCode + policy.PProduct
+	}
 
+	if iReceiptFor == "01" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+	}
+
+	if iReceiptFor == "02" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = payingauth.ClientID
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPa
+	}
+
+	if iReceiptFor == "03" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = iClient
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iClient
+	}
+
+	err1 := GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
 	if err1 != nil {
-		iKey = iTransaction
-		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		iP0034Key = iHistoryCode
+		err1 = GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
 		if err1 != nil {
 			return err1
 		}
@@ -4598,19 +4668,15 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 
 	for i := 0; i < len(p0034data.Letters); i++ {
 		if p0034data.Letters[i].Templates != "" {
-			iKey = p0034data.Letters[i].Templates
-			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			iP0033Key = p0034data.Letters[i].Templates
+			err := GetItemD(int(iCompany), "P0033", iP0033Key, iDate, &extradatap0033)
 			if err != nil {
 				return err
 			}
-			var communication models.Communication
-			communication.AgencyID = policy.AgencyID
+
 			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
 			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
 			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
-			communication.ClientID = policy.ClientID
-			communication.PolicyID = policy.ID
-			communication.CompanyID = uint(iCompany)
 			communication.EmailAllowed = p0033data.EmailAllowed
 			communication.SMSAllowed = p0033data.SMSAllowed
 			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
@@ -4618,9 +4684,8 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.DepartmentName = p0033data.DepartmentName
 			communication.CompanyPhone = p0033data.CompanyPhone
 			communication.CompanyEmail = p0033data.CompanyEmail
-			communication.Tranno = policy.Tranno
-			communication.TemplateName = iKey
-			communication.EffectiveDate = policy.PRCD
+
+			communication.TemplateName = iP0033Key
 			oLetType := ""
 
 			signData := make([]interface{}, 0)
@@ -4649,59 +4714,304 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt, iDate)
+					oData := GetCompanyData(iCompany, iDate)
 					resultMap["CompanyData"] = oData
 				case oLetType == "2":
-					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetClientData(iCompany, iClient)
 					resultMap["ClientData"] = oData
 				case oLetType == "3":
-					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetAddressData(iCompany, iAddress)
 					resultMap["AddressData"] = oData
 				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetPolicyData(iCompany, iPolicy)
 					resultMap["PolicyData"] = oData
 				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetBenefitData(iCompany, iPolicy)
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetSurBData(iCompany, iPolicy)
 					resultMap["SurBData"] = oData
 				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetMrtaData(iCompany, iPolicy)
 					resultMap["MRTAData"] = oData
 				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetReceiptData(iCompany, iReceipt)
 					resultMap["ReceiptData"] = oData
 				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetSaChangeData(iCompany, iPolicy)
 					resultMap["SAChangeData"] = oData
 				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetCompAddData(iCompany, iPolicy)
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetSurrHData(iCompany, iPolicy)
 					resultMap["SurrData"] = oData
 					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["SurrDData"] = oData
 				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetDeathData(iCompany, iPolicy)
 					resultMap["DeathData"] = oData
 				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					oData := GetMatHData(iCompany, iPolicy)
 					resultMap["MaturityData"] = oData
 					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["MatDData"] = oData
 				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					oData := GetSurvBPay(iCompany, iPolicy, iTranno)
 					resultMap["SurvbPay"] = oData
 				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					oData := GetExpi(iCompany, iPolicy, iTranno)
 					resultMap["ExpiryData"] = oData
 				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
+					oData := GetBonusVals(iCompany, iPolicy)
 					resultMap["BonusData"] = oData
 				case oLetType == "17":
-					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
+					oData := GetAgency(iCompany, iAgency)
+					resultMap["Agency"] = oData
+				case oLetType == "18":
+					oData := GetNomiData(iCompany, iPolicy)
+					resultMap["Nominee"] = oData
+				case oLetType == "19":
+					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign)
+					resultMap["GLData"] = oData
+				case oLetType == "20":
+					oData := GetIlpSummaryData(iCompany, iPolicy)
+					resultMap["IlPSummaryData"] = oData
+				case oLetType == "21":
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode)
+					resultMap["ILPANNSummaryData"] = oData
+				case oLetType == "22":
+					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate)
+					resultMap["ILPTransactionData"] = oData
+				case oLetType == "23":
+					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
+					resultMap["GLData"] = oData
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
+					resultMap["SwitchData"] = oData
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
+					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
+					resultMap["IlpFundData"] = oData
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevBenefit"] = oData
+				case oLetType == "29":
+					oData := GetPayingAuthorityData(iCompany, iPa)
+					resultMap["PaData"] = oData
+				case oLetType == "30":
+					oData := GetClientWorkData(iCompany, iClientWork)
+					resultMap["ClientWork"] = oData
+				case oLetType == "98":
+					resultMap["BatchData"] = batchData
+				case oLetType == "99":
+					resultMap["SignData"] = signData
+				default:
+
+				}
+			}
+
+			communication.ExtractedData = resultMap
+			communication.PDFPath = p0034data.Letters[i].PdfLocation
+			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
+
+			results := initializers.DB.Create(&communication)
+
+			if results.Error != nil {
+				return results.Error
+			}
+
+		}
+	}
+	return nil
+}
+
+// #104
+// Create Communication (New Version with Rollback)
+//
+// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
+// 10 Input Variables
+// # It returns success or failure.  Successful records written in Communciaiton Table
+//
+// ©  FuturaInsTech
+func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint) error {
+
+	var communication models.Communication
+	var iKey string
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
+	iTransaction := iHistoryCode
+	iReceiptTranCode := "H0034"
+	iReceiptFor := ""
+
+	if iReceipt != 0 {
+		var receipt models.Receipt
+		result := initializers.DB.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+		if result.Error != nil {
+			return result.Error
+		}
+		iReceiptFor = receipt.ReceiptFor
+	}
+
+	if iPolicy != 0 {
+		var policy models.Policy
+		result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+		if result.Error != nil {
+			return result.Error
+		}
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+		if iTransaction == iReceiptTranCode {
+			iKey = iTransaction + iReceiptFor
+		} else {
+			iKey = iTransaction + policy.PProduct
+		}
+	}
+
+	if iPolicy == 0 && iTransaction == iReceiptTranCode && iPa != 0 {
+		var payingauth models.PayingAuthority
+		result := initializers.DB.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = payingauth.ClientID
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPa
+		iKey = iTransaction + iReceiptFor
+	}
+
+	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+	if err1 != nil {
+		iKey = iTransaction
+		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		if err1 != nil {
+			return err1
+		}
+	}
+
+	for i := 0; i < len(p0034data.Letters); i++ {
+		if p0034data.Letters[i].Templates != "" {
+			iKey = p0034data.Letters[i].Templates
+			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			if err != nil {
+				return err
+			}
+
+			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
+			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
+			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
+			communication.EmailAllowed = p0033data.EmailAllowed
+			communication.SMSAllowed = p0033data.SMSAllowed
+			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
+			communication.DepartmentHead = p0033data.DepartmentHead
+			communication.DepartmentName = p0033data.DepartmentName
+			communication.CompanyPhone = p0033data.CompanyPhone
+			communication.CompanyEmail = p0033data.CompanyEmail
+
+			communication.TemplateName = iKey
+			oLetType := ""
+
+			signData := make([]interface{}, 0)
+			resultOut := map[string]interface{}{
+				"Department":     p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentHead,
+				"CoEmail":        p0033data.CompanyEmail,
+				"CoPhone":        p0033data.CompanyPhone,
+			}
+
+			signData = append(signData, resultOut)
+
+			batchData := make([]interface{}, 0)
+			resultOut = map[string]interface{}{
+				"Date":     DateConvert(iDate),
+				"FromDate": DateConvert(iFromDate),
+				"ToDate":   DateConvert(iToDate),
+			}
+
+			batchData = append(batchData, resultOut)
+
+			resultMap := make(map[string]interface{})
+
+			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
+			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
+				oLetType = p0034data.Letters[i].LetType[n]
+				switch {
+				case oLetType == "1":
+					oData := GetCompanyData(iCompany, iDate)
+					resultMap["CompanyData"] = oData
+				case oLetType == "2":
+					oData := GetClientData(iCompany, iClient)
+					resultMap["ClientData"] = oData
+				case oLetType == "3":
+					oData := GetAddressData(iCompany, iAddress)
+					resultMap["AddressData"] = oData
+				case oLetType == "4":
+					oData := GetPolicyData(iCompany, iPolicy)
+					resultMap["PolicyData"] = oData
+				case oLetType == "5":
+					oData := GetBenefitData(iCompany, iPolicy)
+					resultMap["BenefitData"] = oData
+				case oLetType == "6":
+					oData := GetSurBData(iCompany, iPolicy)
+					resultMap["SurBData"] = oData
+				case oLetType == "7":
+					oData := GetMrtaData(iCompany, iPolicy)
+					resultMap["MRTAData"] = oData
+				case oLetType == "8":
+					oData := GetReceiptData(iCompany, iReceipt)
+					resultMap["ReceiptData"] = oData
+				case oLetType == "9":
+					oData := GetSaChangeData(iCompany, iPolicy)
+					resultMap["SAChangeData"] = oData
+				case oLetType == "10":
+					oData := GetCompAddData(iCompany, iPolicy)
+					resultMap["ComponantAddData"] = oData
+				case oLetType == "11":
+					oData := GetSurrHData(iCompany, iPolicy)
+					resultMap["SurrData"] = oData
+					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["SurrDData"] = oData
+				case oLetType == "12":
+					oData := GetDeathData(iCompany, iPolicy)
+					resultMap["DeathData"] = oData
+				case oLetType == "13":
+					oData := GetMatHData(iCompany, iPolicy)
+					resultMap["MaturityData"] = oData
+					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["MatDData"] = oData
+				case oLetType == "14":
+					oData := GetSurvBPay(iCompany, iPolicy, iTranno)
+					resultMap["SurvbPay"] = oData
+				case oLetType == "15":
+					oData := GetExpi(iCompany, iPolicy, iTranno)
+					resultMap["ExpiryData"] = oData
+				case oLetType == "16":
+					oData := GetBonusVals(iCompany, iPolicy)
+					resultMap["BonusData"] = oData
+				case oLetType == "17":
+					oData := GetAgency(iCompany, iAgency)
 					resultMap["Agency"] = oData
 				case oLetType == "18":
 					oData := GetNomiData(iCompany, iPolicy)
@@ -4732,7 +5042,18 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "26":
 					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
 					resultMap["IlpFundData"] = oData
-
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno)
+					fmt.Println(oData) // Dummy to avoid compilation error
+				case oLetType == "29":
+					oData := GetPayingAuthorityData(iCompany, iPa)
+					resultMap["PrevBenefit"] = oData
+				case oLetType == "30":
+					oData := GetClientWorkData(iCompany, iClientWork)
+					resultMap["ClientWork"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -4747,7 +5068,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 			communication.PDFPath = p0034data.Letters[i].PdfLocation
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
 
-			results := initializers.DB.Create(&communication)
+			results := txn.Create(&communication)
 
 			if results.Error != nil {
 				return results.Error
@@ -5120,9 +5441,9 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 	receiptupd.BankReferenceNo = iRef
 	receiptupd.Branch = "HO"
 	receiptupd.ClientID = policyenq.ClientID
-	receiptupd.PolicyID = iPolicy
-	receiptupd.InstalmentPremium = policyenq.InstalmentPrem
-	receiptupd.PaidToDate = policyenq.PaidToDate
+	receiptupd.ReceiptRefNo = iPolicy
+	receiptupd.ReceiptAmount = policyenq.InstalmentPrem
+	receiptupd.ReceiptDueDate = policyenq.PaidToDate
 	receiptupd.Tranno = policyenq.Tranno
 	receiptupd.TypeOfReceipt = iCollType
 	receiptupd.CompanyID = iCompany
@@ -5200,7 +5521,7 @@ func CreateReceiptB(iCompany uint, iPolicy uint, iAmount float64, iCollDate stri
 
 	iAgency := policyenq.AgencyID
 
-	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0)
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0, 0, 0)
 	if err != nil {
 		return 0, errors.New(err.Error())
 	}
@@ -7482,6 +7803,11 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 	var p0065data paramTypes.P0065Data
 	var extradatap0065 paramTypes.Extradata = &p0065data
 
+	iClientType := clientval.ClientType
+	if iClientType == "I" || iClientType == "C" {
+		iKey = iKey + iClientType
+	}
+
 	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
 	if err != nil {
 		return errors.New(err.Error())
@@ -7498,7 +7824,7 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 			continue
 		}
 
-		if isFieldZero(fv) == true {
+		if isFieldZero(fv) {
 			shortCode := p0065data.FieldList[i].ErrorCode
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
@@ -7506,36 +7832,40 @@ func ValidateClient(clientval models.Client, userco uint, userlan uint, iKey str
 
 	}
 
-	// if clientval.ClientEmail == "" || !strings.Contains(clientval.ClientEmail, "@") || !strings.Contains(clientval.ClientEmail, ".") {
-	// 	shortCode := "GL477"
-	// 	longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-	// 	return errors.New(shortCode + " : " + longDesc)
-	// }
-
 	validemail := isValidEmail(clientval.ClientEmail)
 	if !validemail {
-		shortCode := "GL477"
+		shortCode := "GL477" // Email Format is invalid
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	_, err = strconv.Atoi(clientval.ClientMobile)
 	if err != nil {
-		shortCode := "GL478"
+		shortCode := "GL478" // MobileNumber is not Numeric
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	ibusinessdate := GetBusinessDate(userco, 0, 0)
 	if clientval.ClientDob > ibusinessdate {
-		shortCode := "GL566" // Incorrect Date of Birth
+		shortCode := ""
+		if clientval.ClientType == "C" {
+			shortCode = "GL586" // Incorrect Date of Incorporation
+		} else {
+			shortCode = "GL566" // Incorrect Date of Birth
+		}
 		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 		return errors.New(shortCode + " : " + longDesc)
 	}
 
 	if clientval.ClientDod != "" {
 		if clientval.ClientDod <= clientval.ClientDob {
-			shortCode := "GL567" // Date of Birth/Death Incorrect
+			shortCode := ""
+			if clientval.ClientType == "C" {
+				shortCode = "GL587" // Incorrect Date of Termination
+			} else {
+				shortCode = "GL567" // Date of Birth/Death Incorrect
+			}
 			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
 			return errors.New(shortCode + " : " + longDesc)
 		}
@@ -8130,6 +8460,116 @@ func PostUlpDeductionByFundAmount(iCompany uint, iPolicy uint, iBenefit uint, iF
 	return nil
 }
 
+func PostUlpDeductionByFundAmountN(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode + iallocType
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+	if p0059data.CurrentOrFuture == "F" {
+		iBusinessDate = AddLeadDays(iBusinessDate, 1)
+	} else if p0059data.CurrentOrFuture == "E" {
+		iBusinessDate = iEffDate
+	}
+
+	iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+	var ilptrancrt models.IlpTransaction
+	iKey = iFundCode
+	err = GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	ilptrancrt.CompanyID = iCompany
+	ilptrancrt.PolicyID = iPolicy
+	ilptrancrt.BenefitID = iBenefit
+	ilptrancrt.FundCode = iFundCode
+	ilptrancrt.FundType = ilpsumenq.FundType
+	ilptrancrt.TransactionDate = iEffDate
+
+	ilptrancrt.FundAmount = RoundFloat(iAmount, 2)
+	ilptrancrt.FundCurr = p0061data.FundCurr
+
+	ibidprice, _, ipriceuseddate := GetFundCPrice(iCompany, ilpsumenq.FundCode, iBusinessDate)
+	ilptrancrt.FundPrice = ibidprice
+	ilptrancrt.FundEffDate = ipriceuseddate
+	ilptrancrt.FundUnits = RoundFloat(ilptrancrt.FundAmount/ibidprice, 5)
+
+	ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+	ilptrancrt.OriginalAmount = RoundFloat(iAmount, 2)
+	ilptrancrt.ContractCurry = policyenq.PContractCurr
+	ilptrancrt.SurrenderPercentage = RoundFloat(((ilptrancrt.FundAmount / iFundValue) * 100), 2)
+	ilptrancrt.HistoryCode = iHistoryCode
+	ilptrancrt.InvNonInvFlag = "AC"
+	ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+	ilptrancrt.InvNonInvPercentage = RoundFloat(((iFundValue / iTotalFundValue) * 100), 2)
+	ilptrancrt.AccountCode = p0059data.AccountCode
+
+	ilptrancrt.CurrencyRate = 1.00 // ranga
+	ilptrancrt.MortalityIndicator = ""
+	//ilptrancrt.SurrenderPercentage = 0
+	ilptrancrt.Tranno = iTranno
+	ilptrancrt.Seqno = uint(p0059data.SeqNo)
+	ilptrancrt.UlProcessFlag = "C"
+	result = txn.Create(&ilptrancrt)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	//update ilpsummary
+	var ilpsummupd models.IlpSummary
+	result = txn.Find(&ilpsummupd, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, ilptrancrt.BenefitID, ilptrancrt.FundCode)
+
+	if result.RowsAffected != 0 {
+		ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
+		txn.Save(&ilpsummupd)
+	} else {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	return nil
+}
+
 // # 145
 //
 // PostUlpDeductionByAmount - Post ILP Deductions by alloctype (used in Surrender & PartSurrender Penalty & GST Postings )
@@ -8237,6 +8677,117 @@ func PostUlpDeductionByAmount(iCompany uint, iPolicy uint, iBenefit uint, iAmoun
 			ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
 			initializers.DB.Save(&ilpsummupd)
 		} else {
+			return errors.New(err.Error())
+		}
+	}
+	return nil
+}
+
+func PostUlpDeductionByAmountN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode + iallocType
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			txn.Rollback()
+			return errors.New(err.Error())
+		}
+
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundAmount = RoundFloat((iAmount * iFundValue / iTotalFundValue), 2)
+		ilptrancrt.FundCurr = p0061data.FundCurr
+
+		ibidprice, _, ipriceuseddate := GetFundCPrice(iCompany, ilpsumenq[j].FundCode, iBusinessDate)
+		ilptrancrt.FundPrice = ibidprice
+		ilptrancrt.FundEffDate = ipriceuseddate
+		ilptrancrt.FundUnits = RoundFloat(ilptrancrt.FundAmount/ibidprice, 5)
+
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat((iAmount * iFundValue / iTotalFundValue), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+
+		ilptrancrt.SurrenderPercentage = RoundFloat(((iFundValue / iTotalFundValue) * 100), 2)
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = 0
+		ilptrancrt.AccountCode = p0059data.AccountCode
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		//ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "C"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txn.Rollback()
+			return errors.New(err.Error())
+		}
+
+		//update ilpsummary
+		var ilpsummupd models.IlpSummary
+		result = txn.Find(&ilpsummupd, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, ilptrancrt.BenefitID, ilptrancrt.FundCode)
+
+		if result.RowsAffected != 0 {
+			ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
+			txn.Save(&ilpsummupd)
+		} else {
+			txn.Rollback()
 			return errors.New(err.Error())
 		}
 	}
@@ -8465,6 +9016,117 @@ func PostUlpDeductionByFundUnits(iCompany uint, iPolicy uint, iBenefit uint, iFu
 	return nil
 }
 
+func PostUlpDeductionByFundUnitsN(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iSurrPercentage float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode + iallocType
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+	if p0059data.CurrentOrFuture == "F" {
+		iBusinessDate = AddLeadDays(iBusinessDate, 1)
+	} else if p0059data.CurrentOrFuture == "E" {
+		iBusinessDate = iEffDate
+	}
+
+	iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+	var ilptrancrt models.IlpTransaction
+	iKey = iFundCode
+	err = GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	ilptrancrt.CompanyID = iCompany
+	ilptrancrt.PolicyID = iPolicy
+	ilptrancrt.BenefitID = iBenefit
+	ilptrancrt.FundCode = ilpsumenq.FundCode
+	ilptrancrt.FundType = ilpsumenq.FundType
+	ilptrancrt.TransactionDate = iEffDate
+	ibidprice, _, ipriceuseddate := GetFundCPrice(iCompany, ilpsumenq.FundCode, iBusinessDate)
+	ilptrancrt.FundPrice = ibidprice
+	ilptrancrt.FundEffDate = ipriceuseddate
+	iUnits, _ := GetIlpFundUnits(iCompany, iPolicy, iBenefit, iFundCode)
+	// Full Withdrawl is -100% and Part Withdrawl is -20% or -30% etc
+	iSurrUnits := iUnits * iSurrPercentage / 100
+	ilptrancrt.FundUnits = RoundFloat(iSurrUnits, 5)
+	//utilities.RoundFloat(ilptrancrt.FundAmount/ibidprice, 5)
+	ilptrancrt.FundAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+	ilptrancrt.FundCurr = p0061data.FundCurr
+	ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+	ilptrancrt.OriginalAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+	ilptrancrt.ContractCurry = policyenq.PContractCurr
+	ilptrancrt.SurrenderPercentage = RoundFloat(((ilptrancrt.FundAmount / iFundValue) * 100), 2)
+	ilptrancrt.HistoryCode = iHistoryCode
+	ilptrancrt.InvNonInvFlag = "AC"
+	ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+	ilptrancrt.InvNonInvPercentage = RoundFloat(((ilptrancrt.FundAmount / iTotalFundValue) * 100), 2)
+	ilptrancrt.AccountCode = p0059data.AccountCode
+
+	ilptrancrt.CurrencyRate = 1.00 // ranga
+	ilptrancrt.MortalityIndicator = ""
+	//ilptrancrt.SurrenderPercentage = 0
+	ilptrancrt.Tranno = iTranno
+	ilptrancrt.Seqno = uint(p0059data.SeqNo)
+	ilptrancrt.UlProcessFlag = "C"
+	result = txn.Create(&ilptrancrt)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	//update ilpsummary
+	var ilpsummupd models.IlpSummary
+	result = txn.Find(&ilpsummupd, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, ilptrancrt.BenefitID, ilptrancrt.FundCode)
+
+	if result.RowsAffected != 0 {
+		ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
+		txn.Save(&ilpsummupd)
+	} else {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	return nil
+}
+
 // # 149
 //
 // PostUlpDeductionByUnits - Post ILP Deductions by alloctype (used in PartSurrender Penalty & GST Postings )
@@ -8573,6 +9235,118 @@ func PostUlpDeductionByUnits(iCompany uint, iPolicy uint, iBenefit uint, iSurrPe
 			ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
 			initializers.DB.Save(&ilpsummupd)
 		} else {
+			return errors.New(err.Error())
+		}
+	}
+	return nil
+}
+
+func PostUlpDeductionByUnitsN(iCompany uint, iPolicy uint, iBenefit uint, iSurrPercentage float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string, txn *gorm.DB) error {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode + iallocType
+	err := GetItemD(int(iCompany), "P0059", iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		txn.Rollback()
+		return errors.New(err.Error())
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			txn.Rollback()
+			return errors.New(err.Error())
+		}
+
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ibidprice, _, ipriceuseddate := GetFundCPrice(iCompany, ilpsumenq[j].FundCode, iBusinessDate)
+		ilptrancrt.FundPrice = ibidprice
+		ilptrancrt.FundEffDate = ipriceuseddate
+		iUnits, _ := GetIlpFundUnits(iCompany, iPolicy, iBenefit, iFundCode)
+		// Full Withdrawl is -100% and Part Withdrawl is -20% or -30% etc
+		iSurrUnits := iUnits * iSurrPercentage / 100
+		ilptrancrt.FundUnits = RoundFloat(iSurrUnits, 5)
+		//utilities.RoundFloat(ilptrancrt.FundAmount/ibidprice, 5)
+		ilptrancrt.FundAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+		ilptrancrt.FundCurr = p0061data.FundCurr
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.SurrenderPercentage = RoundFloat(((ilptrancrt.FundAmount / iFundValue) * 100), 2)
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = RoundFloat(((ilptrancrt.FundAmount / iTotalFundValue) * 100), 2)
+		ilptrancrt.AccountCode = p0059data.AccountCode
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		//ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "C"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txn.Rollback()
+			return errors.New(err.Error())
+		}
+
+		//update ilpsummary
+		var ilpsummupd models.IlpSummary
+		result = txn.Find(&ilpsummupd, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, ilptrancrt.BenefitID, ilptrancrt.FundCode)
+
+		if result.RowsAffected != 0 {
+			ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
+			txn.Save(&ilpsummupd)
+		} else {
+			txn.Rollback()
 			return errors.New(err.Error())
 		}
 	}
@@ -9086,10 +9860,19 @@ func PostGlMoveN(iCompany uint, iContractCurry string, iEffectiveDate string,
 	var company models.Company
 	glmove.ContractCurry = iContractCurry
 	glmove.ContractAmount = iAccAmount
-	initializers.DB.Find(&company, "id = ?", iCompany)
+	result := txn.Find(&company, "id = ?", iCompany)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
 	var currency models.Currency
 	// fmt.Println("Currency Code is .... ", company.CurrencyID)
-	initializers.DB.Find(&currency, "id = ?", company.CurrencyID)
+	result = txn.Find(&currency, "id = ?", company.CurrencyID)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
 	iGlCurry := currency.CurrencyShortName
 	glmove.CurrencyRate = 1
 	if glmove.GlCurry != glmove.ContractCurry {
@@ -9132,7 +9915,11 @@ func PostGlMoveN(iCompany uint, iContractCurry string, iEffectiveDate string,
 	glmove.ID = 0
 	glmove.ReversalIndicator = iRevInd
 	glmove.BCoverage = iCoverage
-	txn.Save(&glmove)
+	result = txn.Save(&glmove)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
 	//tx := initializers.DB.Save(&glmove)
 	//tx.Commit()
 
@@ -9154,12 +9941,15 @@ func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iCon
 		temp = iAmount * 1
 	}
 	var company []models.Company
-	initializers.DB.First(&company, "id = ?", iCompany)
-
-	results := initializers.DB.First(&glbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno)
-	if results.Error != nil {
-		return errors.New("Account Code Not Found"), glbal.ContractAmount
+	result := txn.First(&company, "id = ?", iCompany)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error, 0
 	}
+	results := txn.First(&glbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno)
+	// if results.Error != nil {
+	// 	return errors.New("Account Code Not Found"), glbal.ContractAmount
+	// }
 	if results.RowsAffected == 0 {
 		glbal.ContractAmount = temp
 		glbal.CompanyID = iCompany
@@ -9168,215 +9958,26 @@ func UpdateGlBalN(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iCon
 		glbal.ContractCurry = iContCurry
 		glbal.GlRdocno = iGlRdocno
 		//initializers.DB.Save(&glbal)
-		txn.Save(&glbal)
+		result = txn.Create(&glbal)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error, glbal.ContractAmount
+		}
 		return nil, glbal.ContractAmount
 	} else {
 		iAmount := glbal.ContractAmount + temp
 		// fmt.Println("I am inside update.....2", iAmount, glbal.ContractAmount)
 		//initializers.DB.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
-		txn.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
+		result = txn.Model(&glbal).Where("company_id = ? and gl_accountno = ? and gl_rldg_acct = ? and contract_curry = ? and gl_rdocno = ?", iCompany, iGlAccountCode, iGlRldgAcct, iContCurry, iGlRdocno).Update("contract_amount", iAmount)
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error, glbal.ContractAmount
+		}
+
 		return nil, glbal.ContractAmount
 	}
 	//results.Commit()
 
-}
-
-// #104
-// Create Communication (New Version with Rollback)
-//
-// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
-// 10 Input Variables
-// # It returns success or failure.  Successful records written in Communciaiton Table
-//
-// ©  FuturaInsTech
-func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint) error {
-
-	var p0034data paramTypes.P0034Data
-	var extradatap0034 paramTypes.Extradata = &p0034data
-
-	var p0033data paramTypes.P0033Data
-	var extradatap0033 paramTypes.Extradata = &p0033data
-	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
-	iTransaction := iHistoryCode
-	var policy models.Policy
-
-	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	iKey := iTransaction + policy.PProduct
-	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
-
-	if err1 != nil {
-		iKey = iTransaction
-		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
-		if err1 != nil {
-			return err1
-		}
-	}
-
-	for i := 0; i < len(p0034data.Letters); i++ {
-		if p0034data.Letters[i].Templates != "" {
-			iKey = p0034data.Letters[i].Templates
-			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
-			if err != nil {
-				return err
-			}
-			var communication models.Communication
-			communication.AgencyID = policy.AgencyID
-			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
-			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
-			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
-			communication.ClientID = policy.ClientID
-			communication.PolicyID = policy.ID
-			communication.CompanyID = uint(iCompany)
-			communication.EmailAllowed = p0033data.EmailAllowed
-			communication.SMSAllowed = p0033data.SMSAllowed
-			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
-			communication.DepartmentHead = p0033data.DepartmentHead
-			communication.DepartmentName = p0033data.DepartmentName
-			communication.CompanyPhone = p0033data.CompanyPhone
-			communication.CompanyEmail = p0033data.CompanyEmail
-			communication.Tranno = policy.Tranno
-			communication.TemplateName = iKey
-			communication.EffectiveDate = policy.PRCD
-			oLetType := ""
-
-			signData := make([]interface{}, 0)
-			resultOut := map[string]interface{}{
-				"Department":     p0033data.DepartmentName,
-				"DepartmentHead": p0033data.DepartmentHead,
-				"CoEmail":        p0033data.CompanyEmail,
-				"CoPhone":        p0033data.CompanyPhone,
-			}
-
-			signData = append(signData, resultOut)
-
-			batchData := make([]interface{}, 0)
-			resultOut = map[string]interface{}{
-				"Date":     DateConvert(iDate),
-				"FromDate": DateConvert(iFromDate),
-				"ToDate":   DateConvert(iToDate),
-			}
-
-			batchData = append(batchData, resultOut)
-
-			resultMap := make(map[string]interface{})
-
-			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
-			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
-				oLetType = p0034data.Letters[i].LetType[n]
-				switch {
-				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iPolicy, iClient, iAddress, iReceipt, iDate)
-					resultMap["CompanyData"] = oData
-				case oLetType == "2":
-					oData := GetClientData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["ClientData"] = oData
-				case oLetType == "3":
-					oData := GetAddressData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["AddressData"] = oData
-				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["PolicyData"] = oData
-				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["BenefitData"] = oData
-				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurBData"] = oData
-				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["MRTAData"] = oData
-				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["ReceiptData"] = oData
-				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SAChangeData"] = oData
-				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["ComponantAddData"] = oData
-				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["SurrData"] = oData
-					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					// resultMap["SurrDData"] = oData
-				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["DeathData"] = oData
-				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					resultMap["MaturityData"] = oData
-					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
-					// resultMap["MatDData"] = oData
-				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
-					resultMap["SurvbPay"] = oData
-				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
-					resultMap["ExpiryData"] = oData
-				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno)
-					resultMap["BonusData"] = oData
-				case oLetType == "17":
-					oData := GetAgency(iCompany, iPolicy, iClient, iAddress, iReceipt, iTranno, iAgency)
-					resultMap["Agency"] = oData
-				case oLetType == "18":
-					oData := GetNomiData(iCompany, iPolicy)
-					resultMap["Nominee"] = oData
-				case oLetType == "19":
-					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign)
-					resultMap["GLData"] = oData
-				case oLetType == "20":
-					oData := GetIlpSummaryData(iCompany, iPolicy)
-					resultMap["IlPSummaryData"] = oData
-				case oLetType == "21":
-					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode)
-					resultMap["ILPANNSummaryData"] = oData
-				case oLetType == "22":
-					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate)
-					resultMap["ILPTransactionData"] = oData
-				case oLetType == "23":
-					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate)
-					resultMap["GLData"] = oData
-
-				case oLetType == "24":
-					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno)
-					resultMap["SwitchData"] = oData
-
-				case oLetType == "25":
-					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate)
-					resultMap["PolicyHistoryData"] = oData
-				case oLetType == "26":
-					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate)
-					resultMap["IlpFundData"] = oData
-
-				case oLetType == "98":
-					resultMap["BatchData"] = batchData
-
-				case oLetType == "99":
-					resultMap["SignData"] = signData
-				default:
-
-				}
-			}
-
-			communication.ExtractedData = resultMap
-			communication.PDFPath = p0034data.Letters[i].PdfLocation
-			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
-
-			results := txn.Create(&communication)
-
-			if results.Error != nil {
-				return results.Error
-			}
-
-		}
-	}
-	return nil
 }
 
 // # 38
@@ -9567,10 +10168,12 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	}
 
 	//#001 RCD is less than PropsalDate
-	if policyenq.PRCD < policyenq.ProposalDate {
-		shortCode := "GL539" // RCD is less than PropsalDate
-		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New(shortCode + ":" + longDesc)
+	if q0005data.BackDateAllowed == "N" {
+		if policyenq.PRCD < policyenq.ProposalDate {
+			shortCode := "GL539" // RCD is less than PropsalDate
+			longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+		}
 	}
 
 	//#002 UW Date is less than PropsalDate
@@ -9818,6 +10421,13 @@ func CreatePHistory(iCompany uint, iPolicy uint, iMethod string, iEffDate string
 	return nil
 }
 
+// # 167
+// Validate Nominee (New Version)
+// Inputs: Nominee Model, Company id, User Language, History Code
+//
+// # Outputs: error,
+//
+// ©  FuturaInsTech
 func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey string) (string error) {
 
 	var p0065data paramTypes.P0065Data
@@ -9881,5 +10491,636 @@ func ValidateNominee(nomineeval models.Nominee, userco uint, userlan uint, iKey 
 		return errors.New(shortCode + ":" + longDesc)
 	}
 
+	// Owner cannot be Nominee
+	var policyenq models.Policy
+	result = initializers.DB.First(&policyenq, "company_id  = ? and id = ?", nomineeval.CompanyID, nomineeval.PolicyID)
+	if result.Error != nil {
+		shortCode := "GL210" // Policy Not Found
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if nomineeval.ClientID == policyenq.ClientID {
+		shortCode := "GL589" // Owner cannot be Nominee
+		longDesc, _ := GetErrorDesc(nomineeval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
 	return
+}
+
+// # 168
+// Validate Payer (New Version)
+// Inputs: Payer Model, Company id, User Language, History Code
+//
+// # Outputs: error
+//
+// ©  FuturaInsTech
+
+func ValidatePayer(payerval models.Payer, userco uint, userlan uint, iKey string) (string error) {
+	businessdate := GetBusinessDate(payerval.CompanyID, 0, 0)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(payerval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+
+	iPolicy := payerval.PolicyID
+	var policy models.Policy
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", userco, iPolicy)
+	if result.Error != nil {
+		shortCode := "GL175"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+
+	}
+	if payerval.FromDate > businessdate {
+		shortCode := "GL616" // From date is greater than business date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	if payerval.FromDate < policy.PRCD {
+		shortCode := "GL617" // From Date is lesser than RCD Date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payerval.FromDate > payerval.ToDate {
+		shortCode := "GL901" // FromDate greater than ToDate
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	return
+}
+
+// # 169
+// Get Previous Policy Data (New Version)
+// Inputs: CompanyID, PolicyID, HistoryCode, Tranno
+//
+// # Outputs: JSON Policy Data
+//
+// ©  FuturaInsTech
+func GetPPolicyData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno uint) []interface{} {
+	ppolicyarray := make([]interface{}, 0)
+	var phistory models.PHistory
+	result := initializers.DB.Find(&phistory, "company_id = ? and policy_id = ? and history_code = ?  and tranno =  ?", iCompany, iPolicy, iHistoryCode, iTranno)
+	if result.Error != nil {
+		return nil
+	}
+	previousPolicy := phistory.PrevData["Policy"]
+	ppolicyarray = append(ppolicyarray, previousPolicy)
+	return ppolicyarray
+
+}
+
+// # 170
+// Get Previous Benefits Data (New Version)
+// Inputs: CompanyID, PolicyID, HistoryCode, Tranno
+//
+// # Outputs: JSON Benefits Data
+//
+// ©  FuturaInsTech
+func GetPBenefitData(iCompany uint, iPolicy uint, iHistoryCode string, iTranno uint) interface{} {
+	var phistory models.PHistory
+	result := initializers.DB.Find(&phistory, "company_id = ? and policy_id = ? and history_code = ?  and tranno =  ?", iCompany, iPolicy, iHistoryCode, iTranno)
+	if result.Error != nil {
+		return nil
+	}
+	previousBenefit := phistory.PrevData["Benefits"]
+	return previousBenefit
+
+}
+
+// # 171
+// Validate Frequency (New Version)
+// Return False when current frequency premium dues are pending, else true
+// Inputs: RCD, PTD, Curr Freq, New Freq
+//
+// # Outputs: True or False
+//
+// ©  FuturaInsTech
+func ValidateFreq(PrcdDate string, Ptdate string, Currfreq string, Newfreq string) bool {
+	tdate := PrcdDate
+	for {
+		DueDate := GetNextDue(tdate, Newfreq, "")
+		NextDueDate := Date2String(DueDate)
+		if NextDueDate == Ptdate {
+			return true
+		} else if NextDueDate > Ptdate {
+			return false
+		}
+		tdate = NextDueDate
+	}
+}
+
+// #172
+// Validate Agency (New Version)
+// Return Error when Agency is not valid
+// Inputs: agency model, user company, user language, validdate
+//
+// # Outputs: nil or error
+//
+// ©  FuturaInsTech
+func ValidateAgency(agencyenq models.Agency, userco uint, userlan uint, iDate string) (string error) {
+
+	if agencyenq.AgencySt != "AC" {
+		shortCode := "GL221" // InValid Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if agencyenq.LicenseStartDate > iDate {
+		shortCode := "GL577"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if agencyenq.LicenseEndDate < iDate {
+		shortCode := "GL578"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	return nil
+}
+
+// # 173
+// Validate the PolicyData and Benefits Data as required by Q0011 Rules
+// Inputs: Policy Data, Benefit(s) Data, Lang Id,
+//
+// # Outputs: error
+//
+// ©  FuturaInsTech
+func ValidatePolicyBenefitsData(policyenq models.Policy, benefitenq []models.Benefit, langid uint) (string error) {
+
+	var q0011data paramTypes.Q0011Data
+	var extradataq0011 paramTypes.Extradata = &q0011data
+	err := GetItemD(int(policyenq.CompanyID), "Q0011", policyenq.PProduct, policyenq.PRCD, &extradataq0011)
+	if err != nil {
+		shortCode := "GL387" // Q0011 not configured
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// Duplicate Benefits Check
+	duplicatebenefits := false
+	var benefitenq1 []models.Benefit = benefitenq
+	for i := 0; i < len(benefitenq); i++ {
+		duplicatebenefits = false
+		for j := 0; j < len(benefitenq1); j++ {
+			if benefitenq[i].ID != benefitenq1[j].ID &&
+				benefitenq[i].BCoverage == benefitenq1[j].BCoverage &&
+				benefitenq[i].ClientID == benefitenq1[j].ClientID {
+				duplicatebenefits = true
+				break
+			}
+		}
+	}
+	if duplicatebenefits {
+		shortCode := "GL619" // Duplicate Benefits Exist
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// basicbenefit selection
+	var basicbenefit models.Benefit
+	basicbenefit.ID = 0
+	for i := 0; i < len(q0011data.Coverages); i++ {
+		for j := 0; j < len(benefitenq); j++ {
+			if q0011data.Coverages[i].CoverageName == benefitenq[j].BCoverage &&
+				q0011data.Coverages[i].BasicorRider == "B" {
+				basicbenefit = benefitenq[j]
+				break
+			}
+		}
+	}
+
+	// Mandatory Benefits check
+	mandatorybenefits := true
+	for i := 0; i < len(q0011data.Coverages); i++ {
+		if q0011data.Coverages[i].Mandatory == "Y" {
+			mandatorybenefits = false
+			for j := 0; j < len(benefitenq); j++ {
+				if q0011data.Coverages[i].CoverageName == benefitenq[j].BCoverage {
+					mandatorybenefits = true
+					break
+				}
+			}
+		}
+	}
+
+	if !mandatorybenefits {
+		shortCode := "GL621" // Mandatory Coverage(s) not Found
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// Benefits Validation
+	for i := 0; i < len(benefitenq); i++ {
+		//#001 Policy RCD > Benefit Start Date
+		if policyenq.PRCD > benefitenq[i].BStartDate {
+			shortCode := "GL622" // Policy RCD > Benefit Start Date
+			longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+		}
+		if benefitenq[i].BCoverage != basicbenefit.BCoverage {
+			for j := 0; j < len(q0011data.Coverages); j++ {
+				if benefitenq[i].BCoverage == q0011data.Coverages[j].CoverageName {
+					//#002 Benefit Term Exceed Basic Benefit Term
+					if q0011data.Coverages[i].TermCanExceed == "N" &&
+						benefitenq[i].BTerm > basicbenefit.BTerm {
+						shortCode := "GL623" // Benefit Term Exceed Basic Benefit Term
+						longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+						return errors.New(shortCode + ":" + longDesc)
+					}
+					//#003 Benefit Prem Term Exceed Basic Benefit Prem Term
+					if q0011data.Coverages[i].PptCanExceed == "N" &&
+						benefitenq[i].BPTerm > basicbenefit.BPTerm {
+						shortCode := "GL624" // Benefit Prem Term Exceed Basic Benefit Prem Term
+						longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+						return errors.New(shortCode + ":" + longDesc)
+					}
+					//#004 Benefit SA Exceed Basic Benefit SA
+					if q0011data.Coverages[i].SaCanExceed == "N" &&
+						benefitenq[i].BSumAssured > basicbenefit.BSumAssured {
+						shortCode := "GL625" // Benefit SA Exceed Basic Benefit SA
+						longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+						return errors.New(shortCode + ":" + longDesc)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// #174
+// GetPayingAuthorityData - Printing Purpose Only
+// Inputs: Company, Pa, Client, Address, Receipt and Date
+//
+// # Outputs  Paying Authority Details as an Interface
+//
+// ©  FuturaInsTech
+func GetPayingAuthorityData(iCompany uint, iPa uint) []interface{} {
+	payingautharray := make([]interface{}, 0)
+	var payingauth models.PayingAuthority
+	result := initializers.DB.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+	if result.Error != nil {
+		return nil
+	}
+	_, oStatus, _ := GetParamDesc(payingauth.CompanyID, "P0021", payingauth.PaStatus, 1)
+	_, oCurr, _ := GetParamDesc(payingauth.CompanyID, "P0023", payingauth.PaCurrency, 1)
+
+	resultOut := map[string]interface{}{
+		"ID":                IDtoPrint(payingauth.ID),
+		"CompanyID":         IDtoPrint(payingauth.CompanyID),
+		"ClientID":          IDtoPrint(payingauth.ClientID),
+		"AddressID":         IDtoPrint(payingauth.AddressID),
+		"PaName":            payingauth.PaName,
+		"PaType":            payingauth.PaType,
+		"StartDate":         DateConvert(payingauth.StartDate),
+		"EndDate":           DateConvert(payingauth.EndDate),
+		"PaStatus":          oStatus,
+		"ExtractionDay":     payingauth.ExtrationDay,
+		"PayDay":            payingauth.PayDay,
+		"PaToleranceAmount": NumbertoPrint(payingauth.PaToleranceAmt),
+		"PaCurrency":        oCurr,
+	}
+	payingautharray = append(payingautharray, resultOut)
+
+	return payingautharray
+}
+
+// #175
+// GetCurrencyNamebyId
+// Inputs: curr_id
+//
+// # Outputs  Currency ShortName and Currency LongName
+//
+// ©  FuturaInsTech
+func GetCurrencyName(iCurr uint) (string, string) {
+	var curry models.Currency
+	result := initializers.DB.Find(&curry, "id = ?", iCurr)
+	if result.Error != nil {
+		return "", ""
+	}
+	return curry.CurrencyShortName, curry.CurrencyLongName
+}
+
+// #176
+// GetCoCurrIdName
+// Inputs: Company Id
+//
+// # Outputs  Currency ShortName and Currency LongName
+//
+// ©  FuturaInsTech
+func GetCoCurrIdName(iCompany uint) (string, string) {
+	var company models.Company
+	result := initializers.DB.Find(&company, "id = ?", iCompany)
+	if result.Error != nil {
+		return "", ""
+	}
+	var curry models.Currency
+	result = initializers.DB.Find(&curry, "id = ?", company.CurrencyID)
+	if result.Error != nil {
+		return "", ""
+	}
+	return curry.CurrencyShortName, curry.CurrencyLongName
+}
+
+// #177
+// Intf2Uint
+// Inputs: Interface Variable Value
+//
+// # Outputs  Uint variable Value
+//
+// ©  FuturaInsTech
+func Intf2Uint(i interface{}) uint {
+
+	value, ok := i.(float64)
+	if !ok {
+		return 0
+	}
+	return uint(value)
+}
+
+// #178
+// Intf2Int
+// Inputs: Interface Variable Value
+//
+// # Outputs  Int variable Value
+//
+// ©  FuturaInsTech
+func Intf2Int(i interface{}) int {
+
+	value, ok := i.(float64)
+	if !ok {
+		return 0
+	}
+	return int(value)
+}
+
+// #179
+// Intf2String
+// Inputs: Interface Variable Value
+//
+// # Outputs  String variable Value
+//
+// ©  FuturaInsTech
+func Intf2String(i interface{}) string {
+
+	value, ok := i.(string)
+	if !ok {
+		j := Intf2Int(i)
+		return strconv.Itoa(j)
+	}
+	return value
+}
+
+// #180
+// SplitDateString
+// Inputs: String Date Value in YYYYMMDD Format
+//
+// # Outputs  Year, Month and Date
+//
+// ©  FuturaInsTech
+func SplitDateString(ds string) (string, string, string) {
+	// Check if the input string has at least 8 characters
+	if len(ds) < 8 {
+		return "", "", ""
+	}
+
+	// Extract year, month, and day using string slicing
+	year := ds[:4]
+	month := ds[4:6]
+	day := ds[6:8]
+
+	return year, month, day
+}
+
+// #181
+// Validate BillType(New Version)
+// Return Error when BillType is not valid
+// Inputs: billtype string,payingAuthority uint, user company, user language,
+//
+// # Outputs: nil or error
+//
+// # Only SSI validation implemented
+//
+// ©  FuturaInsTech
+func ValidateBillType(policyenq models.Policy, userco uint, userlan uint, iDate string, iBillType string, iPayingAuthority uint) (string error) {
+
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
+
+	err := GetItemD(int(userco), "P0055", iBillType, iDate, &extradatap0055)
+
+	if err != nil {
+		shortCode := "GL279"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	// Validate SSI Bill Type
+
+	if p0055data.PayingAuthority == "N" &&
+		iBillType == policyenq.BillingType {
+		shortCode := "GL637" // Existing and new bill type shuld not be the same
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if p0055data.PayingAuthority == "Y" &&
+		iBillType == policyenq.BillingType &&
+		iPayingAuthority == policyenq.PayingAuthority {
+
+		shortCode := "GL638" // existing  and new Pa should not be same
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if p0055data.PayingAuthority == "N" {
+		if iPayingAuthority != 0 {
+			shortCode := "GL700" // Paying Authority Is Not Provided
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+
+		}
+	}
+
+	if p0055data.PayingAuthority == "Y" {
+		if iPayingAuthority == 0 {
+			shortCode := "GL701" // Paying Authority Not Required
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+
+		}
+	}
+
+	// validate Paying authority
+	err = ValidatePayingAuthority(userco, userlan, iDate, iPayingAuthority)
+	if err != nil {
+		shortCode := "GL639" // No item found in validate Paying Authority
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// P0055 Bank Extration Types like cBank,DBank,NEFT,UPI validation are to be added
+
+	return nil
+}
+
+// #182
+// Validate Paying Authority(New Version)
+// Return Error when Paying Authority is not valid
+// Inputs: payingAuthority uint, user company, user language,
+//
+// # Outputs: nil or error
+//
+// ©  FuturaInsTech
+func ValidatePayingAuthority(userco uint, userlan uint, iDate string, iPayingAuthority uint) (string error) {
+
+	var payingauth models.PayingAuthority
+	result := initializers.DB.First(&payingauth, "company_id = ? and id = ?", userco, iPayingAuthority)
+	if result.Error != nil {
+		shortCode := "GL671" //Failed to get Paying Authority
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payingauth.PaStatus != "AC" {
+		shortCode := "GL640" // InValid PA Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payingauth.StartDate > iDate {
+		shortCode := "GL641" // PA Start Date Should be Greater than Current Date
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payingauth.EndDate < iDate {
+		shortCode := "GL642" // PA End Date Should be Greater than Current Date
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	return nil
+}
+
+// #183
+// Get ClientWork Data - Printing Purpose Only
+// Inputs: Company, Policy, Client, Address, Receipt and Date
+//
+// # Outputs  Client Work Details as an Interface
+//
+// ©  FuturaInsTech
+func GetClientWorkData(iCompany uint, iClientWork uint) []interface{} {
+	clientworkarray := make([]interface{}, 0)
+	var clientwork models.ClientWork
+
+	initializers.DB.Find(&clientwork, "company_id = ? and id = ?", iCompany, iClientWork)
+	resultOut := map[string]interface{}{
+		"ID":            IDtoPrint(clientwork.ID),
+		"ClientID":      IDtoPrint(clientwork.ClientID),
+		"EmployerID":    IDtoPrint(clientwork.EmployerID),
+		"PayRollNumber": clientwork.PayRollNumber,
+		"Designation":   clientwork.Designation,
+		"Department":    clientwork.Department,
+		"Location":      clientwork.Location,
+		"StartDate":     DateConvert(clientwork.StartDate),
+		"EndDate":       clientwork.EndDate,
+		"WorkType":      clientwork.WorkType,
+	}
+	clientworkarray = append(clientworkarray, resultOut)
+	return clientworkarray
+}
+
+// #184
+// Get Validate Client Work
+// Inputs: ClientWork data, Company, Language, Date and Key Detail
+//
+// # Outputs  string error
+//
+// ©  FuturaInsTech
+func ValidateClientWork(clientwork models.ClientWork, userco uint, userlan uint, iDate string, iKey string) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(clientwork)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	var client models.Client
+	clientid := clientwork.ClientID
+	initializers.DB.Find(&client, "company_id = ? and id = ?", userco, clientid)
+
+	if client.ClientStatus != "AC" {
+		shortCode := "GL221" // InValid Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	var employer models.Client
+	employerid := clientwork.EmployerID
+	initializers.DB.Find(&employer, "company_id = ? and id = ?", userco, employerid)
+
+	if employer.ClientStatus != "AC" {
+		shortCode := "GL221" // InValid Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if clientwork.StartDate > iDate {
+		shortCode := "GL656"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if clientwork.EndDate < iDate {
+		shortCode := "GL657"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	return nil
 }

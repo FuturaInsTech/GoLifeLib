@@ -36,4 +36,6 @@ type PolBill struct {
 	ReferenceID       uint   //Dishonour Original Key
 	Seqno             uint
 	ProcessFlag       string `gorm:"type:varchar(05)"`
+	PayingAuthority   uint
+	BillDueMonth      string `gorm:"type:varchar(06)"`
 }

@@ -61,16 +61,18 @@ type Company struct {
 	LeadFollowups   []LeadFollowup
 	//CreatedAt time.Time
 	//UpdatedAt time.Time
-	Transactions  []Transaction
-	Uwreasons     []Uwreason
-	MedProviders  []MedProvider
-	MedReqs       []MedReq
-	Payers        []Payer
-	SaChanges     []SaChange
-	SurrHs        []SurrH
-	SurrDs        []SurrD
-	BusinessDates []BusinessDate
-	MaturityHs    []MaturityH
-	MaturityDs    []MaturityD
-	PolBills      []PolBill
+	Transactions      []Transaction
+	Uwreasons         []Uwreason
+	MedProviders      []MedProvider
+	MedReqs           []MedReq
+	Payers            []Payer
+	SaChanges         []SaChange
+	SurrHs            []SurrH
+	SurrDs            []SurrD
+	BusinessDates     []BusinessDate
+	MaturityHs        []MaturityH
+	MaturityDs        []MaturityD
+	PolBills          []PolBill
+	PayingAuthorities []PayingAuthority
+	PaBillSummaries   []PaBillSummary
 }

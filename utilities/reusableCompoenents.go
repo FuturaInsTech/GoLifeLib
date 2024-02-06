@@ -2505,6 +2505,95 @@ func SBCreate(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iD
 	return nil
 }
 
+func SBCreateN(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iDate string, iSA float64, iType string, iMethod string, iYear int, iAge int, iTranno uint, txn *gorm.DB) error {
+
+	var survb models.SurvB
+	fmt.Println("Values", iCompany, iPolicy, iBenefitID, iCoverage, iDate, iSA, iType, iMethod, iYear, iAge, iTranno)
+	if iType == "T" {
+		var q0012data paramTypes.Q0012Data
+		var extradataq0012 paramTypes.Extradata = &q0012data
+		// fmt.Println("SB Parameters", iCompany, iType, iMethod, iYear, iCoverage, iDate)
+		err := GetItemD(int(iCompany), "Q0012", iMethod, iDate, &extradataq0012)
+		fmt.Println("I am inside Term Based ")
+		if err != nil {
+			txn.Rollback()
+			return err
+
+		}
+		// fmt.Println(q0012data.SBRates[0].Percentage)
+		for x1 := 0; x1 <= iYear; x1++ {
+			fmt.Println("X1Values are ", x1)
+			for i := 0; i < len(q0012data.SbRates); i++ {
+				fmt.Println("i Values are ", x1, i)
+				if x1 == int(q0012data.SbRates[i].Term) {
+					oSB := q0012data.SbRates[i].Percentage * iSA / 100
+					// Write it in SB Table
+					fmt.Println("Values of X and I", x1, i, iYear)
+					survb.CompanyID = iCompany
+					survb.PolicyID = iPolicy
+					survb.PaidDate = ""
+					survb.EffectiveDate = AddYears2Date(iDate, x1, 0, 0)
+					survb.SBPercentage = q0012data.SbRates[i].Percentage
+					survb.Amount = oSB
+					survb.Tranno = uint(iTranno)
+					survb.Sequence++
+					survb.BenefitID = iBenefitID
+					survb.ID = 0
+					err1 := txn.Create(&survb)
+					if err1.Error != nil {
+						txn.Rollback()
+						fmt.Println("I am inside Error")
+						return err1.Error
+					}
+
+				}
+
+			}
+
+		}
+	}
+	if iType == "A" {
+		var q0013data paramTypes.Q0013Data
+		var extradataq0013 paramTypes.Extradata = &q0013data
+		fmt.Println("SB Parameters", iCompany, iType, iMethod, iAge, iCoverage, iDate)
+		err := GetItemD(int(iCompany), "Q0013", iMethod, iDate, &extradataq0013)
+		fmt.Println("SB Parameters", iCompany, iCoverage, iDate)
+
+		if err != nil {
+			return err
+
+		}
+		fmt.Println(q0013data.SbRates[0].Percentage)
+		for x := 0; x <= iAge; x++ {
+			for i := 0; i < len(q0013data.SbRates); i++ {
+				if x == int(q0013data.SbRates[i].Age) {
+					oSB := q0013data.SbRates[i].Percentage * iSA / 100
+					// Write it in SB Table
+					survb.CompanyID = iCompany
+					survb.PolicyID = iPolicy
+					survb.PaidDate = ""
+					survb.EffectiveDate = AddYears2Date(iDate, x, 0, 0)
+					survb.SBPercentage = q0013data.SbRates[i].Percentage
+					survb.Amount = oSB
+					survb.Tranno = uint(iTranno)
+					survb.Sequence++
+					survb.BenefitID = iBenefitID
+					err1 := txn.Create(&survb)
+					if err1 != nil {
+						txn.Rollback()
+						return err1.Error
+					}
+					continue
+				}
+
+			}
+
+		}
+
+	}
+	return nil
+}
+
 // # 52 (Redundant)  It is replaced by Create Communication
 // LetterCreate - To Create Letters
 //

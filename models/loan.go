@@ -20,7 +20,7 @@ type Loan struct {
 	LoanType        string `gorm:"type:varchar(02)"`
 	LoanStatus      string `gorm:"type:varchar(02)"`
 	LoanCurrency    string `gorm:"type:varchar(03)"`
-	LoanAmount      string `gorm:"type:varchar(15)"`
+	LoanAmount      float64
 	LoanIntRate     float64
 	LoanIntType     string `gorm:"type:varchar(02)"`
 	LastCapAmount   float64

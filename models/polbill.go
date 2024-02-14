@@ -38,4 +38,5 @@ type PolBill struct {
 	ProcessFlag       string `gorm:"type:varchar(05)"`
 	PayingAuthority   uint
 	BillDueMonth      string `gorm:"type:varchar(06)"`
+	BillDueAmount     float64
 }

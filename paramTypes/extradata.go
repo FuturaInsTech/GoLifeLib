@@ -2102,7 +2102,7 @@ func (m *P0071Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type P0072Data struct {
-	MinLoanAmount           string
+	MinLoanAmount           float64
 	MaxLoanPercentage       int
 	LoanInterestType        string // P0050
 	IntPayableFreq          string // P0050

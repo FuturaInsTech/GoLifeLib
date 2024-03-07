@@ -11213,3 +11213,370 @@ func ValidateClientWork(clientwork models.ClientWork, userco uint, userlan uint,
 	}
 	return nil
 }
+
+// #185
+// Stamp Duty for Loan Calculation
+// Inputs: CompanyID, SD Rate, Loan Amt, PolicyID
+//
+// # Outputs  Stamp Duty Amount
+//
+// ©  FuturaInsTech
+func CalculateStampDutyforLoan(iCompany uint, iRate float64, iDate string, iLoanAmount float64, iPolicy uint) float64 {
+
+	// //var policyenq models.Policy
+	// iPolicy := "80075"
+	var benefitenq []models.Benefit
+	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	var q0006data paramTypes.Q0006Data
+	var extradata2 paramTypes.Extradata = &q0006data
+	GetItemD(int(iCompany), "Q0006", benefitenq[0].BCoverage, iDate, &extradata2)
+	var p0072data paramTypes.P0072Data
+	var extradata paramTypes.Extradata = &p0072data
+
+	method := q0006data.LoanMethod
+
+	err := GetItemD(int(iCompany), "P0072", method, iDate, &extradata)
+	if err != nil {
+		return 0
+	}
+
+	oStampDuty := p0072data.StampDutyRate * iLoanAmount
+	oStampDuty = RoundFloat(oStampDuty, 2)
+
+	return oStampDuty
+}
+
+// #186
+// Get Loan Data
+// Inputs: CompanyID, PolicyID and EffectiveDate
+//
+// # Outputs  All Loan Data with Total Loan Details
+//
+// ©  FuturaInsTech
+func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]interface{} {
+	combinedData := make(map[string]interface{})
+
+	loanArray := make([]interface{}, 0)
+	extraData := make([]map[string]interface{}, 0)
+	overallData := make(map[string]interface{}) // Create a map for overall data
+
+	var loanenq []models.Loan
+
+	// Fetch loans for the specified company and policy
+	initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	var overallLoanAmount float64
+	var overallstampduty float64
+	var finalLoanAmountTotal float64
+
+	var p0072data paramTypes.P0072Data
+	var extradata4 paramTypes.Extradata = &p0072data
+	GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata4)
+
+	// Map to keep track of already printed LoanSeqNumber values
+	printedLoanSeqNumbers := make(map[uint]bool)
+
+	for i := 0; i < len(loanenq); i++ {
+		var benefit models.Benefit
+		initializers.DB.First(&benefit, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, loanenq[i].BenefitID)
+
+		//_, oFreq, _ := GetParamDesc(loanenq[i].PolicyID, "Q0009", "oFreq", 1)
+
+		// Calculate stamp duty based on the benefit
+		stampDuty := CalculateStampDutyforLoan(iCompany, p0072data.StampDutyRate, iEffectiveDate, loanenq[i].LoanAmount, loanenq[i].PolicyID)
+		overallstampduty += stampDuty
+
+		// Calculate final loan amount by adding loan amount and stamp duty
+		finalLoanAmount := loanenq[i].LoanAmount - stampDuty
+
+		// Update finalLoanAmountTotal with the final loan amount
+		finalLoanAmountTotal += finalLoanAmount
+
+		// Construct resultOut map for the loan
+		resultOut := map[string]interface{}{
+			"ID":              IDtoPrint(loanenq[i].PolicyID),
+			"BenefitID":       IDtoPrint(loanenq[i].BenefitID),
+			"PProduct":        loanenq[i].PProduct,
+			"BCoverage":       loanenq[i].BCoverage,
+			"ClientID":        IDtoPrint(loanenq[i].ClientID),
+			"LoanSeqNumber":   loanenq[i].LoanSeqNumber,
+			"TranDate":        DateConvert(loanenq[i].TranDate),
+			"TranNumber":      loanenq[i].TranNumber,
+			"LoanEffDate":     DateConvert(loanenq[i].LoanEffDate),
+			"LoanType":        loanenq[i].LoanType,
+			"LoanStatus":      loanenq[i].LoanStatus,
+			"LoanCurrency":    loanenq[i].LoanCurrency,
+			"LoanAmount":      loanenq[i].LoanAmount,
+			"LoanIntRate":     loanenq[i].LoanIntRate,
+			"LoanIntType":     loanenq[i].LoanIntType,
+			"LastCapAmount":   NumbertoPrint(loanenq[i].LastCapAmount),
+			"LastCapDate":     DateConvert(loanenq[i].LastCapDate),
+			"NextCapDate":     DateConvert(loanenq[i].NextCapDate),
+			"LastIntBillDate": DateConvert(loanenq[i].LastIntBillDate),
+			"NextIntBillDate": DateConvert(loanenq[i].NextIntBillDate),
+			"StampDuty":       stampDuty,
+			//"InterestFrequency": p0072data.IntPayableFreq,
+			"FinalLoanAmount": finalLoanAmount,
+		}
+
+		// Append resultOut to loanArray
+		loanArray = append(loanArray, resultOut)
+
+		// Add LoanSeqNumber to printedLoanSeqNumbers if it's not already added
+		if _, ok := printedLoanSeqNumbers[loanenq[i].LoanSeqNumber]; !ok {
+			printedLoanSeqNumbers[loanenq[i].LoanSeqNumber] = true
+
+			// Construct extraData map for the LoanSeqNumber
+			extraData = append(extraData, map[string]interface{}{
+				"LoanSeqNumber": loanenq[i].LoanSeqNumber,
+				"LoanEffDate":   DateConvert(loanenq[i].LoanEffDate),
+			})
+		}
+
+		// Incrementally sum up the loan amounts to calculate overall loan amount
+		overallLoanAmount += loanenq[i].LoanAmount
+	}
+
+	// Create a map to store overall loan data
+	overallData["overallLoanAmount"] = overallLoanAmount
+	overallData["overallstampduty"] = overallstampduty
+	overallData["finalLoanAmountTotal"] = finalLoanAmountTotal
+
+	// Assign arrays to their respective keys
+	combinedData["a1"] = loanArray
+	combinedData["a2"] = extraData
+	combinedData["a3"] = []map[string]interface{}{overallData}
+
+	return combinedData
+}
+
+// #187
+// All OS Loan and OS Loan Interest by Loan Type
+// Inputs: CompanyID, PolicyID, BenefitID, Effective Date, Loan Type
+//
+// # Outputs  OS Loan, OS Loan Int, Total Loan Int, Total Loan, Loan Currency
+//
+// ©  FuturaInsTech
+func GetAllLoanOSByType(iCompany uint, iPolicy uint, iBenefit uint, iEffectiveDate string, iLoanType string) (oLoanOS float64, oLoanIntOS float64, oLoanInt float64, oTotalLoan float64, oLoanCurr string) {
+
+	var loanenq []models.Loan
+	result := initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ? and benefit_id = ? and loan_status = ? and loan_type = ?", iCompany, iPolicy, iBenefit, "AC", iLoanType)
+	if result.Error != nil {
+		// txn.Rollback()
+		return 0, 0, 0, 0, ""
+	}
+	for i := 0; i < len(loanenq); i++ {
+		if loanenq[i].NextCapDate > iEffectiveDate {
+			oLoanOS = oLoanOS + loanenq[i].LastCapAmount
+			oLoanInt = loanenq[i].LoanIntRate
+			_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastCapDate)
+			itemp := CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+			oLoanIntOS = itemp
+			oLoanOS = oLoanIntOS + loanenq[i].LastCapAmount
+			// oLoanIntOS = itemp + loanenq[i].LastCapAmount - oLoanIntOS
+			// oTotalLoan = oLoanOS
+			oLoanCurr = loanenq[i].LoanCurrency
+		}
+		return oLoanOS, oLoanIntOS, oLoanInt, oTotalLoan, oLoanCurr
+	}
+
+	return
+}
+
+// #188
+// OS Loan and OS Loan Interest Calculation
+// Inputs: CompanyID, PolicyID, Effective Date
+//
+// # Outputs  Outstanding Loan and Loan Interest
+//
+// ©  FuturaInsTech
+func GetAllLoanInterest(iCompany uint, iPolicy uint, iEffectiveDate string) []interface{} {
+	var benefitenq []models.Benefit
+	allLoanOs := make([]interface{}, 0)
+	result := initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		return nil
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+
+	// Initialize variables
+	var totalLoan float64
+	var totalInt float64
+	var totalOsAmount float64
+
+	// Calculate total amount outside the loop
+	for s := 0; s < len(benefitenq); s++ {
+		iKey := benefitenq[s].BCoverage
+		iDate := benefitenq[s].BStartDate
+		iBenefit := benefitenq[s].ID
+
+		GetItemD(int(iCompany), "Q0006", iKey, iDate, &extradataq0006)
+		if q0006data.SurrMethod != "" && q0006data.LoanMethod != "" {
+			oLoanOSP, oLoanIntOSP, _, _, _ := GetAllLoanOSByType(iCompany, iPolicy, iBenefit, iEffectiveDate, "P")
+			totalLoanP := oLoanOSP + oLoanIntOSP
+
+			oLoanOS_A, oLoanIntOS_A, _, _, _ := GetAllLoanOSByType(iCompany, iPolicy, iBenefit, iEffectiveDate, "A")
+			totalLoanA := oLoanOS_A + oLoanIntOS_A
+
+			// Calculate the total amount
+			totalLoan += totalLoanP + totalLoanA
+
+			// Calculate the total interest
+			totalInt += oLoanIntOSP + oLoanIntOS_A
+		}
+		totalOsAmount += totalLoan + totalInt
+	}
+
+	allLoanOs = append(allLoanOs, map[string]interface{}{
+		"TotLoanOS":     RoundFloat(totalLoan, 0),
+		"TotIntOs":      RoundFloat(totalInt, 0),
+		"TotalOsAmount": RoundFloat(totalOsAmount, 0),
+	})
+
+	return allLoanOs
+}
+
+// #189
+// Get Next Loan Number (Increment and return to use for new Loan)
+// Inputs: CompanyID, PolicyID
+//
+// # Outputs  Next Loan Sequence Number (Maximum Loan Number + 1)
+//
+// ©  FuturaInsTech
+func GetMaxLoanSeqNo(iCompany uint, iPolicy uint) (error, uint) {
+
+	var result *gorm.DB
+
+	result1 := initializers.DB.Table("loans").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(loan_seq_number)")
+
+	if result1.Error != nil {
+		return result.Error, 0
+	}
+
+	var loanseqno uint = 0
+	var newloanseqno uint = 0
+
+	err := result1.Row().Scan(&loanseqno)
+
+	fmt.Println("Error ", err)
+
+	newloanseqno = uint(loanseqno) + 1
+
+	return nil, newloanseqno
+
+}
+
+// #190
+// TDF Loan Interest Billing Process
+// Inputs: CompanyID, PolicyID, Function, Tran No,
+//
+// # Outputs  Error
+//
+// ©  FuturaInsTech
+func TDFLoanInt(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var loanenq []models.Loan
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
+	if result.Error != nil {
+		return "", result.Error
+	}
+	oDate := ""
+	for i := 0; i < len(loanenq); i++ {
+
+		if oDate == "" {
+			oDate = loanenq[i].NextIntBillDate
+		}
+		if loanenq[i].NextIntBillDate < oDate {
+			oDate = loanenq[i].NextIntBillDate
+		}
+	}
+
+	if oDate != "" {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			txn.Create(&tdfpolicy)
+			return "", nil
+		} else {
+			txn.Delete(&tdfpolicy)
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+
+			txn.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}
+
+// #191
+// TDF Loan Interest Capitalization Process
+// Inputs: CompanyID, PolicyID, Function, Tran No,
+//
+// # Outputs  Error
+//
+// ©  FuturaInsTech
+func TDFLoanCap(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var loanenq []models.Loan
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
+	if result.Error != nil {
+		return "", result.Error
+	}
+	oDate := ""
+	for i := 0; i < len(loanenq); i++ {
+
+		if oDate == "" {
+			oDate = loanenq[i].NextCapDate
+		}
+		if loanenq[i].NextCapDate < oDate {
+			oDate = loanenq[i].NextCapDate
+		}
+	}
+
+	if oDate != "" {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error != nil {
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+			txn.Create(&tdfpolicy)
+			return "", nil
+		} else {
+			txn.Delete(&tdfpolicy)
+			var tdfpolicy models.TDFPolicy
+			tdfpolicy.CompanyID = iCompany
+			tdfpolicy.PolicyID = iPolicy
+			tdfpolicy.Seqno = tdfrule.Seqno
+			tdfpolicy.TDFType = iFunction
+			tdfpolicy.ID = 0
+			tdfpolicy.EffectiveDate = oDate
+			tdfpolicy.Tranno = iTranno
+
+			txn.Create(&tdfpolicy)
+			return "", nil
+		}
+	}
+	return "", nil
+}

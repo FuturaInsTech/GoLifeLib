@@ -91,7 +91,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.IlpStatementPrint{})
 	// DB.AutoMigrate(&models.PayingAuthority{})
 	// DB.AutoMigrate(&models.PaBillSummary{})
-	// DB.AutoMigrate(&models.ClientWork{})
+	DB.AutoMigrate(&models.ClientWork{})
 	DB.AutoMigrate(&models.Loan{})
 	DB.AutoMigrate(&models.LoanBill{})
 

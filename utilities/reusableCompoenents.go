@@ -5143,6 +5143,18 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "30":
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
+				case oLetType == "31":
+					oData := GetLoanData(iCompany, iPolicy, iDate)
+					resultMap["LoanData"] = oData
+				case oLetType == "32":
+					oData := GetAllLoanInterest(iCompany, iPolicy, iDate)
+					resultMap["LoanInterestData"] = oData				
+				case oLetType == "33":
+					oData := LoanCap(iCompany, iPolicy, iDate, iFromDate, iToDate)
+					resultMap["LoanCap"] = oData
+				case oLetType == "34":
+					oData := LoanBillData(iCompany, iPolicy, iDate)
+					resultMap["LoanBillData"] = oData					
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -11580,3 +11592,791 @@ func TDFLoanCap(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 	}
 	return "", nil
 }
+
+// #192
+// Loan Interest Billing Process
+// Inputs: CompanyID, PolicyID, Loan Type, Effective Date, History Code
+//
+// # Outputs  Error
+//
+// ©  FuturaInsTech
+func LoanInt(iCompany uint, iPolicy uint, iType string, iEffectiveDate string, iHistoryCD string) error {
+
+	method := "B0116" //H0176
+	iHistoryC := "B0116"
+	txn := initializers.DB.Begin()
+	var loanenq []models.Loan
+
+	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and  loan_type = ? and loan_status = ? and next_int_bill_date<=?", iCompany, iPolicy, "P", "AC", iEffectiveDate)
+
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var policyenq models.Policy
+
+	result = txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var tdfpolicyenq []models.TDFPolicy
+	result = txn.First(&tdfpolicyenq, "company_id = ? and policy_id = ? and tdf_type = ? and effective_date <= ? ", iCompany, iPolicy, iType, iEffectiveDate)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var loanbillupd models.LoanBill
+	result = txn.Find(&loanbillupd, "company_id = ? and policy_id = ?  ", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	//Reversal
+	historyMap := make(map[string]interface{})
+	historyMap["Policy"] = policyenq
+	historyMap["TDFPolicies"] = tdfpolicyenq
+	historyMap["Loan"] = loanenq
+	if result.RowsAffected > 0 {
+		historyMap["LoanBill"] = loanbillupd
+	}
+	_, newtranno, err := GetMaxTrannoBN(iCompany, iPolicy, method, policyenq.NxtBTDate, 1, historyMap, txn)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	var oLoanOS float64
+	var oLoanIntOS float64
+	iDate := utilities.GetBusinessDate(iCompany, 0, 0)
+
+	var p0072data paramTypes.P0072Data
+	var extradata paramTypes.Extradata = &p0072data
+	utilities.GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata)
+
+	var p0027data paramTypes.P0027Data
+	var extradata1 paramTypes.Extradata = &p0027data
+	utilities.GetItemD(int(iCompany), "P0027", iHistoryC, iDate, &extradata1)
+	//var duescounter uint
+
+	for i := 0; i < len(loanenq); i++ {
+		var itemp float64
+
+		// loanbillupd.PolicyID = newtranno
+		loanbillupd.PolicyID = loanenq[i].PolicyID
+		loanbillupd.BenefitID = loanenq[i].BenefitID
+		loanbillupd.ClientID = loanenq[i].ClientID
+		loanbillupd.LoanID = loanenq[i].ID
+		loanbillupd.LoanBillCurr = loanenq[i].LoanCurrency
+		loanbillupd.LoanType = loanenq[i].LoanType
+		loanbillupd.LoanBillDueDate = loanenq[i].NextIntBillDate
+		loanbillupd.LoanIntAmount = loanenq[i].LastCapAmount
+		loanbillupd.CompanyID = iCompany
+		loanbillupd.Tranno = newtranno
+
+		oLoanOS = loanenq[i].LastCapAmount
+		oLoanInt := loanenq[i].LoanIntRate
+		_, _, _, iNoOfDays, _, _, _, _ := utilities.NoOfDays(loanenq[i].NextIntBillDate, loanenq[i].LastIntBillDate)
+
+		if p0072data.LoanInterestType == "C" {
+			itemp = utilities.CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+		} else if p0072data.LoanInterestType == "S" {
+			itemp = utilities.SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+		}
+
+		oLoanIntOS += itemp
+
+		loanbillupd.LoanIntAmount = utilities.RoundFloat(itemp, 2)
+
+		loanenq[i].LastIntBillDate = loanenq[i].NextIntBillDate
+		a := utilities.GetNextDue(loanenq[i].NextIntBillDate, p0072data.IntPayableFreq, "")
+		NextbillDate := utilities.Date2String(a)
+		loanenq[i].NextIntBillDate = NextbillDate
+		result = txn.Save(&loanenq[i])
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+
+		iCoverage := loanenq[i].BCoverage
+
+		// Accounting entries
+		if itemp != 0 {
+			glcode := p0027data.GlMovements[0].AccountCode
+			var acccode0 models.AccountCode
+			result = txn.First(&acccode0, "company_id = ? and account_code = ? ", iCompany, glcode)
+			if result.Error != nil {
+				txn.Rollback()
+				return result.Error
+			}
+			var iSequenceno uint64
+			iAccountCodeID := acccode0.ID
+
+			iAccCurry := loanenq[i].LoanCurrency
+			iAccountCode := glcode
+			iEffectiveDate := iDate
+
+			iGlAmount := itemp
+			iAccAmount := itemp
+			iGlSign := p0027data.GlMovements[0].GlSign
+			iTranno := newtranno
+			iSequenceno = uint64(p0027data.GlMovements[0].SeqNo)
+			iGlRldgAcct := strconv.Itoa(int(iPolicy)) + iCoverage
+			iGlRdocno := loanenq[i].PolicyID
+
+			err = utilities.PostGlMove(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+				iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iHistoryCD, "", iCoverage)
+			if err != nil {
+				txn.Rollback()
+				return err
+			}
+		}
+
+		if itemp != 0 {
+			glcode := p0027data.GlMovements[1].AccountCode
+			var acccode0 models.AccountCode
+			result = txn.First(&acccode0, "company_id = ? and account_code = ? ", iCompany, glcode)
+			if result.Error != nil {
+				txn.Rollback()
+				return result.Error
+			}
+			var iSequenceno uint64
+			iAccountCodeID := acccode0.ID
+
+			iAccCurry := loanenq[i].LoanCurrency
+			iAccountCode := glcode
+			iEffectiveDate := iDate
+
+			iGlAmount := itemp
+			iAccAmount := itemp
+			iGlSign := p0027data.GlMovements[1].GlSign
+			iTranno := newtranno
+			iSequenceno = uint64(p0027data.GlMovements[1].SeqNo)
+			iGlRldgAcct := strconv.Itoa(int(iPolicy)) + iCoverage
+			//iGlRldgAcct = strconv.Itoa(int(iPolicy)) + iCoverage
+			iGlRdocno := loanenq[i].PolicyID
+
+			err = utilities.PostGlMove(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+				iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iHistoryCD, "", iCoverage)
+			if err != nil {
+				txn.Rollback()
+				return err
+			}
+		}
+
+	}
+	result = txn.Save(&loanbillupd)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	/// sandhiya's note
+	// have to check condition if the loan int bill date is equal to loan last int bill date then letter not to be generated
+	iClient := policyenq.ClientID
+	iAddress := policyenq.AddressID
+	if loanenq[0].LastIntBillDate == loanbillupd.LoanBillDueDate {
+		err = utilities.CreateCommunicationsN(iCompany, method, newtranno, iEffectiveDate, iPolicy, iClient, iAddress, 0, 0, 0, "", "", "", "", "", txn, 0, 0, 0, oLoanIntOS, 0, 0, 0)
+		if err != nil {
+			txn.Rollback()
+			return err
+		}
+	}
+	_, err = TDFLoanInt(iCompany, uint(iPolicy), "LOANINT", newtranno, txn)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+	err = utilities.TdfhUpdateN(iCompany, uint(iPolicy), txn)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+	txn.Commit()
+
+	return nil
+
+}
+
+// #193
+// Loan Interest Capitalization Process
+// Inputs: CompanyID, PolicyID, Loan Type, Effective Date, History Code
+//
+// # Outputs  Error
+//
+// ©  FuturaInsTech
+func LoanCap(iCompany uint, iPolicy uint, iType string, iEffectiveDate string, iHistoryCD string) error {
+
+	method := "B0117" //B0117
+	iHistoryC := "B0117"
+	txn := initializers.DB.Begin()
+	var loanenq []models.Loan
+
+	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and  loan_type = ? and loan_status = ? and next_cap_date <=?", iCompany, iPolicy, "P", "AC", iEffectiveDate)
+
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var policyenq models.Policy
+
+	result = txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	var tdfpolicyenq []models.TDFPolicy
+	result = txn.First(&tdfpolicyenq, "company_id = ? and policy_id = ? and tdf_type = ? and effective_date <= ? ", iCompany, iPolicy, iType, iEffectiveDate)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+	var loanbillupd []models.LoanBill
+	result = txn.Find(&loanbillupd, "company_id = ? and policy_id = ? and loan_bill_due_date <= ?", iCompany, iPolicy, iEffectiveDate)
+	if result.Error != nil {
+		txn.Rollback()
+		return result.Error
+	}
+
+	historyMap := make(map[string]interface{})
+	historyMap["Policy"] = policyenq
+	historyMap["TDFPolicies"] = tdfpolicyenq
+	historyMap["Loan"] = loanenq
+	// historyMap["LoanBill"] = loanbillupd
+
+	_, newtranno, err := GetMaxTrannoBN(iCompany, iPolicy, method, policyenq.NxtBTDate, 1, historyMap, txn)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	var minLoanDate string
+	var maxLoanDate string
+	var oLoanOS float64
+	var oLoanIntOS float64
+	iDate := utilities.GetBusinessDate(iCompany, 0, 0)
+
+	var p0072data paramTypes.P0072Data
+	var extradata paramTypes.Extradata = &p0072data
+	utilities.GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata)
+
+	var p0027data paramTypes.P0027Data
+	var extradata1 paramTypes.Extradata = &p0027data
+	utilities.GetItemD(int(iCompany), "P0027", iHistoryC, iDate, &extradata1)
+
+	var totalcapamount float64
+	var dueCounter uint
+
+	for i := 0; i < len(loanenq); i++ {
+		var itemp float64
+		var loanIntAmo float64
+		var validosbill uint
+
+		for j := 0; j < len(loanbillupd); j++ {
+			if loanbillupd[j].ReceiptNo == 0 {
+				dueCounter++
+				if loanenq[i].LastCapDate <= loanbillupd[j].LoanBillDueDate && loanbillupd[j].LoanBillDueDate <= loanenq[i].NextCapDate {
+					if validosbill == 0 {
+						minLoanDate = loanbillupd[0].LoanBillDueDate
+						maxLoanDate = loanbillupd[0].LoanBillDueDate
+						validosbill = 1
+					}
+					oLoanOS = loanenq[i].LastCapAmount
+					oLoanInt := loanenq[i].LoanIntRate
+					loanIntAmo = loanbillupd[j].LoanIntAmount
+					oLoanIntOS += loanIntAmo
+					_, _, _, iNoOfDays, _, _, _, _ := utilities.NoOfDays(loanenq[i].NextCapDate, loanbillupd[j].LoanBillDueDate)
+
+					// Update minLoanDate if the current due date is lower
+					if loanbillupd[j].LoanBillDueDate < minLoanDate {
+						minLoanDate = loanbillupd[j].LoanBillDueDate
+					}
+					// Update maxLoanDate if the current due date is higher
+					if loanbillupd[j].LoanBillDueDate > maxLoanDate {
+						maxLoanDate = loanbillupd[j].LoanBillDueDate
+					}
+
+					if p0072data.LoanInterestType == "C" { // NOTE: include when intrest on intrest to be calculated
+						itemp = utilities.CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+					} else if p0072data.LoanInterestType == "S" {
+						itemp = utilities.SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+					}
+
+					// oLoanIntOS += itemp  // NOTE: include when intrest on intrest to be calculated
+					fmt.Println(itemp)
+
+				}
+
+				// soft delete
+				initializers.DB.Delete(&loanbillupd[j])
+
+			}
+		}
+
+		loanenq[i].LastCapDate = loanenq[i].NextCapDate //
+		a := utilities.GetNextDue(loanenq[i].NextCapDate, p0072data.CapitalizationFrequency, "")
+		NextCapDate := utilities.Date2String(a)
+		loanenq[i].NextCapDate = NextCapDate
+		// totalcapamount := loanenq[i].LastCapAmount  + totalloanint + oLoanIntOS // NOTE : include when intrest on intrest to be calculated
+		totalcapamount = loanenq[i].LastCapAmount + oLoanIntOS
+
+		loanenq[i].LastCapAmount = utilities.RoundFloat(totalcapamount, 2)
+
+		// save the loan table
+		result = txn.Save(&loanenq[i])
+		if result.Error != nil {
+			txn.Rollback()
+			return result.Error
+		}
+
+		iCoverage := loanenq[i].BCoverage
+		// For Accounting Enries  refering to p0027
+		if loanIntAmo != 0 {
+			glcode := p0027data.GlMovements[0].AccountCode
+			var acccode0 models.AccountCode
+			result = txn.First(&acccode0, "company_id = ? and account_code = ? ", iCompany, glcode)
+			if result.Error != nil {
+				txn.Rollback()
+				return result.Error
+			}
+			var iSequenceno uint64
+			iAccountCodeID := acccode0.ID
+
+			iAccCurry := loanenq[i].LoanCurrency
+			iAccountCode := glcode
+			iEffectiveDate := iDate
+
+			iGlAmount := oLoanIntOS
+			iAccAmount := oLoanIntOS
+			iGlSign := p0027data.GlMovements[0].GlSign
+			iTranno := newtranno
+			iSequenceno = uint64(p0027data.GlMovements[0].SeqNo)
+			iGlRldgAcct := strconv.Itoa(int(iPolicy)) + iCoverage
+			//iGlRldgAcct = strconv.Itoa(int(iPolicy)) + iCoverage
+			iGlRdocno := loanenq[i].PolicyID
+
+			err = utilities.PostGlMove(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+				iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iHistoryCD, "", iCoverage)
+			if err != nil {
+				txn.Rollback()
+				return errors.New("P0027date[0] Failed")
+
+			}
+		}
+
+		if loanIntAmo != 0 {
+			glcode := p0027data.GlMovements[1].AccountCode
+			var acccode0 models.AccountCode
+			result = txn.First(&acccode0, "company_id = ? and account_code = ? ", iCompany, glcode)
+			if result.Error != nil {
+				txn.Rollback()
+				return result.Error
+			}
+			var iSequenceno uint64
+			iAccountCodeID := acccode0.ID
+
+			iAccCurry := loanenq[i].LoanCurrency
+			iAccountCode := glcode
+			iEffectiveDate := iDate
+
+			iGlAmount := oLoanIntOS
+			iAccAmount := oLoanIntOS
+			iGlSign := p0027data.GlMovements[1].GlSign
+			iTranno := newtranno
+			iSequenceno = uint64(p0027data.GlMovements[1].SeqNo)
+			iGlRldgAcct := strconv.Itoa(int(iPolicy)) + iCoverage
+			//iGlRldgAcct = strconv.Itoa(int(iPolicy)) + iCoverage
+			iGlRdocno := loanenq[i].PolicyID
+
+			err = utilities.PostGlMove(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+				iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iHistoryCD, "", iCoverage)
+			if err != nil {
+				txn.Rollback()
+				return errors.New("P0027date[1] Failed")
+
+			}
+		}
+
+		if loanIntAmo != 0 {
+			glcode := p0027data.GlMovements[2].AccountCode
+			var acccode2 models.AccountCode
+			result = txn.First(&acccode2, "company_id = ? and account_code = ? ", iCompany, glcode)
+			if result.Error != nil {
+				txn.Rollback()
+				return result.Error
+			}
+			var iSequenceno uint64
+			iAccountCodeID := acccode2.ID
+
+			iAccCurry := loanenq[i].LoanCurrency
+			iAccountCode := glcode
+			iEffectiveDate := iDate
+
+			iGlAmount := oLoanIntOS
+			iAccAmount := oLoanIntOS
+			iGlSign := p0027data.GlMovements[2].GlSign
+			iTranno := newtranno
+			iSequenceno = uint64(p0027data.GlMovements[2].SeqNo)
+			iGlRldgAcct := strconv.Itoa(int(iPolicy)) + iCoverage
+			//iGlRldgAcct = strconv.Itoa(int(iPolicy)) + iCoverage
+			iGlRdocno := loanenq[i].PolicyID
+
+			err = utilities.PostGlMove(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+				iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iHistoryCD, "", iCoverage)
+			if err != nil {
+				txn.Rollback()
+				return errors.New("P0027date[2] Failed")
+
+			}
+		}
+
+		if loanIntAmo != 0 {
+			glcode := p0027data.GlMovements[3].AccountCode
+			var acccode3 models.AccountCode
+			result = txn.First(&acccode3, "company_id = ? and account_code = ? ", iCompany, glcode)
+			if result.Error != nil {
+				txn.Rollback()
+				return result.Error
+			}
+			var iSequenceno uint64
+			iAccountCodeID := acccode3.ID
+
+			iAccCurry := loanenq[i].LoanCurrency
+			iAccountCode := glcode
+			iEffectiveDate := iDate
+
+			iGlAmount := oLoanIntOS
+			iAccAmount := oLoanIntOS
+			iGlSign := p0027data.GlMovements[3].GlSign
+			iTranno := newtranno
+			iSequenceno = uint64(p0027data.GlMovements[3].SeqNo)
+			iGlRldgAcct := strconv.Itoa(int(iPolicy)) + iCoverage
+			//iGlRldgAcct = strconv.Itoa(int(iPolicy)) + iCoverage
+			iGlRdocno := loanenq[i].PolicyID
+
+			err = utilities.PostGlMove(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+				iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iHistoryCD, "", iCoverage)
+			if err != nil {
+				txn.Rollback()
+				return errors.New("P0027date[3] Failed")
+
+			}
+		}
+
+	}
+
+	iClient := policyenq.ClientID
+	iAddress := policyenq.AddressID
+	iFromDate := minLoanDate
+	iToDate := maxLoanDate
+	iAmount1 := totalcapamount
+	iAmount2 := oLoanIntOS
+	iNo1 := dueCounter
+	err = utilities.CreateCommunicationsN(iCompany, method, newtranno, iEffectiveDate, iPolicy, iClient, iAddress, 0, 0, 0, iFromDate, iToDate, "", "", "", txn, 0, 0, 0, iAmount1, iAmount2, iNo1, 0)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+
+	_, err = TDFLoanCap(iCompany, uint(iPolicy), "LOANCAP", newtranno, txn)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+	err = utilities.TdfhUpdateN(iCompany, uint(iPolicy), txn)
+	if err != nil {
+		txn.Rollback()
+		return err
+	}
+	txn.Commit()
+
+	return nil
+
+}
+
+// #194
+// Get Loan Data for Letters
+// Inputs: CompanyID, PolicyID, Effective Date
+//
+// # Outputs: Letter Data
+//
+// ©  FuturaInsTech
+func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]interface{} {
+	combinedData := make(map[string]interface{})
+
+	loanArray := make([]interface{}, 0)
+	extraData := make([]map[string]interface{}, 0)
+	overallData := make(map[string]interface{}) // Create a map for overall data
+
+	var loanenq []models.Loan
+
+	// Fetch loans for the specified company and policy
+	initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	var overallLoanAmount float64
+	var overallstampduty float64
+	var finalLoanAmountTotal float64
+
+	var p0072data paramTypes.P0072Data
+	var extradata4 paramTypes.Extradata = &p0072data
+	GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata4)
+
+	// Map to keep track of already printed LoanSeqNumber values
+	printedLoanSeqNumbers := make(map[uint]bool)
+
+	for i := 0; i < len(loanenq); i++ {
+		var benefit models.Benefit
+		initializers.DB.First(&benefit, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, loanenq[i].BenefitID)
+
+		//_, oFreq, _ := GetParamDesc(loanenq[i].PolicyID, "Q0009", "oFreq", 1)
+
+		// Calculate stamp duty based on the benefit
+		stampDuty := CalculateStampDutyforLoan(iCompany, p0072data.StampDutyRate, iEffectiveDate, loanenq[i].LoanAmount, loanenq[i].PolicyID)
+		overallstampduty += stampDuty
+
+		// Calculate final loan amount by adding loan amount and stamp duty
+		finalLoanAmount := loanenq[i].LoanAmount - stampDuty
+
+		// Update finalLoanAmountTotal with the final loan amount
+		finalLoanAmountTotal += finalLoanAmount
+
+		// Construct resultOut map for the loan
+		resultOut := map[string]interface{}{
+			"ID":              IDtoPrint(loanenq[i].PolicyID),
+			"BenefitID":       IDtoPrint(loanenq[i].BenefitID),
+			"PProduct":        loanenq[i].PProduct,
+			"BCoverage":       loanenq[i].BCoverage,
+			"ClientID":        IDtoPrint(loanenq[i].ClientID),
+			"LoanSeqNumber":   loanenq[i].LoanSeqNumber,
+			"TranDate":        DateConvert(loanenq[i].TranDate),
+			"TranNumber":      loanenq[i].TranNumber,
+			"LoanEffDate":     DateConvert(loanenq[i].LoanEffDate),
+			"LoanType":        loanenq[i].LoanType,
+			"LoanStatus":      loanenq[i].LoanStatus,
+			"LoanCurrency":    loanenq[i].LoanCurrency,
+			"LoanAmount":      loanenq[i].LoanAmount,
+			"LoanIntRate":     loanenq[i].LoanIntRate,
+			"LoanIntType":     loanenq[i].LoanIntType,
+			"LastCapAmount":   NumbertoPrint(loanenq[i].LastCapAmount),
+			"LastCapDate":     DateConvert(loanenq[i].LastCapDate),
+			"NextCapDate":     DateConvert(loanenq[i].NextCapDate),
+			"LastIntBillDate": DateConvert(loanenq[i].LastIntBillDate),
+			"NextIntBillDate": DateConvert(loanenq[i].NextIntBillDate),
+			"StampDuty":       stampDuty,
+			//"InterestFrequency": p0072data.IntPayableFreq,
+			"FinalLoanAmount": finalLoanAmount,
+		}
+
+		// Append resultOut to loanArray
+		loanArray = append(loanArray, resultOut)
+
+		// Add LoanSeqNumber to printedLoanSeqNumbers if it's not already added
+		if _, ok := printedLoanSeqNumbers[loanenq[i].LoanSeqNumber]; !ok {
+			printedLoanSeqNumbers[loanenq[i].LoanSeqNumber] = true
+
+			// Construct extraData map for the LoanSeqNumber
+			extraData = append(extraData, map[string]interface{}{
+				"LoanSeqNumber": loanenq[i].LoanSeqNumber,
+				"LoanEffDate":   DateConvert(loanenq[i].LoanEffDate),
+			})
+		}
+
+		// Incrementally sum up the loan amounts to calculate overall loan amount
+		overallLoanAmount += loanenq[i].LoanAmount
+	}
+
+	// Create a map to store overall loan data
+	overallData["overallLoanAmount"] = overallLoanAmount
+	overallData["overallstampduty"] = overallstampduty
+	overallData["finalLoanAmountTotal"] = finalLoanAmountTotal
+
+	// Assign arrays to their respective keys
+	combinedData["a1"] = loanArray
+	combinedData["a2"] = extraData
+	combinedData["a3"] = []map[string]interface{}{overallData}
+
+	return combinedData
+}
+
+// #195
+// Get All Loan Interest Data for Letters
+// Inputs: CompanyID, PolicyID, Effective Date
+//
+// # Outputs: Letter Data
+//
+// ©  FuturaInsTech
+func GetAllLoanInterest(iCompany uint, iPolicy uint, iEffectiveDate string) []interface{} {
+	var benefitenq []models.Benefit
+	allLoanOs := make([]interface{}, 0)
+	result := initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		return nil
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+
+	// Initialize variables
+	var totalLoan float64
+	var totalInt float64
+	var totalOsAmount float64
+
+	// Calculate total amount outside the loop
+	for s := 0; s < len(benefitenq); s++ {
+		iKey := benefitenq[s].BCoverage
+		iDate := benefitenq[s].BStartDate
+		iBenefit := benefitenq[s].ID
+
+		GetItemD(int(iCompany), "Q0006", iKey, iDate, &extradataq0006)
+		if q0006data.SurrMethod != "" && q0006data.LoanMethod != "" {
+			oLoanOSP, oLoanIntOSP, _, _, _ := GetAllLoanOSByType1(iCompany, iPolicy, iBenefit, iEffectiveDate, "P")
+			totalLoanP := oLoanOSP + oLoanIntOSP
+
+			oLoanOS_A, oLoanIntOS_A, _, _, _ := GetAllLoanOSByType1(iCompany, iPolicy, iBenefit, iEffectiveDate, "A")
+			totalLoanA := oLoanOS_A + oLoanIntOS_A
+
+			// Calculate the total amount
+			totalLoan += totalLoanP + totalLoanA
+
+			// Calculate the total interest
+			totalInt += oLoanIntOSP + oLoanIntOS_A
+		}
+		totalOsAmount += totalLoan + totalInt
+	}
+
+	allLoanOs = append(allLoanOs, map[string]interface{}{
+		"TotLoanOS":     RoundFloat(totalLoan, 0),
+		"TotIntOs":      RoundFloat(totalInt, 0),
+		"TotalOsAmount": RoundFloat(totalOsAmount, 0),
+	})
+
+	return allLoanOs
+}
+
+// #196
+// Get Loan Bill Data For Letters
+// Inputs: CompanyID, PolicyID, Effective Date
+//
+// # Outputs: Loan Bill Data
+//
+// ©  FuturaInsTech
+func LoanBillData(iCompany uint, iPolicy uint, iEffectiveDate string) []interface{} {
+
+	var loanenq []models.Loan
+
+	initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ? and  loan_type = ? and loan_status = ? and next_int_bill_date<=?", iCompany, iPolicy, "P", "AC", iEffectiveDate)
+
+	var policyenq models.Policy
+
+	initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	var loanbillupd models.LoanBill
+	var oLoanOS float64
+	var oLoanIntOS float64
+
+	var p0072data paramTypes.P0072Data
+	var extradata paramTypes.Extradata = &p0072data
+	GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata)
+	loanbill := make([]interface{}, 0)
+
+	for i := 0; i < len(loanenq); i++ {
+		var itemp float64
+
+		// loanbillupd.PolicyID = newtranno
+		loanbillupd.PolicyID = loanenq[i].PolicyID
+		loanbillupd.BenefitID = loanenq[i].BenefitID
+		loanbillupd.ClientID = loanenq[i].ClientID
+		loanbillupd.LoanID = loanenq[i].ID
+		loanbillupd.LoanBillCurr = loanenq[i].LoanCurrency
+		loanbillupd.LoanType = loanenq[i].LoanType
+		loanbillupd.LoanBillDueDate = loanenq[i].NextIntBillDate
+		loanbillupd.LoanIntAmount = loanenq[i].LastCapAmount
+		loanbillupd.CompanyID = iCompany
+
+		oLoanOS = loanenq[i].LastCapAmount
+		oLoanInt := loanenq[i].LoanIntRate
+		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(loanenq[i].NextIntBillDate, loanenq[i].LastIntBillDate)
+
+		if p0072data.LoanInterestType == "C" {
+			itemp = CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+		} else if p0072data.LoanInterestType == "S" {
+			itemp = SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+		}
+
+		oLoanIntOS += itemp
+
+		loanbillupd.LoanIntAmount = itemp
+
+		loanenq[i].LastIntBillDate = loanenq[i].NextIntBillDate
+		a := GetNextDue(loanenq[i].NextIntBillDate, p0072data.IntPayableFreq, "")
+		NextbillDate := Date2String(a)
+		loanenq[i].NextIntBillDate = NextbillDate
+
+		resultOut := map[string]interface{}{
+
+			"PolicyID":  IDtoPrint(loanbillupd.PolicyID),
+			"CompanyID": IDtoPrint(loanbillupd.CompanyID),
+			"ClientID":  IDtoPrint(loanbillupd.ClientID),
+			"BenefitID": IDtoPrint(loanbillupd.BenefitID),
+			// "PaidToDate":       DateConvert(loanbillupd.PaidToDate),
+			"LoanBillCurrency": loanbillupd.LoanBillCurr,
+			"LoanType":         loanbillupd.LoanType,
+			"LoanBillDueDate":  DateConvert(loanbillupd.LoanBillDueDate),
+			"LoanIntAmount":    RoundFloat(loanbillupd.LoanIntAmount, 0),
+		}
+		loanbill = append(loanbill, resultOut)
+
+	}
+
+	return loanbill
+
+}
+
+// #197
+// Get Loan Capitalized Amount
+// Inputs: CompanyID, PolicyID, Effective Date, Minimum Loan Date, Maximum Loan Date
+//
+// # Outputs: Loan Capitalized Amount
+//
+// ©  FuturaInsTech
+func LoanCap(iCompany uint, iPolicy uint, iEffectiveDate string, minLoanDate string, maxLoanDate string) []interface{} {
+	allLoanCap := make([]interface{}, 0)
+
+	var loanenq []models.Loan
+	var totalcapamount float64
+
+	initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ? and  loan_type = ? and loan_status = ? and next_cap_date <=?", iCompany, iPolicy, "P", "AC", iEffectiveDate)
+
+	var policyenq models.Policy
+
+	initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	// var minLoanDate string
+	// var maxLoanDate string
+	var p0072data paramTypes.P0072Data
+	var extradata paramTypes.Extradata = &p0072data
+	GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata)
+
+	for i := 0; i < len(loanenq); i++ {
+
+		totalcapamount = loanenq[i].LastCapAmount
+
+	}
+	resultOut := map[string]interface{}{
+		"totalcapamount": RoundFloat(totalcapamount, 0),
+		"minLoanDate":    minLoanDate,
+		"maxLoanDate":    maxLoanDate,
+	}
+	allLoanCap = append(allLoanCap, resultOut)
+	return allLoanCap
+
+}
+
+
+

@@ -4928,7 +4928,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint) error {
+func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint, iAmount1 float64, iAmount2 float64, iNo1 uint, iNo2 uint) error {
 
 	var communication models.Communication
 	var iKey string
@@ -5144,13 +5144,13 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
 				case oLetType == "31":
-					oData := GetLoanData(iCompany, iPolicy, iDate)
+					oData := GetLoanData(iCompany, iPolicy, iDate, iAmount1)
 					resultMap["LoanData"] = oData
 				case oLetType == "32":
 					oData := GetAllLoanInterest(iCompany, iPolicy, iDate)
 					resultMap["LoanInterestData"] = oData
 				case oLetType == "33":
-					oData := LoanCap(iCompany, iPolicy, iDate, iFromDate, iToDate)
+					oData := LoanCap(iCompany, iPolicy, iDate, iFromDate, iToDate, iAmount1, iAmount2, iNo1)
 					resultMap["LoanCap"] = oData
 				case oLetType == "34":
 					oData := LoanBillData(iCompany, iPolicy, iDate)
@@ -11266,7 +11266,7 @@ func CalculateStampDutyforLoan(iCompany uint, iRate float64, iDate string, iLoan
 // # Outputs  All Loan Data with Total Loan Details
 //
 // ©  FuturaInsTech
-func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]interface{} {
+func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string, iOsLoanInterest float64) map[string]interface{} {
 	combinedData := make(map[string]interface{})
 
 	loanArray := make([]interface{}, 0)
@@ -11292,8 +11292,6 @@ func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]
 	for i := 0; i < len(loanenq); i++ {
 		var benefit models.Benefit
 		initializers.DB.First(&benefit, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, loanenq[i].BenefitID)
-
-		//_, oFreq, _ := GetParamDesc(loanenq[i].PolicyID, "Q0009", "oFreq", 1)
 
 		// Calculate stamp duty based on the benefit
 		stampDuty := CalculateStampDutyforLoan(iCompany, p0072data.StampDutyRate, iEffectiveDate, loanenq[i].LoanAmount, loanenq[i].PolicyID)
@@ -11328,7 +11326,7 @@ func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]
 			"LastIntBillDate": DateConvert(loanenq[i].LastIntBillDate),
 			"NextIntBillDate": DateConvert(loanenq[i].NextIntBillDate),
 			"StampDuty":       stampDuty,
-			//"InterestFrequency": p0072data.IntPayableFreq,
+
 			"FinalLoanAmount": finalLoanAmount,
 		}
 
@@ -11343,6 +11341,7 @@ func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]
 			extraData = append(extraData, map[string]interface{}{
 				"LoanSeqNumber": loanenq[i].LoanSeqNumber,
 				"LoanEffDate":   DateConvert(loanenq[i].LoanEffDate),
+				"NextCapDate":   DateConvert(loanenq[i].NextCapDate),
 			})
 		}
 
@@ -11354,6 +11353,7 @@ func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]
 	overallData["overallLoanAmount"] = overallLoanAmount
 	overallData["overallstampduty"] = overallstampduty
 	overallData["finalLoanAmountTotal"] = finalLoanAmountTotal
+	overallData["OsLoaInterest"] = iOsLoanInterest
 
 	// Assign arrays to their respective keys
 	combinedData["a1"] = loanArray
@@ -11594,165 +11594,6 @@ func TDFLoanCap(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 }
 
 // #192
-// Get Loan Data for Letters
-// Inputs: CompanyID, PolicyID, Effective Date
-//
-// # Outputs: Letter Data
-//
-// ©  FuturaInsTech
-func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string) map[string]interface{} {
-	combinedData := make(map[string]interface{})
-
-	loanArray := make([]interface{}, 0)
-	extraData := make([]map[string]interface{}, 0)
-	overallData := make(map[string]interface{}) // Create a map for overall data
-
-	var loanenq []models.Loan
-
-	// Fetch loans for the specified company and policy
-	initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-
-	var overallLoanAmount float64
-	var overallstampduty float64
-	var finalLoanAmountTotal float64
-
-	var p0072data paramTypes.P0072Data
-	var extradata4 paramTypes.Extradata = &p0072data
-	GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata4)
-
-	// Map to keep track of already printed LoanSeqNumber values
-	printedLoanSeqNumbers := make(map[uint]bool)
-
-	for i := 0; i < len(loanenq); i++ {
-		var benefit models.Benefit
-		initializers.DB.First(&benefit, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, loanenq[i].BenefitID)
-
-		//_, oFreq, _ := GetParamDesc(loanenq[i].PolicyID, "Q0009", "oFreq", 1)
-
-		// Calculate stamp duty based on the benefit
-		stampDuty := CalculateStampDutyforLoan(iCompany, p0072data.StampDutyRate, iEffectiveDate, loanenq[i].LoanAmount, loanenq[i].PolicyID)
-		overallstampduty += stampDuty
-
-		// Calculate final loan amount by adding loan amount and stamp duty
-		finalLoanAmount := loanenq[i].LoanAmount - stampDuty
-
-		// Update finalLoanAmountTotal with the final loan amount
-		finalLoanAmountTotal += finalLoanAmount
-
-		// Construct resultOut map for the loan
-		resultOut := map[string]interface{}{
-			"ID":              IDtoPrint(loanenq[i].PolicyID),
-			"BenefitID":       IDtoPrint(loanenq[i].BenefitID),
-			"PProduct":        loanenq[i].PProduct,
-			"BCoverage":       loanenq[i].BCoverage,
-			"ClientID":        IDtoPrint(loanenq[i].ClientID),
-			"LoanSeqNumber":   loanenq[i].LoanSeqNumber,
-			"TranDate":        DateConvert(loanenq[i].TranDate),
-			"TranNumber":      loanenq[i].TranNumber,
-			"LoanEffDate":     DateConvert(loanenq[i].LoanEffDate),
-			"LoanType":        loanenq[i].LoanType,
-			"LoanStatus":      loanenq[i].LoanStatus,
-			"LoanCurrency":    loanenq[i].LoanCurrency,
-			"LoanAmount":      loanenq[i].LoanAmount,
-			"LoanIntRate":     loanenq[i].LoanIntRate,
-			"LoanIntType":     loanenq[i].LoanIntType,
-			"LastCapAmount":   NumbertoPrint(loanenq[i].LastCapAmount),
-			"LastCapDate":     DateConvert(loanenq[i].LastCapDate),
-			"NextCapDate":     DateConvert(loanenq[i].NextCapDate),
-			"LastIntBillDate": DateConvert(loanenq[i].LastIntBillDate),
-			"NextIntBillDate": DateConvert(loanenq[i].NextIntBillDate),
-			"StampDuty":       stampDuty,
-			//"InterestFrequency": p0072data.IntPayableFreq,
-			"FinalLoanAmount": finalLoanAmount,
-		}
-
-		// Append resultOut to loanArray
-		loanArray = append(loanArray, resultOut)
-
-		// Add LoanSeqNumber to printedLoanSeqNumbers if it's not already added
-		if _, ok := printedLoanSeqNumbers[loanenq[i].LoanSeqNumber]; !ok {
-			printedLoanSeqNumbers[loanenq[i].LoanSeqNumber] = true
-
-			// Construct extraData map for the LoanSeqNumber
-			extraData = append(extraData, map[string]interface{}{
-				"LoanSeqNumber": loanenq[i].LoanSeqNumber,
-				"LoanEffDate":   DateConvert(loanenq[i].LoanEffDate),
-			})
-		}
-
-		// Incrementally sum up the loan amounts to calculate overall loan amount
-		overallLoanAmount += loanenq[i].LoanAmount
-	}
-
-	// Create a map to store overall loan data
-	overallData["overallLoanAmount"] = overallLoanAmount
-	overallData["overallstampduty"] = overallstampduty
-	overallData["finalLoanAmountTotal"] = finalLoanAmountTotal
-
-	// Assign arrays to their respective keys
-	combinedData["a1"] = loanArray
-	combinedData["a2"] = extraData
-	combinedData["a3"] = []map[string]interface{}{overallData}
-
-	return combinedData
-}
-
-// #193
-// Get All Loan Interest Data for Letters
-// Inputs: CompanyID, PolicyID, Effective Date
-//
-// # Outputs: Letter Data
-//
-// ©  FuturaInsTech
-func GetAllLoanInterest(iCompany uint, iPolicy uint, iEffectiveDate string) []interface{} {
-	var benefitenq []models.Benefit
-	allLoanOs := make([]interface{}, 0)
-	result := initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
-	if result.Error != nil {
-		return nil
-	}
-
-	var q0006data paramTypes.Q0006Data
-	var extradataq0006 paramTypes.Extradata = &q0006data
-
-	// Initialize variables
-	var totalLoan float64
-	var totalInt float64
-	var totalOsAmount float64
-
-	// Calculate total amount outside the loop
-	for s := 0; s < len(benefitenq); s++ {
-		iKey := benefitenq[s].BCoverage
-		iDate := benefitenq[s].BStartDate
-		iBenefit := benefitenq[s].ID
-
-		GetItemD(int(iCompany), "Q0006", iKey, iDate, &extradataq0006)
-		if q0006data.SurrMethod != "" && q0006data.LoanMethod != "" {
-			oLoanOSP, oLoanIntOSP, _, _, _ := GetAllLoanOSByType1(iCompany, iPolicy, iBenefit, iEffectiveDate, "P")
-			totalLoanP := oLoanOSP + oLoanIntOSP
-
-			oLoanOS_A, oLoanIntOS_A, _, _, _ := GetAllLoanOSByType1(iCompany, iPolicy, iBenefit, iEffectiveDate, "A")
-			totalLoanA := oLoanOS_A + oLoanIntOS_A
-
-			// Calculate the total amount
-			totalLoan += totalLoanP + totalLoanA
-
-			// Calculate the total interest
-			totalInt += oLoanIntOSP + oLoanIntOS_A
-		}
-		totalOsAmount += totalLoan + totalInt
-	}
-
-	allLoanOs = append(allLoanOs, map[string]interface{}{
-		"TotLoanOS":     RoundFloat(totalLoan, 0),
-		"TotIntOs":      RoundFloat(totalInt, 0),
-		"TotalOsAmount": RoundFloat(totalOsAmount, 0),
-	})
-
-	return allLoanOs
-}
-
-// #194
 // Get Loan Bill Data For Letters
 // Inputs: CompanyID, PolicyID, Effective Date
 //
@@ -11804,7 +11645,7 @@ func LoanBillData(iCompany uint, iPolicy uint, iEffectiveDate string) []interfac
 
 		oLoanIntOS += itemp
 
-		loanbillupd.LoanIntAmount = itemp
+		loanbillupd.LoanIntAmount = RoundFloat(itemp, 2)
 
 		loanenq[i].LastIntBillDate = loanenq[i].NextIntBillDate
 		a := GetNextDue(loanenq[i].NextIntBillDate, p0072data.IntPayableFreq, "")
@@ -11821,7 +11662,7 @@ func LoanBillData(iCompany uint, iPolicy uint, iEffectiveDate string) []interfac
 			"LoanBillCurrency": loanbillupd.LoanBillCurr,
 			"LoanType":         loanbillupd.LoanType,
 			"LoanBillDueDate":  DateConvert(loanbillupd.LoanBillDueDate),
-			"LoanIntAmount":    RoundFloat(loanbillupd.LoanIntAmount, 0),
+			"LoanIntAmount":    loanbillupd.LoanIntAmount,
 		}
 		loanbill = append(loanbill, resultOut)
 
@@ -11831,18 +11672,19 @@ func LoanBillData(iCompany uint, iPolicy uint, iEffectiveDate string) []interfac
 
 }
 
-// #195
+// #193
 // Get Loan Capitalized Amount
 // Inputs: CompanyID, PolicyID, Effective Date, Minimum Loan Date, Maximum Loan Date
 //
-// # Outputs: Loan Capitalized Amount
+// # Outputs: Loan Capitalized Amount, OpenLoanBal Date, CloseLoanBal Date
 //
 // ©  FuturaInsTech
-func LoanCap(iCompany uint, iPolicy uint, iEffectiveDate string, minLoanDate string, maxLoanDate string) []interface{} {
+func LoanCap(iCompany uint, iPolicy uint, iEffectiveDate string, minLoanBillDueDate string, maxLoanBillDueDate string, itotalcapamount float64, itotalInterest float64, itotalOsDue uint) []interface{} {
 	allLoanCap := make([]interface{}, 0)
 
 	var loanenq []models.Loan
-	var totalcapamount float64
+	var prevloancapamount float64
+	var oLoanInt float64
 
 	initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ? and  loan_type = ? and loan_status = ? and next_cap_date <=?", iCompany, iPolicy, "P", "AC", iEffectiveDate)
 
@@ -11858,13 +11700,19 @@ func LoanCap(iCompany uint, iPolicy uint, iEffectiveDate string, minLoanDate str
 
 	for i := 0; i < len(loanenq); i++ {
 
-		totalcapamount = loanenq[i].LastCapAmount
+		prevloancapamount = loanenq[i].LastCapAmount
+		oLoanInt = loanenq[i].LoanIntRate
 
 	}
+
 	resultOut := map[string]interface{}{
-		"totalcapamount": RoundFloat(totalcapamount, 0),
-		"minLoanDate":    minLoanDate,
-		"maxLoanDate":    maxLoanDate,
+		"prevcapamount":  RoundFloat(prevloancapamount, 0),
+		"minLoanDate":    DateConvert(minLoanBillDueDate),
+		"maxLoanDate":    DateConvert(maxLoanBillDueDate),
+		"InterestRate":   RoundFloat(oLoanInt, 0),
+		"totalcapamount": itotalcapamount,
+		"totalInterest":  itotalInterest,
+		"totalOsDue":     itotalOsDue,
 	}
 	allLoanCap = append(allLoanCap, resultOut)
 	return allLoanCap

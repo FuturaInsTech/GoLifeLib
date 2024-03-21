@@ -4928,7 +4928,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 // # It returns success or failure.  Successful records written in Communciaiton Table
 //
 // ©  FuturaInsTech
-func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint, iAmount1 float64, iAmount2 float64, iNo1 uint, iNo2 uint) error {
+func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint) error {
 
 	var communication models.Communication
 	var iKey string
@@ -5143,18 +5143,6 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "30":
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
-				case oLetType == "31":
-					oData := GetLoanData(iCompany, iPolicy, iDate, iAmount1)
-					resultMap["LoanData"] = oData
-				case oLetType == "32":
-					oData := GetAllLoanInterest(iCompany, iPolicy, iDate)
-					resultMap["LoanInterestData"] = oData
-				case oLetType == "33":
-					oData := LoanCap(iCompany, iPolicy, iDate, iFromDate, iToDate, iAmount1, iAmount2, iNo1)
-					resultMap["LoanCap"] = oData
-				case oLetType == "34":
-					oData := LoanBillData(iCompany, iPolicy, iDate)
-					resultMap["LoanBillData"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 

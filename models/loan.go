@@ -9,11 +9,11 @@ type Loan struct {
 	gorm.Model
 	types.CModel
 	PolicyID        uint
+	LoanSeqNumber   uint
 	BenefitID       uint
 	PProduct        string `gorm:"type:varchar(03)"`
 	BCoverage       string `gorm:"type:varchar(05)"` //Q0006
 	ClientID        uint
-	LoanSeqNumber   uint
 	TranDate        string `gorm:"type:varchar(08)"`
 	TranNumber      uint
 	LoanEffDate     string `gorm:"type:varchar(08)"`

@@ -9,6 +9,7 @@ type LoanBill struct {
 	gorm.Model
 	types.CModel
 	PolicyID        uint
+	LoanSeqNumber   uint
 	BenefitID       uint
 	ClientID        uint
 	LoanID          uint // Foreign Key of Loan
@@ -28,5 +29,4 @@ type LoanBill struct {
 	ExtractionDate  string `gorm:"type:varchar(08)"`
 	ReconciledFlg   string `gorm:"type:varchar(01)"`
 	ReconciledDate  string `gorm:"type:varchar(08)"`
-	LoanSeqNumber   uint
 }

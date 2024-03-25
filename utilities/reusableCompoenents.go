@@ -11965,3 +11965,41 @@ func CreateCommunicationsL(iCompany uint, iHistoryCode string, iTranno uint, iDa
 	}
 	return nil
 }
+
+// #195
+// TDF Loan Deposit Adjustment process
+// Inputs: CompanyID, PolicyID, Function, Tran No,
+//
+// # Outputs  Error
+//
+// ©  FuturaInsTech
+func TDFLoanDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate string, txn *gorm.DB) (string, error) {
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = iTranno
+		tdfpolicy.Seqno = tdfrule.Seqno
+		txn.Create(&tdfpolicy)
+		return "", nil
+	} else {
+		txn.Delete(&tdfpolicy)
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = iTranno
+
+		txn.Create(&tdfpolicy)
+		return "", nil
+	}
+}

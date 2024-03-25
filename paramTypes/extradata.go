@@ -2112,6 +2112,7 @@ type P0072Data struct {
 	CapitalizationFrequency string // P0050
 	ToleranceAmount         uint
 	PrevLoanToBeClosed      string
+	AllowCapDuringLoanYear  string // P0050 Yes/No
 }
 
 func (m *P0072Data) ParseData(datamap map[string]interface{}) {

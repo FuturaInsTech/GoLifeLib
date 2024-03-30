@@ -11366,8 +11366,11 @@ func GetAllLoanOSByType(iCompany uint, iPolicy uint, iBenefit uint, iEffectiveDa
 		// txn.Rollback()
 		return 0, 0, 0, 0, ""
 	}
+
 	for i := 0; i < len(loanenq); i++ {
+
 		if loanenq[i].NextCapDate > iEffectiveDate {
+			oTotalLoan = oLoanOS
 			oLoanOS = oLoanOS + loanenq[i].LastCapAmount
 			oLoanInt = loanenq[i].LoanIntRate
 			_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastCapDate)
@@ -11378,10 +11381,10 @@ func GetAllLoanOSByType(iCompany uint, iPolicy uint, iBenefit uint, iEffectiveDa
 			// oTotalLoan = oLoanOS
 			oLoanCurr = loanenq[i].LoanCurrency
 		}
-		return oLoanOS, oLoanIntOS, oLoanInt, oTotalLoan, oLoanCurr
+		oTotalLoan += oLoanOS
 	}
+	return oLoanOS, oLoanIntOS, oLoanInt, oTotalLoan, oLoanCurr
 
-	return
 }
 
 // #188
@@ -11941,6 +11944,9 @@ func CreateCommunicationsL(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "34":
 					oData := LoanBillData(iCompany, iPolicy, iDate)
 					resultMap["LoanBillData"] = oData
+				case oLetType == "35":
+					oData := LoanBillsInterest(iCompany, iPolicy, iNo1, iAmount1)
+					resultMap["LoanBillsInterest"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -12002,4 +12008,56 @@ func TDFLoanDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDat
 		txn.Create(&tdfpolicy)
 		return "", nil
 	}
+}
+
+// #196
+// Get Loan Bills Interest For Letters
+// Inputs: CompanyID, PolicyID, SeqNo,CurrentInterestDueAmount
+//
+// # Outputs: LoanBills,TotalInterest,totUnpaidInterest
+//
+// ©  FuturaInsTech
+
+func LoanBillsInterest(iCompany uint, iPolicy uint, iSeqNo uint, iCurrentIntDue float64) map[string]interface{} {
+	var loanbillupd1 []models.LoanBill
+	initializers.DB.Order("CASE WHEN loan_seq_number = 1 THEN 0 WHEN loan_seq_number = 2 THEN 1 ELSE 2 END").Find(&loanbillupd1, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+
+	var totalInterest float64
+	var totUnpaidIntetest float64
+
+	var loanbills []interface{}
+	overallInt := make(map[string]interface{})
+
+	for i := 0; i < len(loanbillupd1); i++ {
+		// Add LoanIntAmount to totalInterest
+		totalInterest += loanbillupd1[i].LoanIntAmount
+
+		// Create a result map for each loan bill
+		resultOut := map[string]interface{}{
+			"PolicyID":         IDtoPrint(loanbillupd1[i].PolicyID),
+			"CompanyID":        IDtoPrint(loanbillupd1[i].CompanyID),
+			"ClientID":         IDtoPrint(loanbillupd1[i].ClientID),
+			"BenefitID":        IDtoPrint(loanbillupd1[i].BenefitID),
+			"LoanBillCurrency": loanbillupd1[i].LoanBillCurr,
+			"LoanType":         loanbillupd1[i].LoanType,
+			"LoanBillDueDate":  DateConvert(loanbillupd1[i].LoanBillDueDate),
+			"LoanIntAmount":    loanbillupd1[i].LoanIntAmount,
+			"LoanSeqNo":        loanbillupd1[i].LoanSeqNumber,
+		}
+		// Append result map to loanbills slice
+		loanbills = append(loanbills, resultOut)
+	}
+	totUnpaidIntetest += totalInterest + iCurrentIntDue
+
+	overallInt["TotalInterest"] = totalInterest
+	overallInt["totUnpaidIntetest"] = RoundFloat(totUnpaidIntetest, 2)
+
+	// Combine loanbills and totalInterestMap into a single map
+	combinedData := map[string]interface{}{
+		"LoanBills": loanbills,
+		"TotOsInt":  []map[string]interface{}{overallInt},
+	}
+
+	// Return combinedData map
+	return combinedData
 }

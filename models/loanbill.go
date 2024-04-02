@@ -9,6 +9,7 @@ type LoanBill struct {
 	gorm.Model
 	types.CModel
 	PolicyID        uint
+	LoanSeqNumber   uint
 	BenefitID       uint
 	ClientID        uint
 	LoanID          uint // Foreign Key of Loan

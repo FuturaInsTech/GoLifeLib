@@ -2101,18 +2101,18 @@ func (m *P0071Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
-// EBAOTECH TO LIFE ASIA MAPPING RULE
-
 type P0072Data struct {
-	P0072Array []P0072
-}
-type P0072 struct {
-	FieldName          string
-	SourceFieldName    string
-	DefaultFieldValue  string
-	MandatoryInd       string
-	MappingFunction    string
-	ValidationFunction string
+	MinLoanAmount           float64
+	MaxLoanPercentage       int
+	LoanInterestType        string // P0050
+	IntPayableFreq          string // P0050
+	RateOfInterest          float64
+	StampDutyRate           float64
+	LoanCapitalization      string // LOANCAP // P0050
+	CapitalizationFrequency string // P0050
+	ToleranceAmount         uint
+	PrevLoanToBeClosed      string
+	AllowCapDuringLoanYear  string // P0050 Yes/No
 }
 
 func (m *P0072Data) ParseData(datamap map[string]interface{}) {

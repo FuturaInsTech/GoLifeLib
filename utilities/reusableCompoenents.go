@@ -11223,25 +11223,7 @@ func ValidateClientWork(clientwork models.ClientWork, userco uint, userlan uint,
 // ©  FuturaInsTech
 func CalculateStampDutyforLoan(iCompany uint, iRate float64, iDate string, iLoanAmount float64, iPolicy uint) float64 {
 
-	// //var policyenq models.Policy
-	// iPolicy := "80075"
-	var benefitenq []models.Benefit
-	initializers.DB.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-
-	var q0006data paramTypes.Q0006Data
-	var extradata2 paramTypes.Extradata = &q0006data
-	GetItemD(int(iCompany), "Q0006", benefitenq[0].BCoverage, iDate, &extradata2)
-	var p0072data paramTypes.P0072Data
-	var extradata paramTypes.Extradata = &p0072data
-
-	method := q0006data.LoanMethod
-
-	err := GetItemD(int(iCompany), "P0072", method, iDate, &extradata)
-	if err != nil {
-		return 0
-	}
-
-	oStampDuty := p0072data.StampDutyRate * iLoanAmount
+	oStampDuty := iRate * iLoanAmount
 	oStampDuty = RoundFloat(oStampDuty, 2)
 
 	return oStampDuty
@@ -11358,20 +11340,67 @@ func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string, iOsLoanInte
 // # Outputs  OS Loan, OS Loan Int, Total Loan Int, Total Loan, Loan Currency
 //
 // ©  FuturaInsTech
-func GetAllLoanOSByType(iCompany uint, iPolicy uint, iBenefit uint, iEffectiveDate string, iLoanType string) (oLoanOS float64, oLoanIntOS float64, oLoanInt float64, oTotalLoan float64, oLoanCurr string) {
+func GetAllLoanOSByType(iCompany uint, iPolicy uint, iBenefit uint, iEffectiveDate string) (oLoanOS float64, oLoanIntOS float64, oLoanInt float64, oTotalLoan float64, oLoanCurr string) {
 
 	var loanenq []models.Loan
-	result := initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ? and benefit_id = ? and loan_status = ? and loan_type = ?", iCompany, iPolicy, iBenefit, "AC", iLoanType)
+	result := initializers.DB.Find(&loanenq, "company_id = ? and policy_id = ? and benefit_id = ? and loan_status = ? ", iCompany, iPolicy, iBenefit, "AC")
 	if result.Error != nil {
 		// txn.Rollback()
 		return 0, 0, 0, 0, ""
 	}
+	var p0072data paramTypes.P0072Data
+	var extradata3 paramTypes.Extradata = &p0072data
+	GetItemD(int(iCompany), "P0072", "LN001", iEffectiveDate, &extradata3)
+
+	var itemp float64
+	var LoanIntOS float64
+	var loanIntPaid float64
+	var iAmount float64
+	var brokenperiodint float64
 
 	for i := 0; i < len(loanenq); i++ {
 
+		if p0072data.PrevLoanToBeClosed == "Y" {
+			var loanbillupd []models.LoanBill
+			initializers.DB.Find(&loanbillupd, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+			for i := 0; i < len(loanbillupd); i++ {
+
+				if loanbillupd[i].ReceiptNo == 0 {
+
+					itemp = loanbillupd[i].LoanIntAmount
+
+					LoanIntOS += RoundFloat(itemp, 2)
+
+				}
+
+				if loanbillupd[i].ReceiptNo != 0 {
+
+					itemp = loanbillupd[i].LoanIntAmount
+
+					loanIntPaid += RoundFloat(itemp, 2)
+
+				}
+
+			}
+			// calculate the broken period of interest for example 15 days interest
+
+			_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastIntBillDate)
+			oLoanInt := p0072data.RateOfInterest
+			LoanIntamt := loanenq[i].LastCapAmount
+
+			if p0072data.LoanInterestType == "C" {
+				iAmount = CompoundInterest(LoanIntamt, oLoanInt, float64(iNoOfDays))
+			} else if p0072data.LoanInterestType == "S" {
+				iAmount = SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+			}
+			brokenperiodint += RoundFloat(iAmount, 2)
+
+		}
+
 		if loanenq[i].NextCapDate > iEffectiveDate {
 			oTotalLoan = oLoanOS
-			oLoanOS = oLoanOS + loanenq[i].LastCapAmount
+			oLoanOS = oLoanOS + loanenq[i].LastCapAmount + LoanIntOS - loanIntPaid + brokenperiodint
 			oLoanInt = loanenq[i].LoanIntRate
 			_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastCapDate)
 			itemp := CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))

@@ -29,4 +29,5 @@ type LoanBill struct {
 	ExtractionDate  string `gorm:"type:varchar(08)"`
 	ReconciledFlg   string `gorm:"type:varchar(01)"`
 	ReconciledDate  string `gorm:"type:varchar(08)"`
+	BillingStatus   string `gorm:"type:varchar(02)"`
 }

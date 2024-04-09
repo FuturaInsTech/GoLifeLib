@@ -11447,17 +11447,18 @@ func GetAllLoanInterest(iCompany uint, iPolicy uint, iEffectiveDate string) []in
 
 		GetItemD(int(iCompany), "Q0006", iKey, iDate, &extradataq0006)
 		if q0006data.SurrMethod != "" && q0006data.LoanMethod != "" {
-			oLoanOSP, oLoanIntOSP, _, _, _ := GetAllLoanOSByType(iCompany, iPolicy, iBenefit, iEffectiveDate, "P")
+			oLoanOSP, oLoanIntOSP, _, _, _ := GetAllLoanOSByType(iCompany, iPolicy, iBenefit, iEffectiveDate)
 			totalLoanP := oLoanOSP + oLoanIntOSP
 
-			oLoanOS_A, oLoanIntOS_A, _, _, _ := GetAllLoanOSByType(iCompany, iPolicy, iBenefit, iEffectiveDate, "A")
-			totalLoanA := oLoanOS_A + oLoanIntOS_A
+			//note:= if we need we can revisite
+			// oLoanOS_A, oLoanIntOS_A, , , _ := GetAllLoanOSByType(iCompany, iPolicy, iBenefit, iEffectiveDate, "A")
+			// totalLoanA := oLoanOS_A + oLoanIntOS_A
 
 			// Calculate the total amount
-			totalLoan += totalLoanP + totalLoanA
+			totalLoan += totalLoanP //+ totalLoanA
 
 			// Calculate the total interest
-			totalInt += oLoanIntOSP + oLoanIntOS_A
+			totalInt += oLoanIntOSP // + oLoanIntOS_A
 		}
 		totalOsAmount += totalLoan + totalInt
 	}

@@ -11340,6 +11340,7 @@ func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string, iOsLoanInte
 // # Outputs  OS Loan, OS Loan Int, Total Loan Int, Total Loan, Loan Currency
 //
 // ©  FuturaInsTech
+
 func GetAllLoanOSByType(iCompany uint, iPolicy uint, iBenefit uint, iEffectiveDate string) (oLoanOS float64, oLoanIntOS float64, oLoanInt float64, oTotalLoan float64, oLoanCurr string) {
 
 	var loanenq []models.Loan
@@ -11360,59 +11361,55 @@ func GetAllLoanOSByType(iCompany uint, iPolicy uint, iBenefit uint, iEffectiveDa
 
 	for i := 0; i < len(loanenq); i++ {
 
-		if p0072data.PrevLoanToBeClosed == "Y" {
-			var loanbillupd []models.LoanBill
-			initializers.DB.Find(&loanbillupd, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastIntBillDate)
+		oLoanInt = p0072data.RateOfInterest
+		LoanIntamt := loanenq[i].LastCapAmount
 
-			for i := 0; i < len(loanbillupd); i++ {
-
-				if loanbillupd[i].ReceiptNo == 0 {
-
-					itemp = loanbillupd[i].LoanIntAmount
-
-					LoanIntOS += RoundFloat(itemp, 2)
-
-				}
-
-				if loanbillupd[i].ReceiptNo != 0 {
-
-					itemp = loanbillupd[i].LoanIntAmount
-
-					loanIntPaid += RoundFloat(itemp, 2)
-
-				}
-
-			}
-			// calculate the broken period of interest for example 15 days interest
-
-			_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastIntBillDate)
-			oLoanInt := p0072data.RateOfInterest
-			LoanIntamt := loanenq[i].LastCapAmount
-
-			if p0072data.LoanInterestType == "C" {
-				iAmount = CompoundInterest(LoanIntamt, oLoanInt, float64(iNoOfDays))
-			} else if p0072data.LoanInterestType == "S" {
-				iAmount = SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
-			}
-			brokenperiodint += RoundFloat(iAmount, 2)
-
+		if p0072data.LoanInterestType == "C" {
+			iAmount = CompoundInterest(LoanIntamt, oLoanInt, float64(iNoOfDays))
+		} else if p0072data.LoanInterestType == "S" {
+			iAmount = SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
 		}
+		brokenperiodint = RoundFloat(iAmount, 2)
 
 		if loanenq[i].NextCapDate > iEffectiveDate {
 			oTotalLoan = oLoanOS
-			oLoanOS = oLoanOS + loanenq[i].LastCapAmount + LoanIntOS - loanIntPaid + brokenperiodint
+			oLoanOS = oLoanOS + loanenq[i].LastCapAmount
 			oLoanInt = loanenq[i].LoanIntRate
 			_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastCapDate)
 			itemp := CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
 			oLoanIntOS = itemp
-			oLoanOS = oLoanIntOS + loanenq[i].LastCapAmount
+			oLoanOS = oLoanOS + brokenperiodint
 			// oLoanIntOS = itemp + loanenq[i].LastCapAmount - oLoanIntOS
 			// oTotalLoan = oLoanOS
 			oLoanCurr = loanenq[i].LoanCurrency
 		}
-		oTotalLoan += oLoanOS
+		oTotalLoan = oLoanOS
 	}
-	return oLoanOS, oLoanIntOS, oLoanInt, oTotalLoan, oLoanCurr
+	var loanbillupd []models.LoanBill
+	initializers.DB.Find(&loanbillupd, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	for i := 0; i < len(loanbillupd); i++ {
+
+		if loanbillupd[i].ReceiptNo == 0 {
+
+			itemp = loanbillupd[i].LoanIntAmount
+
+			LoanIntOS += RoundFloat(itemp, 2)
+
+		}
+
+		if loanbillupd[i].ReceiptNo != 0 {
+
+			itemp = loanbillupd[i].LoanIntAmount
+
+			loanIntPaid += RoundFloat(itemp, 2)
+
+		}
+
+	}
+
+	oLoanOS = oLoanOS + LoanIntOS - loanIntPaid
+	return oLoanOS, oLoanIntOS, oLoanInt, oLoanOS, oLoanCurr
 
 }
 

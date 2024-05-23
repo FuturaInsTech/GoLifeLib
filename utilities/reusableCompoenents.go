@@ -7600,7 +7600,7 @@ func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 	}
 
 	// Get Total Fund Value
-	iTotalFundValue, ,  := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
 
 	for j := 0; j < len(ilpsumenq); j++ {
 		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
@@ -7610,7 +7610,7 @@ func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 			iBusinessDate = iEffDate
 		}
 		iFundCode := ilpsumenq[j].FundCode
-		iFundValue, ,  := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
 		if iFundValue == 0 {
 			if p0059data.NegativeAccum == "N" {
 				// triger TdfLaps

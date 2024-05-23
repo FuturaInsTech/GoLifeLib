@@ -7563,7 +7563,7 @@ func PostUlpDeduction(iCompany uint, iPolicy uint, iBenefit uint, iAmount float6
 	return nil
 }
 
-func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, txn *gorm.DB) error {
+func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, NegativeUnitsOrAmt string, txn *gorm.DB) error {
 
 	var policyenq models.Policy
 
@@ -7603,7 +7603,7 @@ func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 	}
 
 	// Get Total Fund Value
-	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+	iTotalFundValue, ,  := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
 
 	for j := 0; j < len(ilpsumenq); j++ {
 		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
@@ -7613,7 +7613,14 @@ func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 			iBusinessDate = iEffDate
 		}
 		iFundCode := ilpsumenq[j].FundCode
-		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		iFundValue, ,  := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		if iFundValue == 0 {
+			if p0059data.NegativeAccum == "N" {
+				// triger TdfLaps
+				return nil
+			}
+
+		}
 		var ilptrancrt models.IlpTransaction
 		iKey := ilpsumenq[j].FundCode
 		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
@@ -7628,17 +7635,28 @@ func PostUlpDeductionN(iCompany uint, iPolicy uint, iBenefit uint, iAmount float
 		ilptrancrt.TransactionDate = iEffDate
 		ilptrancrt.FundEffDate = iBusinessDate
 		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
-		ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+
+		if NegativeUnitsOrAmt == "U" {
+			if iTotalFundValue <= 0 {
+				ilptrancrt.FundAmount = RoundFloat(iAmount, 2)
+				ilptrancrt.OriginalAmount = RoundFloat(iAmount, 2)
+				ilptrancrt.InvNonInvPercentage = 100
+			}
+		} else {
+			ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+			ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+			ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
+
+		}
 		ilptrancrt.FundCurr = p0061data.FundCurr
 		ilptrancrt.FundUnits = 0
 		ilptrancrt.FundPrice = 0
 		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
-		ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+
 		ilptrancrt.ContractCurry = policyenq.PContractCurr
 		ilptrancrt.HistoryCode = iHistoryCode
 		ilptrancrt.InvNonInvFlag = "AC"
 		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
-		ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
 		ilptrancrt.AccountCode = p0059data.AccountCode
 		ilptrancrt.CurrencyRate = 1.00 // ranga
 		ilptrancrt.MortalityIndicator = ""

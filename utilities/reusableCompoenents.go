@@ -1600,7 +1600,15 @@ func TDFBillDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRev
 	}
 
 	if policy.PaidToDate >= odate {
-		return "Date Exceeded", errors.New("Premium Cessation Date is Exceeded")
+		// return "Date Exceeded", errors.New("Premium Cessation Date is Exceeded")
+		var tdfpolicyupd models.TDFPolicy
+		result = txn.Find(&tdfpolicyupd, "company_id = ? AND policy_id = ? and tdf_type= ?", iCompany, iPolicy, "BILLD")
+		if result.Error != nil {
+			txn.Rollback()
+			return "", nil
+		}
+		result = txn.Delete(&tdfpolicyupd)
+		return "", nil
 	}
 
 	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
@@ -4016,11 +4024,22 @@ func GetMaturityAmount(iCompany uint, iPolicy uint, iCoverage string, iEffective
 			oAmount = survb.Amount
 		}
 		return oAmount
-	case imatMethod == "MAT008": // Without Deducting Survival Benefit
-		// Survival Benefit Amount is already paid through TDF
-		// So Maturity Amount is set to Zero
-		oAmount = iSA
-		return oAmount
+	// case imatMethod == "MAT008": // ilp fund value
+	// 	iFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, iEffectiveDate)
+	// 	oAmount = iFund
+	// 	return oAmount
+	// case imatMethod == "MAT009": // ilp fund value + Sumassured
+	// 	iFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, iEffectiveDate)
+	// 	oAmount = iFund + iSA
+	// 	return oAmount
+	// case imatMethod == "MAT010": // ilp fund value or Sumassured which one is greater
+	// 	iFund, _, _ := GetAllFundValueByPol(iCompany, iPolicy, iEffectiveDate)
+	// 	if iFund < iSA {
+	// 		oAmount = iSA
+	// 	} else {
+	// 		oAmount = iFund
+	// 	}
+	// 	return oAmount
 	case imatMethod == "MAT099": // No Maturity Value
 		oAmount = 0
 		break
@@ -5547,10 +5566,10 @@ func WordsinMillions(camt float64, csym string, cname string, ccoin string) (aiw
 		return "minus " + WordsinMillions(-camt, csym, cname, ccoin)
 	}
 
-	num := int(camt)
-	dec := int((camt - float64(num)) * 100)
+	num := int64(camt)
+	dec := int64((camt - float64(num)) * 100)
 
-	// Process the number in  trillion, billion, million, thousand, and units
+	// Process the number in trillion, billion, million, thousand, and units
 
 	trillions := num / 1000000000000
 	num %= 1000000000000
@@ -5569,35 +5588,36 @@ func WordsinMillions(camt float64, csym string, cname string, ccoin string) (aiw
 	words := ""
 
 	// Convert trillions to words
-	if trillionWords := HundredsInWords(trillions, ones, tens); len(trillionWords) > 0 {
+	trillionsInt := int(trillions) // Convert int64 to int
+	if trillionWords := HundredsInWords(trillionsInt, ones, tens); len(trillionWords) > 0 {
 		words += trillionWords + " Trillion "
 	}
 
 	// Convert billions to words
-	if billionWords := HundredsInWords(billions, ones, tens); len(billionWords) > 0 {
+	// Convert billions to words
+	if billionWords := HundredsInWords(int(billions), ones, tens); len(billionWords) > 0 {
 		words += billionWords + " Billion "
 	}
 
 	// Convert millions to words
-	if millionWords := HundredsInWords(millions, ones, tens); len(millionWords) > 0 {
+	if millionWords := HundredsInWords(int(millions), ones, tens); len(millionWords) > 0 {
 		words += millionWords + " Million "
 	}
 
 	// Convert thousands to words
-	if thousandWords := HundredsInWords(thousands, ones, tens); len(thousandWords) > 0 {
+	if thousandWords := HundredsInWords(int(thousands), ones, tens); len(thousandWords) > 0 {
 		words += thousandWords + " Thousand "
 	}
 
 	// Convert units to words
-	if unitWords := HundredsInWords(units, ones, tens); len(unitWords) > 0 {
+	if unitWords := HundredsInWords(int(units), ones, tens); len(unitWords) > 0 {
 		words += unitWords
 	}
 
 	words += " " + cname
 
 	// Convert dec to decwords
-
-	if decWords := HundredsInWords(dec, ones, tens); len(decWords) > 0 {
+	if decWords := HundredsInWords(int(dec), ones, tens); len(decWords) > 0 {
 		words += " and "
 		words += decWords
 		words += " " + ccoin
@@ -6724,6 +6744,27 @@ func GetAllFundValueByPol(iCompany uint, iPolicy uint, iDate string) (float64, f
 	return bpfv, opfv, iDate
 }
 
+func GetAllFundValueByPolN(iCompany uint, iPolicy uint, iDate string, txn *gorm.DB) (float64, float64, string) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, 0)
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpv, opv, _ := GetaFundValueN(iCompany, iPolicy, ilpsummaryenq[i].FundCode, iDate, txn)
+		bpfv = RoundFloat(bpfv+bpv, 5)
+		opfv = RoundFloat(opfv+opv, 5)
+	}
+	return bpfv, opfv, iDate
+}
+
 // # 123
 // GetaFundValue - Get Fund Value per Policy (Across All Benefits)
 //
@@ -6758,6 +6799,37 @@ func GetaFundValue(iCompany uint, iPolicy uint, iFundCode string, iDate string) 
 	for i := 0; i < len(ilpsummaryenq); i++ {
 		bpfundvalue = RoundFloat(ilpsummaryenq[i].FundUnits*ilppriceenq.FundBidPrice, 2)
 		opfundvalue = RoundFloat(ilpsummaryenq[i].FundUnits*ilppriceenq.FundOfferPrice, 2)
+	}
+	return bpfundvalue, opfundvalue, iPriceDateUsed
+
+}
+
+func GetaFundValueN(iCompany uint, iPolicy uint, iFundCode string, iDate string, txn *gorm.DB) (float64, float64, string) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq []models.IlpSummary
+	result := txn.Order("fund_code").
+		Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and fund_code = ?", iCompany, iPolicy, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = txn.Where("company_id = ? and fund_code = ? and approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpfundvalue = RoundFloat(ilpsummaryenq[i].FundUnits*ilppriceenq.FundBidPrice, 5)
+		opfundvalue = RoundFloat(ilpsummaryenq[i].FundUnits*ilppriceenq.FundOfferPrice, 5)
 	}
 	return bpfundvalue, opfundvalue, iPriceDateUsed
 
@@ -12526,4 +12598,73 @@ func GetP0069Data(iCompany uint, iPolicy uint, iDate string) (p0069Month int, No
 		}
 	}
 	return p0069Month, NoOfMonths
+}
+
+// #201
+// GetLoanIntrest  from the loan table
+// Inputs: CompanyID, iPolicy, iEffectiveDate,loantype
+//
+// # Outputs: LoanAmount, oLoanInt
+// ©  FuturaInsTech
+func GetLoanAndIntrestD(iCompany uint, iPolicy uint, iDate string, itype string, txn *gorm.DB) (oLoanAmount float64, oLoanInt float64) {
+
+	var policy models.Policy
+	result := initializers.DB.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return 0, 0
+	}
+
+	var loanenq []models.Loan
+	var loanbillenq []models.LoanBill
+
+	result = txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status =? and loan_type=?", iCompany, iPolicy, "AC", itype)
+	if result.Error != nil {
+		return 0, 0
+	}
+	result = txn.Find(&loanbillenq, "company_id = ? and policy_id = ? and loan_type=? and billing_status=?", iCompany, iPolicy, itype, "OP")
+	if result.Error != nil {
+		return 0, 0
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+
+	var p0072data paramTypes.P0072Data
+	var extradata3 paramTypes.Extradata = &p0072data
+	iAmount := 0.0
+	brokenperiodint := 0.0
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+	GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
+	oLoanAmount = 0.0
+	for i := 0; i < len(loanenq); i++ {
+		GetItemD(int(iCompany), "Q0006", loanenq[i].BCoverage, iDate, &extradataq0006)
+		if itype == "A" {
+			GetItemD(int(iCompany), "P0072", q0005data.AplLoanMethod, iDate, &extradata3)
+		} else if itype == "P" {
+			GetItemD(int(iCompany), "P0072", q0006data.LoanMethod, iDate, &extradata3)
+		}
+		oLoanAmount += loanenq[i].LastCapAmount
+
+		if iDate > loanenq[i].LastIntBillDate {
+			_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iDate, loanenq[i].LastIntBillDate)
+			oLoanIntRat := p0072data.RateOfInterest
+			LoanIntamt := loanenq[i].LastCapAmount
+
+			if p0072data.LoanInterestType == "C" {
+				iAmount = CompoundInterest(LoanIntamt, oLoanIntRat, float64(iNoOfDays))
+			} else if p0072data.LoanInterestType == "S" {
+				iAmount = SimpleInterest(LoanIntamt, oLoanIntRat, float64(iNoOfDays))
+			}
+			brokenperiodint += iAmount
+		}
+
+	}
+
+	for i := 0; i < len(loanbillenq); i++ {
+		oLoanInt += loanbillenq[i].LoanIntAmount
+	}
+
+	oLoanInt = oLoanInt + brokenperiodint
+	return RoundFloat(oLoanAmount, 2), RoundFloat(oLoanInt, 2)
 }

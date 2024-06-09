@@ -5566,10 +5566,10 @@ func WordsinMillions(camt float64, csym string, cname string, ccoin string) (aiw
 		return "minus " + WordsinMillions(-camt, csym, cname, ccoin)
 	}
 
-	num := int64(camt)
-	dec := int64((camt - float64(num)) * 100)
+	num := int(camt)
+	dec := int((camt - float64(num)) * 100)
 
-	// Process the number in trillion, billion, million, thousand, and units
+	// Process the number in  trillion, billion, million, thousand, and units
 
 	trillions := num / 1000000000000
 	num %= 1000000000000
@@ -5588,36 +5588,35 @@ func WordsinMillions(camt float64, csym string, cname string, ccoin string) (aiw
 	words := ""
 
 	// Convert trillions to words
-	trillionsInt := int(trillions) // Convert int64 to int
-	if trillionWords := HundredsInWords(trillionsInt, ones, tens); len(trillionWords) > 0 {
+	if trillionWords := HundredsInWords(trillions, ones, tens); len(trillionWords) > 0 {
 		words += trillionWords + " Trillion "
 	}
 
 	// Convert billions to words
-	// Convert billions to words
-	if billionWords := HundredsInWords(int(billions), ones, tens); len(billionWords) > 0 {
+	if billionWords := HundredsInWords(billions, ones, tens); len(billionWords) > 0 {
 		words += billionWords + " Billion "
 	}
 
 	// Convert millions to words
-	if millionWords := HundredsInWords(int(millions), ones, tens); len(millionWords) > 0 {
+	if millionWords := HundredsInWords(millions, ones, tens); len(millionWords) > 0 {
 		words += millionWords + " Million "
 	}
 
 	// Convert thousands to words
-	if thousandWords := HundredsInWords(int(thousands), ones, tens); len(thousandWords) > 0 {
+	if thousandWords := HundredsInWords(thousands, ones, tens); len(thousandWords) > 0 {
 		words += thousandWords + " Thousand "
 	}
 
 	// Convert units to words
-	if unitWords := HundredsInWords(int(units), ones, tens); len(unitWords) > 0 {
+	if unitWords := HundredsInWords(units, ones, tens); len(unitWords) > 0 {
 		words += unitWords
 	}
 
 	words += " " + cname
 
 	// Convert dec to decwords
-	if decWords := HundredsInWords(int(dec), ones, tens); len(decWords) > 0 {
+
+	if decWords := HundredsInWords(dec, ones, tens); len(decWords) > 0 {
 		words += " and "
 		words += decWords
 		words += " " + ccoin

@@ -8,6 +8,6 @@ import (
 type TDFParam struct {
 	gorm.Model
 	types.CModel
-	FromPolicy uint
-	ToPolicy   uint
+	FromPolicy uint64
+	ToPolicy   uint64
 }

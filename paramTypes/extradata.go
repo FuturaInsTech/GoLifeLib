@@ -40,6 +40,8 @@ type Q0005Data struct {
 	NoLapseGuarantee       string   //P0050 YESNO
 	NoLapseGuaranteeMonths int
 	SpecialRevivalMonths   int
+	AplLoanMethod          string
+	NfoMethod              []string //p0050
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {
@@ -129,10 +131,72 @@ func (m *Q0005Data) GetFormattedData(datamap map[string]string) map[string]inter
 		}
 		resp["AllowedFrequencies"] = resultarray
 		return resp
+	} else if datamap["function"] == "NfoMethod" {
+		resp := make(map[string]interface{})
+		//allowedfreq := make([]string, 0)
+		resultarray := make([]interface{}, 0)
+
+		for i := 0; i < len(m.NfoMethod); i++ {
+			if m.NfoMethod[i] == "" {
+				break
+			}
+
+			long := GetP0050ItemCodeDesc(uint(coy), "NfoMethod", 1, m.NfoMethod[i])
+
+			resultOut := map[string]interface{}{
+				"Item":     m.NfoMethod[i],
+				"LongDesc": long,
+			}
+
+			resultarray = append(resultarray, resultOut)
+		}
+		resp["NfoMethod"] = resultarray
+		return resp
 	} else {
 		return nil
 	}
 
+}
+
+// GetP0050ItemCodeDesc - Get the Description of an item's Code
+//
+// Inputs: Company, ParamItem and Language
+//
+// # Outputs:  Description
+//
+// ©  FuturaInsTech
+func GetP0050ItemCodeDesc(iCompany uint, iItem string, iLanguage uint, iCode string) string {
+	var paramdata models.Param
+	var paramdatamap map[string]interface{}
+
+	var idescription string = ""
+	var iParam = "P0050"
+	results := initializers.DB.Where("company_id = ? AND name = ? and item = ? and is_valid = ?", iCompany, iParam, iItem, 1).Find(&paramdata)
+	if results.Error != nil || results.RowsAffected == 0 {
+		return ""
+	}
+
+	datamap, _ := json.Marshal(paramdata.Data)
+	json.Unmarshal(datamap, &paramdatamap)
+
+	// use the iCode and return its corresponding Description
+	type jsondata struct {
+		Code        string
+		Description string
+	}
+	var jd []jsondata
+
+	datamap, _ = json.Marshal(paramdatamap["dataPairs"])
+	json.Unmarshal(datamap, &jd)
+
+	for i := 0; i < len(jd); i++ {
+		if jd[i].Code == iCode {
+			idescription = jd[i].Description
+			break
+		}
+	}
+
+	return idescription
 }
 
 // /
@@ -1650,16 +1714,20 @@ func (m *P0058Data) GetFormattedData(datamap map[string]string) map[string]inter
 // ILP Rules
 // Transaction Code + Coverage Code
 type P0059Data struct {
-	CurrentOrFuture          string `gorm:"type:varchar(1)"` // P0050
-	SeqNo                    int
-	AllocationCategory       string // P0050 2 Character
-	AccountCode              string `gorm:"type:varchar(30)"`
-	NegativeUnits            string // P0050 YES/NO Y
-	NegativeUnitsPeriod      uint   // In Months    36
-	NegativeAmounts          string //P0050 YES/NO  N
-	NegativeAmountsPeriod    uint   // In Months    26
-	RecoverFromTopUpFirst    string // YES/NO
-	NegUnitsOrAmtRecovPeriod uint   //In Months     60 MONTHS
+	CurrentOrFuture    string `gorm:"type:varchar(1)"` // P0050
+	SeqNo              int
+	AllocationCategory string // P0050 2 Character
+	AccountCode        string `gorm:"type:varchar(30)"`
+	// NegativeUnits            string // P0050 YES/NO Y
+	// NegativeUnitsPeriod      uint   // In Months    36
+	// NegativeAmounts          string //P0050 YES/NO  N
+	// NegativeAmountsPeriod    uint   // In Months    26
+	// NegUnitsOrAmtRecovPeriod uint   //In Months     60 MONTHS
+
+	NegativeAccum         string  // P0050 Y/N  (ILP  Only)
+	NegativeAccumMonths   float64 // No of Months of Negative Accum
+	NegativeUnitsOrAmt    string // unit or Amounts P0050 U/A
+	RecoverFromTopUpFirst string  // YES/NO
 
 }
 

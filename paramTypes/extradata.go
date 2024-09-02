@@ -369,6 +369,11 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 		}
 		resp["AllowedTermRange"] = allowedtermrange
 		return resp
+	} else if datamap["function"] == "PremCalcType" {
+		resp := make(map[string]interface{})
+		PremCalcType := m.PremCalcType
+		resp["AllowedPremCalcType"] = PremCalcType
+		return resp
 	} else {
 		return nil
 	}
@@ -1726,7 +1731,7 @@ type P0059Data struct {
 
 	NegativeAccum         string  // P0050 Y/N  (ILP  Only)
 	NegativeAccumMonths   float64 // No of Months of Negative Accum
-	NegativeUnitsOrAmt    string // unit or Amounts P0050 U/A
+	NegativeUnitsOrAmt    string  // unit or Amounts P0050 U/A
 	RecoverFromTopUpFirst string  // YES/NO
 
 }

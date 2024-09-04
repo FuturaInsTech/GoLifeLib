@@ -2206,3 +2206,30 @@ func (m *P0072Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+type P0073Data struct {
+	P0073Array []P0073
+}
+type P0073 struct {
+	NoOfYears  float64
+	LBFunction string // P0050
+}
+
+func (m *P0073Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0073Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}

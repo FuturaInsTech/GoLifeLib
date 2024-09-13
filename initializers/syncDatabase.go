@@ -2,6 +2,7 @@ package initializers
 
 import (
 	"github.com/FuturaInsTech/GoLifeLib/models"
+	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
 )
 
 // Table Name should start with Capital Letter

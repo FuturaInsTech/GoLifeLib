@@ -369,6 +369,11 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 		}
 		resp["AllowedTermRange"] = allowedtermrange
 		return resp
+	} else if datamap["function"] == "PremCalcType" {
+		resp := make(map[string]interface{})
+		PremCalcType := m.PremCalcType
+		resp["AllowedPremCalcType"] = PremCalcType
+		return resp
 	} else {
 		return nil
 	}
@@ -1726,7 +1731,7 @@ type P0059Data struct {
 
 	NegativeAccum         string  // P0050 Y/N  (ILP  Only)
 	NegativeAccumMonths   float64 // No of Months of Negative Accum
-	NegativeUnitsOrAmt    string // unit or Amounts P0050 U/A
+	NegativeUnitsOrAmt    string  // unit or Amounts P0050 U/A
 	RecoverFromTopUpFirst string  // YES/NO
 
 }
@@ -2198,6 +2203,33 @@ func (m *P0072Data) ParseData(datamap map[string]interface{}) {
 }
 
 func (m *P0072Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+type P0073Data struct {
+	P0073Array []P0073
+}
+type P0073 struct {
+	NoOfYears  float64
+	LBFunction string // P0050
+}
+
+func (m *P0073Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0073Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 	return nil
 
 }

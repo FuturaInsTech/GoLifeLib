@@ -1,9 +1,5 @@
 package initializers
 
-import (
-	"github.com/FuturaInsTech/GoLifeLib/models"
-)
-
 // Table Name should start with Capital Letter
 func SyncDatabase() {
 	// All Drop Down Come First
@@ -55,7 +51,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.Receipt{})
 	// DB.AutoMigrate(&models.Tdfh{})
 	// DB.AutoMigrate(&models.TDFPolicy{})
-	// DB.AutoMigrate(&sudmodels.UIMaster{})
+	//DB.AutoMigrate(&sudmodels.UIMaster{})
 	// DB.AutoMigrate(&models.TDFParam{})
 	// DB.AutoMigrate(&models.SurvB{})
 	// DB.AutoMigrate(&models.Communication{})
@@ -76,7 +72,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.BusinessDate{})
 	// DB.AutoMigrate(&models.MaturityH{})
 	// DB.AutoMigrate(&models.MaturityD{})
-	DB.AutoMigrate(&models.PolBill{})
+	// DB.AutoMigrate(&models.PolBill{})
 	// DB.AutoMigrate(&models.CriticalIllness{})
 	// DB.AutoMigrate(&models.TransactionLock{})
 	// DB.AutoMigrate(&models.IBenefit{})
@@ -91,8 +87,8 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.IlpStatementPrint{})
 	// DB.AutoMigrate(&models.PayingAuthority{})
 	// DB.AutoMigrate(&models.PaBillSummary{})
-	DB.AutoMigrate(&models.ClientWork{})
-	DB.AutoMigrate(&models.Loan{})
-	DB.AutoMigrate(&models.LoanBill{})
+	// DB.AutoMigrate(&models.ClientWork{})
+	// DB.AutoMigrate(&models.Loan{})
+	// DB.AutoMigrate(&models.LoanBill{})
 
 }

@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +18,7 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 
+	"github.com/xuri/excelize/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"gorm.io/gorm"
@@ -12693,4 +12697,667 @@ func GetLoanAndIntrestD(iCompany uint, iPolicy uint, iDate string, itype string,
 
 	oLoanInt = oLoanInt + brokenperiodint
 	return RoundFloat(oLoanAmount, 2), RoundFloat(oLoanInt, 2)
+}
+
+// #202
+// xlsx2json - xlsxfile data is transformed into jsonfile
+// Inputs: xlsxFile
+//
+// # Outputs: jsonFile
+// ©  FuturaInsTech
+func xlsx2json(excelFileName string, jsonFileName string) {
+
+	// Open the Excel file
+	f, err := excelize.OpenFile(excelFileName)
+	if err != nil {
+		log.Fatalf("Error opening Excel file: %v", err)
+	}
+
+	// Get all sheet names
+	sheetNames := f.GetSheetList()
+
+	// Create a map to hold the data for all sheets
+	allSheetsData := make(map[string][]map[string]interface{})
+
+	// Process each sheet
+	for _, sheetName := range sheetNames {
+		rows, err := f.GetRows(sheetName)
+		if err != nil {
+			log.Printf("Error reading rows for sheet %s: %v", sheetName, err)
+			continue
+		}
+
+		if len(rows) == 0 {
+			log.Fatal("Excel file is empty")
+		}
+
+		// Extract headers from the first row
+		headers := rows[0]
+
+		// Create a slice to hold the JSON objects for this sheet
+		var sheetData []map[string]interface{}
+
+		// Process rows to create JSON objects
+		if len(rows) > 1 {
+			// Process rows starting from the second row if they exist
+			for _, row := range rows[1:] {
+				obj := make(map[string]interface{})
+				for colIndex, value := range row {
+					if colIndex < len(headers) {
+						obj[headers[colIndex]] = value // Use headers to map keys
+					}
+				}
+				sheetData = append(sheetData, obj)
+			}
+		} else {
+			// No data rows; write an empty object with only headers
+			obj := make(map[string]interface{})
+			for _, header := range headers {
+				obj[header] = nil // Set values as `nil` for missing data
+			}
+			sheetData = append(sheetData, obj)
+		}
+
+		// Add the sheet data to the map
+		allSheetsData[sheetName] = sheetData
+	}
+
+	// Write the JSON data to a file
+	jsonFile, err := os.Create(jsonFileName)
+	if err != nil {
+		log.Fatalf("Error creating JSON file: %v", err)
+	}
+	defer jsonFile.Close()
+
+	encoder := json.NewEncoder(jsonFile)
+	encoder.SetIndent("", "  ") // Format the JSON output with indentation
+	if err := encoder.Encode(allSheetsData); err != nil {
+		log.Fatalf("Error writing JSON file: %v", err)
+	}
+
+	fmt.Println("JSON file successfully created:", jsonFileName)
+}
+
+// #203
+// json2xlsx - jsonfile data is transformed into xlsxfile
+// Inputs: jsonFile
+//
+// # Outputs: xlsxFile
+// ©  FuturaInsTech
+func json2xlsx(jsonFile string, excelFile string) {
+	// Read JSON file
+	jsonData, err := os.ReadFile(jsonFile)
+	if err != nil {
+		log.Fatalf("Failed to read JSON file: %v", err)
+	}
+
+	var jsondata1 map[string][]map[string]string // nested data structure
+	var jsondata2 []map[string]interface{}       // slice of map string interface
+	var jsondata3 []map[string]string            // slice of map string of strings
+	var jsondata4 map[string]interface{}         // map string interface
+	var jsondata5 map[string]string              // map string of string
+	var jsondata6 []string                       // array of string
+
+	jsonType := ""
+
+	err = json.Unmarshal(jsonData, &jsondata1)
+	if err == nil {
+		if jsonType == "" {
+			jsonType = "1"
+		}
+	}
+
+	err = json.Unmarshal(jsonData, &jsondata2)
+	if err == nil {
+		if jsonType == "" {
+			jsonType = "2"
+		}
+	}
+
+	err = json.Unmarshal(jsonData, &jsondata3)
+	if err == nil {
+		if jsonType == "" {
+			jsonType = "3"
+		}
+	}
+
+	err = json.Unmarshal(jsonData, &jsondata4)
+	if err == nil {
+		if jsonType == "" {
+			jsonType = "4"
+		}
+	}
+
+	err = json.Unmarshal(jsonData, &jsondata5)
+	if err == nil {
+		if jsonType == "" {
+			jsonType = "5"
+		}
+	}
+
+	err = json.Unmarshal(jsonData, &jsondata6)
+	if err == nil {
+		if jsonType == "" {
+			jsonType = "6"
+		}
+	}
+
+	switch jsonType {
+	case "1": // Parse JSON data into a nested data structure
+		var sheetsData map[string][]map[string]string
+		err = json.Unmarshal(jsonData, &sheetsData)
+		if err != nil {
+			log.Fatalf("Failed to parse JSON data: %v", err)
+		}
+
+		// Create a new Excel file
+		f := excelize.NewFile()
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Fatalf("Failed to close Excel file: %v", err)
+			}
+		}()
+
+		// Populate the Excel file with data for each sheet
+		for sheetName, records := range sheetsData {
+			// Add a new sheet
+			index, _ := f.NewSheet(sheetName)
+			if index == -1 {
+				log.Fatalf("Failed to create sheet: %s", sheetName)
+			}
+
+			if len(records) == 0 {
+				log.Printf("Skipping empty sheet: %s", sheetName)
+				continue
+			}
+
+			// Create a map to store unique keys
+			uniqueKeys := make(map[string]struct{})
+
+			// Collect all keys from each JSON object
+			for _, obj := range records {
+				for key := range obj {
+					uniqueKeys[key] = struct{}{} // Using empty struct for memory efficiency
+				}
+			}
+
+			// Convert map keys to a slice
+			headers := make([]string, 0, len(uniqueKeys))
+			for key := range uniqueKeys {
+				headers = append(headers, key)
+			}
+
+			//Write header rows
+			for i, header := range headers {
+				cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+				if err := f.SetCellValue(sheetName, cell, header); err != nil {
+					log.Fatalf("Failed to write header to sheet %s: %v", sheetName, err)
+				}
+			}
+
+			// Write data rows
+			for rowIdx, record := range records {
+				for colIdx, header := range headers {
+					cell, _ := excelize.CoordinatesToCellName(colIdx+1, rowIdx+2)
+					if err := f.SetCellValue(sheetName, cell, record[header]); err != nil {
+						log.Fatalf("Failed to write data to sheet %s: %v", sheetName, err)
+					}
+				}
+			}
+		}
+		// Delete the default "Sheet1"
+		defaultSheet := "Sheet1"
+		if err := f.DeleteSheet(defaultSheet); err != nil {
+			log.Fatalf("Failed to delete default sheet: %v", err)
+		}
+		// Save the Excel file
+		if err := f.SaveAs(excelFile); err != nil {
+			log.Fatalf("Failed to save Excel file: %v", err)
+		} else {
+			fmt.Printf("Excel file has been created: %s\n", excelFile)
+		}
+
+	case "2": // Parse JSON data into slice of map string interface
+		var data []map[string]interface{}
+		err = json.Unmarshal(jsonData, &data)
+		if err != nil {
+			log.Fatalf("Failed to parse JSON data: %v", err)
+		}
+
+		// Create a new Excel file
+		f := excelize.NewFile()
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Fatalf("Failed to close Excel file: %v", err)
+			}
+		}()
+
+		sheetName := "Sheet1"
+		index, _ := f.NewSheet(sheetName)
+
+		// Find all unique keys from the JSON data to create the headers
+		headers := make(map[string]bool) // To track unique keys
+		for _, item := range data {
+			for key := range item {
+				headers[key] = true
+			}
+		}
+
+		// Write the column headers in the first row
+		col := 1
+		for key := range headers {
+			cellHeader, _ := excelize.CoordinatesToCellName(col, 1) // Column (col), Row 1
+			f.SetCellValue(sheetName, cellHeader, key)
+			col++
+		}
+
+		// Write the values under each header
+		row := 2 // Start from the second row
+		for _, item := range data {
+			col = 1
+			for key := range headers {
+				// Write the value in the correct column
+				cellValue, _ := excelize.CoordinatesToCellName(col, row) // Column (col), Row (row)
+				if value, exists := item[key]; exists {
+					f.SetCellValue(sheetName, cellValue, value)
+				}
+				col++
+			}
+			row++
+		}
+
+		// Set the active sheet
+		f.SetActiveSheet(index)
+
+		// Save the Excel file
+		if err := f.SaveAs(excelFile); err != nil {
+			log.Fatalf("Failed to save Excel file: %v", err)
+		} else {
+			fmt.Printf("Excel file has been created: %s\n", excelFile)
+		}
+
+	case "3": // Parse JSON data into slice of map string of strings
+		var data []map[string]string
+		err = json.Unmarshal(jsonData, &data)
+		if err != nil {
+			log.Fatalf("Failed to parse JSON data: %v", err)
+		}
+
+		// Collect all unique headers
+		headerSet := make(map[string]bool)
+		for _, record := range data {
+			for key := range record {
+				headerSet[key] = true
+			}
+		}
+
+		// Convert headers to a sorted slice
+		headers := make([]string, 0, len(headerSet))
+		for header := range headerSet {
+			headers = append(headers, header)
+		}
+		sort.Strings(headers)
+
+		// Create a new Excel file
+		f := excelize.NewFile()
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Fatalf("Failed to close Excel file: %v", err)
+			}
+		}()
+
+		sheetName := "Sheet1"
+		f.SetSheetName(f.GetSheetName(0), sheetName)
+
+		// Write headers to the first row
+		for i, header := range headers {
+			cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+			f.SetCellValue(sheetName, cell, header)
+		}
+
+		// Write data to subsequent rows
+		for rowNum, record := range data {
+			for colNum, header := range headers {
+				value, exists := record[header]
+				if exists {
+					cell, _ := excelize.CoordinatesToCellName(colNum+1, rowNum+2)
+					f.SetCellValue(sheetName, cell, value)
+				}
+			}
+		}
+
+		// Save the Excel file
+		if err := f.SaveAs(excelFile); err != nil {
+			log.Fatalf("Failed to save Excel file: %v", err)
+		} else {
+			fmt.Printf("Excel file has been created: %s\n", excelFile)
+		}
+
+	case "4": // Parse JSON data into a map string interface
+		// Parse JSON data into a map
+		var data map[string]interface{}
+		err = json.Unmarshal(jsonData, &data)
+		if err != nil {
+			log.Fatalf("Failed to parse JSON data: %v", err)
+		}
+
+		// Create a new Excel file
+		f := excelize.NewFile()
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Fatalf("Failed to close Excel file: %v", err)
+			}
+		}()
+
+		sheetName := "Sheet1"
+		index, _ := f.NewSheet(sheetName)
+
+		// Write the column header in the first row
+		col := 1 // Start with column 1 (A)
+		for key, value := range data {
+			// Write the column header (key) in the first row
+			cellHeader, _ := excelize.CoordinatesToCellName(col, 1) // Column (col), Row 1
+			f.SetCellValue(sheetName, cellHeader, key)
+
+			// Write the value under the column header in the second row
+			cellValue, _ := excelize.CoordinatesToCellName(col, 2) // Column (col), Row 2
+			f.SetCellValue(sheetName, cellValue, value)
+
+			// Move to the next column
+			col++
+		}
+
+		// Set active sheet
+		f.SetActiveSheet(index)
+
+		// Save the Excel file
+		if err := f.SaveAs(excelFile); err != nil {
+			log.Fatalf("Failed to save Excel file: %v", err)
+		} else {
+			fmt.Printf("Excel file has been created: %s\n", excelFile)
+		}
+
+	case "5": // Parse JSON data into a map string of string
+		var data map[string]string
+		err = json.Unmarshal(jsonData, &data)
+		if err != nil {
+			log.Fatalf("Failed to parse JSON data: %v", err)
+		}
+
+		// Create a new Excel file
+		f := excelize.NewFile()
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Fatalf("Failed to close Excel file: %v", err)
+			}
+		}()
+
+		sheetName := "Sheet1"
+		index, _ := f.NewSheet(sheetName)
+
+		// Maintain order by using a slice of keys
+		keys := []string{}
+		for key := range data {
+			keys = append(keys, key)
+		}
+
+		// Write headers (keys from JSON)
+		for col, key := range keys {
+			cell, _ := excelize.CoordinatesToCellName(col+1, 1) // Header in row 1
+			if err := f.SetCellValue(sheetName, cell, key); err != nil {
+				log.Fatalf("Error writing header: %v", err)
+			}
+		}
+
+		// Write values (values from JSON)
+		for col, key := range keys {
+			cell, _ := excelize.CoordinatesToCellName(col+1, 2) // Values in row 2
+			if err := f.SetCellValue(sheetName, cell, data[key]); err != nil {
+				log.Fatalf("Error writing value: %v", err)
+			}
+		}
+
+		// Set active sheet
+		f.SetActiveSheet(index)
+
+		// Save the Excel file
+		if err := f.SaveAs(excelFile); err != nil {
+			log.Fatalf("Failed to save Excel file: %v", err)
+		} else {
+			fmt.Printf("Excel file has been created: %s\n", excelFile)
+		}
+
+	case "6": // Parse JSON data into a JSON array
+		var data []string
+		err = json.Unmarshal(jsonData, &data)
+		if err != nil {
+			log.Fatalf("Failed to parse JSON data: %v", err)
+		}
+
+		// Create a new Excel file
+		f := excelize.NewFile()
+		defer func() {
+			if err := f.Close(); err != nil {
+				log.Fatalf("Failed to close Excel file: %v", err)
+			}
+		}()
+
+		sheetName := "Sheet1"
+		index, _ := f.NewSheet(sheetName)
+
+		// Write the data horizontally (each string in a new column)
+		for i, value := range data {
+			cell, _ := excelize.CoordinatesToCellName(i+1, 1) // Column i+1, Row 1
+			if err := f.SetCellValue(sheetName, cell, value); err != nil {
+				log.Fatalf("Error writing value: %v", err)
+			}
+		}
+
+		// Set active sheet
+		f.SetActiveSheet(index)
+
+		// Save the Excel file
+		if err := f.SaveAs(excelFile); err != nil {
+			log.Fatalf("Failed to save Excel file: %v", err)
+		} else {
+			fmt.Printf("Excel file has been created: %s\n", excelFile)
+		}
+
+	default:
+		log.Fatalf("JSON Data Format Invalid: %v", err)
+	}
+}
+
+// #204
+// GetCalcDate - Utility to return a calculated date
+// Returns Calculated Date
+//   - adjusted by mnth
+//   - optionally to return [B]eginning or [E]nding of the month or [N] day in iDate
+//   - additionally verifying to return the given day if available in the month
+//
+// Inputs: YYYYMMDD Date, month between -12 and 12, option B/E/N, original day in iDate
+//
+// # Outputs: YYYYMMDD calc Date and Time format calc Date.
+// ©  FuturaInsTech
+func GetCalcDate(iDate string, mnth int, opt string, day int) (osDate string, otDate time.Time) {
+	// Sanity edits
+	if opt == "" {
+		opt = "N"
+	}
+	if opt != "B" && opt != "E" && opt != "N" {
+		fmt.Println("Invalid Option.. correction needed")
+		return
+	}
+	if mnth > 12 || mnth < -12 {
+		fmt.Println("Invalid Months.. correction needed")
+		return
+	}
+
+	var iyear int
+	var imonth time.Month
+	var iday int
+	var oyear int
+	var omonth time.Month
+	day31mnths := []time.Month{
+		time.January,
+		time.March,
+		time.May,
+		time.July,
+		time.August,
+		time.October,
+		time.December,
+	}
+	itDate, _ := time.Parse("20060102", iDate)
+	iyear, imonth, iday = itDate.Date()
+
+	var cmnth time.Month
+	cmnth = imonth + time.Month(mnth)
+	if opt == "B" {
+		iday = 1
+	}
+	if opt == "E" {
+		iday = 0
+	}
+	if opt == "N" {
+		iday = day
+	}
+
+	if cmnth <= 0 {
+		cmnth = cmnth + 12
+		iyear = iyear - 1
+	} else if cmnth > 12 {
+		cmnth = cmnth - 12
+		iyear = iyear + 1
+	}
+
+	if opt == "B" {
+		otDate = time.Date(iyear, cmnth, iday, 0, 0, 0, 0, itDate.Location())
+	} else if opt == "E" {
+		otDate = time.Date(iyear, cmnth+1, iday, 0, 0, 0, 0, itDate.Location())
+	} else if opt == "N" {
+		otDate = time.Date(iyear, cmnth, iday, 0, 0, 0, 0, itDate.Location())
+		//Special Handling for February Dates...
+		cday := iday
+		oyear, omonth, _ = otDate.Date()
+
+		for omonth != cmnth {
+			cday = cday - 1
+			otDate = time.Date(oyear, cmnth, cday, 0, 0, 0, 0, itDate.Location())
+			oyear, omonth, _ = otDate.Date()
+		}
+		for _, month := range day31mnths {
+			if month == cmnth && day != 0 && day > cday {
+				otDate = time.Date(iyear, cmnth, day, 0, 0, 0, 0, itDate.Location())
+				break
+			}
+		}
+
+	}
+	osDate = otDate.Format("20060102")
+	return osDate, otDate
+}
+
+// #205
+// GetCalcDates - Utility to return a series of calculated dates
+// Returns a Series of Calculated Dates
+//   - adjusted by mnth
+//   - optionally to return [B]eginning or [E]nding of the month or [N] day in iDate
+//
+// Inputs: DateFrom & DateTo in YYYYMMDD, month between -12 and 12, option B/E/N
+// Dependant on #204 GetCalcDate
+// # Outputs: An array of Calc Dates in YYYYMMDD between DateFrom & DateTo and Time format calc Date.
+// ©  FuturaInsTech
+func GetAllCalcDates(iDatefrom string, iDateto string, mnth int, opt string) (osDate []string) {
+	// Sanity edits
+	if opt == "" {
+		opt = "N"
+	}
+	if opt != "B" && opt != "E" && opt != "N" {
+		fmt.Println("Invalid Option.. correction needed")
+		return
+	}
+	if mnth > 12 || mnth < -12 {
+		fmt.Println("Invalid Months.. correction needed")
+		return
+	}
+	// Convert the string dates into time format dates
+	tDatefrom, _ := time.Parse("20060102", iDatefrom)
+	tDateto, _ := time.Parse("20060102", iDateto)
+	_, _, iday := tDatefrom.Date()
+	// Loop to find end of month dates
+	if mnth > 0 && iDatefrom < iDateto {
+		for current := tDatefrom; !current.After(tDateto); {
+			// Get the current date in string format
+			scurrDate := current.Format("20060102")
+			sDate, tDate := GetCalcDate(scurrDate, mnth, opt, iday)
+			if sDate < iDateto {
+				fmt.Println(sDate)
+				osDate = append(osDate, sDate)
+			}
+			year, month, day := tDate.Date()
+			current = time.Date(year, month, day, 0, 0, 0, 0, current.Location())
+		}
+	} else if mnth < 0 && iDatefrom > iDateto {
+		for current := tDatefrom; !current.Before(tDateto); {
+			// Get the current date in string format
+			scurrDate := current.Format("20060102")
+			sDate, tDate := GetCalcDate(scurrDate, mnth, opt, iday)
+			if sDate > iDateto {
+				fmt.Println(sDate)
+				osDate = append(osDate, sDate)
+			}
+			year, month, day := tDate.Date()
+			current = time.Date(year, month, day, 0, 0, 0, 0, current.Location())
+		}
+	} else {
+		fmt.Println("Dates are jumbled.. correction needed")
+		return
+	}
+	return osDate
+}
+
+// #206
+// GetDateOpt - Utility to find if the date is [B]eginning or [E]nding or [N]ormal Date
+// Returns the option value as B/E/N of given date
+//
+// Input: iDate
+//
+// # Output: B or E or N.
+// ©  FuturaInsTech
+func GetDateOpt(iDate string) (opt string) {
+	tdate, _ := time.Parse("20060102", iDate)
+	// Subtract one day to the date
+	prevDay := tdate.AddDate(0, 0, -1)
+	if tdate.Month() != prevDay.Month() {
+		return "B"
+	}
+	// Add one day to the date
+	nextDay := tdate.AddDate(0, 0, 1)
+	if tdate.Month() != nextDay.Month() {
+		return "E"
+	}
+	return "N"
+}
+
+// #207
+// CheckDateOpt - Utility to confirm if Date's opt value given is correct or incorrect
+// Returns true if the given date satifies the opt value given
+//
+// Input: iDate
+//
+// # Output: true or false
+// ©  FuturaInsTech
+func CheckDateOpt(iDate string, opt string) bool {
+	tdate, _ := time.Parse("20060102", iDate)
+	// Subtract one day to the date
+	prevDay := tdate.AddDate(0, 0, -1)
+	if tdate.Month() != prevDay.Month() && (opt == "B") {
+		return true
+	}
+	// Add one day to the date
+	nextDay := tdate.AddDate(0, 0, 1)
+	if tdate.Month() != nextDay.Month() && (opt == "E") {
+		return true
+	}
+	return false
 }

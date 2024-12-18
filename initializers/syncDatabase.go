@@ -90,6 +90,6 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.ClientWork{})
 	// DB.AutoMigrate(&models.Loan{})
 	// DB.AutoMigrate(&models.LoanBill{})
-	DB.AutoMigrate(&models.WorkflowComments{})
+	//DB.AutoMigrate(&models.WorkflowComments{})
 
 }

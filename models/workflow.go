@@ -18,8 +18,8 @@ type WorkflowComments struct {
 
 type WorkflowRules struct {
 	types.CModel
-	WorkflowSeqno        uint
-	WorkflowType         string `gorm:"type:varchar(20)"`
+	WorkflowType         string `gorm:"primaryKey;type:varchar(20)"`
+	WorkflowSeqno        uint   `gorm:"primaryKey;"`
 	WorkflowDescription  string `gorm:"type:varchar(50)"`
 	WorkflowSubType      string `gorm:"type:varchar(20)"`
 	WorkflowSubTypeDesc  string `gorm:"type:varchar(50)"`

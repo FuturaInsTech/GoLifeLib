@@ -25,3 +25,15 @@ type WorkflowRules struct {
 	WorkflowSubTypeDesc  string `gorm:"type:varchar(50)"`
 	WorkflowOptIndicator string `gorm:"type:varchar(1)"` // M Mandatory O Option
 }
+
+type WorkflowPolicy struct {
+	gorm.Model
+	types.CModel
+	PolicyID             uint
+	WorkflowType         string `gorm:"type:varchar(20)"`
+	WorkflowSeqno        uint
+	WorkflowDescription  string `gorm:"type:varchar(50)"`
+	WorkflowSubType      string `gorm:"type:varchar(20)"`
+	WorkflowSubTypeDesc  string `gorm:"type:varchar(50)"`
+	WorkflowOptIndicator string `gorm:"type:varchar(1)"` // M Mandatory O Option
+}

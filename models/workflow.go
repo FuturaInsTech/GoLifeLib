@@ -31,6 +31,7 @@ type WorkflowPolicy struct {
 	types.CModel
 	PolicyID             uint
 	WorkflowType         string `gorm:"type:varchar(20)"`
+	WorkflowTypeRef      string `gorm:"type:varchar(20)"`
 	WorkflowSeqno        uint
 	WorkflowDescription  string `gorm:"type:varchar(50)"`
 	WorkflowSubType      string `gorm:"type:varchar(20)"`

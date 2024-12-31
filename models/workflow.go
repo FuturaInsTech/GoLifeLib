@@ -41,33 +41,6 @@ type WorkflowRules struct {
 // 	WorkflowOptIndicator string `gorm:"type:varchar(1)"` // M Mandatory O Option
 // }
 
-type WfRequest struct {
-	gorm.Model
-	types.CModel
-	ReqName        string `gorm:"type:varchar(20)"`
-	ReqDescription string `gorm:"type:longtext"`
-	CreatedBy      uint
-	ReqRefData     string `gorm:"type:varchar(20)"`
-	ReqRefType     string `gorm:"type:varchar(20)"`
-	ReqStatus      string `gorm:"type:varchar(20)"`
-	WfTasks        []WfTask
-}
-
-type WfTask struct {
-	gorm.Model
-	types.CModel
-	RequestID        uint
-	TaskName         string `gorm:"type:varchar(20)"`
-	TaskDescription  string `gorm:"type:longtext"`
-	SeqNo            uint
-	SlaDuration      uint
-	TaskStatus       string `gorm:"type:varchar(2)"`
-	Priority         string `gorm:"type:varchar(2)"`
-	DueDate          string `gorm:"type:varchar(8)"`
-	WfTaskAssignment WfTaskAssignment
-	ExecutionLogs    []WfTaskExecutionLog
-}
-
 type WfTaskAssignment struct {
 	gorm.Model
 	types.CModel
@@ -84,7 +57,10 @@ type WfTaskAssignment struct {
 type WfTaskExecutionLog struct {
 	gorm.Model
 	types.CModel
+	ReqRefData   string `gorm:"type:varchar(20)"`
+	ReqRefType   string `gorm:"type:varchar(20)"`
 	TaskID       uint
+	ActionID     uint
 	AssignedTo   uint
 	AssignedAt   time.Time
 	StartedAt    time.Time
@@ -94,4 +70,46 @@ type WfTaskExecutionLog struct {
 	// action      string `gorm:"type:varchar(10)"` //sub-tasks of tasks ??
 	// PerformedBy uint
 	Details string `gorm:"type:longtext"`
+}
+
+type WfAction struct {
+	gorm.Model
+	types.CModel
+	TaskID              uint
+	ActionName          string `gorm:"type:varchar(20)"`
+	ActionDescription   string `gorm:"type:longtext"`
+	SeqNo               uint
+	SlaDuration         uint
+	ActionStatus        string `gorm:"type:varchar(2)"`
+	Priority            string `gorm:"type:varchar(2)"`
+	DueDate             string `gorm:"type:varchar(8)"`
+	WfTaskExecutionLogs []WfTaskExecutionLog
+}
+
+type WfTask struct {
+	gorm.Model
+	types.CModel
+	RequestID           uint
+	TaskName            string `gorm:"type:varchar(20)"`
+	TaskDescription     string `gorm:"type:longtext"`
+	SeqNo               uint
+	SlaDuration         uint
+	TaskStatus          string `gorm:"type:varchar(2)"`
+	Priority            string `gorm:"type:varchar(2)"`
+	DueDate             string `gorm:"type:varchar(8)"`
+	WfTaskAssignment    uint
+	WfActions           []WfAction
+	WfTaskExecutionLogs []WfTaskExecutionLog
+}
+
+type WfRequest struct {
+	gorm.Model
+	types.CModel
+	ReqName        string `gorm:"type:varchar(20)"`
+	ReqDescription string `gorm:"type:longtext"`
+	CreatedBy      uint
+	ReqRefData     string `gorm:"type:varchar(20)"`
+	ReqRefType     string `gorm:"type:varchar(20)"`
+	ReqStatus      string `gorm:"type:varchar(20)"`
+	WfTasks        []WfTask
 }

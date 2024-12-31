@@ -90,7 +90,13 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.ClientWork{})
 	// DB.AutoMigrate(&models.Loan{})
 	// DB.AutoMigrate(&models.LoanBill{})
+
 	// DB.AutoMigrate(&models.WorkflowComments{})
 	// DB.AutoMigrate(&models.WorkflowRules{})
+	// DB.AutoMigrate(&models.WorkflowPolicy{})
 
+	// DB.AutoMigrate(&models.WfRequest{})
+	// DB.AutoMigrate(&models.WfTask{})
+	// DB.AutoMigrate(&models.WfTaskAssignment{})
+	// DB.AutoMigrate(&models.WfTaskExecutionLog{})
 }

@@ -97,7 +97,7 @@ type WfTask struct {
 	TaskStatus          string `gorm:"type:varchar(2)"`
 	Priority            string `gorm:"type:varchar(2)"`
 	DueDate             string `gorm:"type:varchar(8)"`
-	WfTaskAssignment    uint
+	WfTaskAssignmentID  uint
 	WfActions           []WfAction
 	WfTaskExecutionLogs []WfTaskExecutionLog
 }

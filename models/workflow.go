@@ -41,7 +41,7 @@ type WorkflowRules struct {
 // 	WorkflowOptIndicator string `gorm:"type:varchar(1)"` // M Mandatory O Option
 // }
 
-type WorkflowRequest struct {
+type WfRequest struct {
 	gorm.Model
 	types.CModel
 	ReqName        string `gorm:"type:varchar(20)"`

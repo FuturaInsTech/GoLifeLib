@@ -94,4 +94,9 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WorkflowRules{})
 	// DB.AutoMigrate(&models.WorkflowPolicy{})
 
+	// DB.AutoMigrate(&models.WfRequest{})
+	// DB.AutoMigrate(&models.WfTask{})
+	// DB.AutoMigrate(&models.WfTaskAssignment{})
+	// DB.AutoMigrate(&models.WfTaskExecutionLog{})
+
 }

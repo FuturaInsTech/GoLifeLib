@@ -128,3 +128,13 @@ type WfRequest struct {
 	ReqStatus      string `gorm:"type:varchar(20)"`
 	//WfTasks        []WfTask
 }
+
+type UserDepartment struct {
+	gorm.Model
+	types.CModel
+	DepartmentID    string `gorm:"type:varchar(5)"`
+	TeamsID         string `gorm:"type:varchar(5)"`
+	UserID          string `gorm:"type:varchar(5)"`
+	UserDesignation string `gorm:"type:varchar(20)"`
+	UserLevel       string `gorm:"type:varchar(5)"`
+}

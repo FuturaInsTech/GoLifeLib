@@ -132,9 +132,23 @@ type WfRequest struct {
 type UserDepartment struct {
 	gorm.Model
 	types.CModel
-	DepartmentID    string `gorm:"type:varchar(5)"`
-	TeamsID         string `gorm:"type:varchar(5)"`
-	UserID          string `gorm:"type:varchar(5)"`
+	DepartmentID    string `gorm:"type:varchar(20)"`
+	TeamsID         string `gorm:"type:varchar(20)"`
+	UserID          string `gorm:"type:varchar(20)"`
 	UserDesignation string `gorm:"type:varchar(20)"`
-	UserLevel       string `gorm:"type:varchar(5)"`
+	UserLevel       string `gorm:"type:varchar(20)"`
+}
+
+type WfUserReminder struct {
+	gorm.Model
+	types.CModel
+	UserId         uint
+	ReminderRef    string `gorm:"type:varchar(20)"`
+	ReminderOn     string `gorm:"type:varchar(20)"`
+	ReminderNote   string `gorm:"type:varchar(20)"`
+	ReminderDatime time.Time
+	ReminderType   string `gorm:"type:varchar(20)"`
+	PhoneNo        string `gorm:"type:varchar(20)"`
+	Email          string `gorm:"type:varchar(20)"`
+	ReminderPerson string `gorm:"type:varchar(50)"`
 }

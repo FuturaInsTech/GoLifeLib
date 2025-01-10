@@ -90,7 +90,7 @@ type WfAction struct {
 	gorm.Model
 	types.CModel
 	TaskID               uint
-	ActionName           string `gorm:"type:varchar(20)"`
+	ActionName           string `gorm:"type:varchar(100)"`
 	ActionDescription    string `gorm:"type:longtext"`
 	SeqNo                uint
 	SlaDuration          uint
@@ -107,7 +107,7 @@ type WfTask struct {
 	gorm.Model
 	types.CModel
 	RequestID          uint
-	TaskName           string `gorm:"type:varchar(20)"`
+	TaskName           string `gorm:"type:varchar(100)"`
 	TaskDescription    string `gorm:"type:longtext"`
 	SeqNo              uint
 	SlaDuration        uint

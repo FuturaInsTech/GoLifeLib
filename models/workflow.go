@@ -132,8 +132,8 @@ type WfRequest struct {
 type UserDepartment struct {
 	gorm.Model
 	types.CModel
-	DepartmentID    string `gorm:"type:varchar(20)"`
-	TeamsID         string `gorm:"type:varchar(20)"`
+	DepartmentCode    string `gorm:"type:varchar(20)"`
+	TeamsCode         string `gorm:"type:varchar(20)"`
 	UserID          string `gorm:"type:varchar(20)"`
 	UserDesignation string `gorm:"type:varchar(20)"`
 	UserLevel       string `gorm:"type:varchar(20)"`

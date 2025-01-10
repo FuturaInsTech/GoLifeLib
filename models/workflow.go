@@ -97,6 +97,8 @@ type WfAction struct {
 	ActionStatus         string `gorm:"type:varchar(2)"`
 	Priority             string `gorm:"type:varchar(2)"`
 	DueDate              string `gorm:"type:varchar(8)"`
+	DepartmentCode       string `gorm:"type:varchar(20)"`
+	TeamsCode            string `gorm:"type:varchar(20)"`
 	WfActionAssignmentID uint
 	//WfTaskExecutionLogs []WfTaskExecutionLog
 }
@@ -112,6 +114,8 @@ type WfTask struct {
 	TaskStatus         string `gorm:"type:varchar(2)"`
 	Priority           string `gorm:"type:varchar(2)"`
 	DueDate            string `gorm:"type:varchar(8)"`
+	DepartmentCode     string `gorm:"type:varchar(20)"`
+	TeamsCode          string `gorm:"type:varchar(20)"`
 	WfTaskAssignmentID uint
 	//WfActions           []WfAction
 	//WfTaskExecutionLogs []WfTaskExecutionLog
@@ -132,8 +136,8 @@ type WfRequest struct {
 type UserDepartment struct {
 	gorm.Model
 	types.CModel
-	DepartmentCode    string `gorm:"type:varchar(20)"`
-	TeamsCode         string `gorm:"type:varchar(20)"`
+	DepartmentCode  string `gorm:"type:varchar(20)"`
+	TeamsCode       string `gorm:"type:varchar(20)"`
 	UserID          string `gorm:"type:varchar(20)"`
 	UserDesignation string `gorm:"type:varchar(20)"`
 	UserLevel       string `gorm:"type:varchar(20)"`

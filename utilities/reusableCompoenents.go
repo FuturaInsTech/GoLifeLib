@@ -13361,3 +13361,17 @@ func CheckDateOpt(iDate string, opt string) bool {
 	}
 	return false
 }
+
+func GetDepDes(iDepCoad string, iCompany uint, iLanguage uint) (oDepCoad string) {
+
+	shortdes, _, _ := GetParamDesc(iCompany, "W0006", iDepCoad, iLanguage)
+
+	return shortdes
+}
+func GetTeamDes(iTeamCoad string, iCompany uint, iLanguage uint) (oDepCoad string) {
+
+	shortdes, _, _ := GetParamDesc(iCompany, "W0008", iTeamCoad, iLanguage)
+
+	return shortdes
+
+}

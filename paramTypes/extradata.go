@@ -2233,3 +2233,287 @@ func (m *P0073Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Workflow Param
+type W0001Data struct {
+	RequestType string // P0050
+	Department  string // W0006
+	Team        string // W0008
+	SLA         string // W0009
+}
+
+func (m *W0001Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0001Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+type W0002Data struct {
+	TaskType     string // P0050
+	Department   string // W0006
+	Team         string // W0008
+	SLA          string // W0009
+	ReassignedBy string // assignedto, manager, head
+}
+
+func (m *W0002Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0002Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+type W0003Data struct {
+	ActionType   string // P0050
+	Department   string // W0006
+	Team         string // W0008
+	SLA          string // W0009
+	TranCode     string // table:Transaction
+	ReassignedBy string // assignedto, manager, head
+}
+
+func (m *W0003Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0003Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+type W0004Data struct {
+	FieldArray []W0004
+}
+type W0004 struct {
+	Action string // W0003
+}
+
+func (m *W0004Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0004Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+type W0005Data struct {
+	FieldArray []W0005
+}
+type W0005 struct {
+	Task string // W0002
+}
+
+func (m *W0005Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0005Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+type W0006Data struct {
+	DepartmentHead uint // table:users
+	MaxNoOfTeams   uint
+}
+
+func (m *W0006Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0006Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+type W0007Data struct {
+	TeamLead     uint // table:users
+	MaxNoOfUsers uint
+}
+
+func (m *W0007Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0007Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+type W0008Data struct {
+	FieldArray []W0008
+}
+type W0008 struct {
+	Team string // W0007
+}
+
+func (m *W0008Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0008Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+type W0009Data struct {
+	SLAMethod string // sla calc program name
+}
+
+func (m *W0009Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0009Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+type W0010Data struct {
+	FieldArray []W0010
+}
+type W0010 struct {
+	NextStatus string // W0009
+}
+
+func (m *W0010Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0010Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+type W0011Data struct {
+	ReminderMethod string // reminder method trigger program name
+}
+
+func (m *W0011Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0011Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}

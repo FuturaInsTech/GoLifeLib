@@ -95,11 +95,19 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WorkflowRules{})
 	// DB.AutoMigrate(&models.WorkflowPolicy{})
 
+	// DB.AutoMigrate(&models.WfRequest{})
+	// DB.AutoMigrate(&models.WfTask{})
+	// DB.AutoMigrate(&models.WfTaskAssignment{})
+	// DB.AutoMigrate(&models.WfTaskExecutionLog{})
+	// DB.AutoMigrate(&models.WorkflowPolicy{})
+
 	// DB.AutoMigrate(&models.WfTaskAssignment{})
 	// DB.AutoMigrate(&models.WfActionAssignment{})
 	// DB.AutoMigrate(&models.WfTaskExecutionLog{})
 	// DB.AutoMigrate(&models.WfAction{})
 	// DB.AutoMigrate(&models.WfTask{})
 	// DB.AutoMigrate(&models.WfRequest{})
+	// DB.AutoMigrate(&models.UserDepartment{})
+	// DB.AutoMigrate(&models.WfUserReminder{})
 
 }

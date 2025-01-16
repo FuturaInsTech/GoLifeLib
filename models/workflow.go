@@ -90,13 +90,15 @@ type WfAction struct {
 	gorm.Model
 	types.CModel
 	TaskID               uint
-	ActionName           string `gorm:"type:varchar(20)"`
+	ActionName           string `gorm:"type:varchar(100)"`
 	ActionDescription    string `gorm:"type:longtext"`
 	SeqNo                uint
 	SlaDuration          uint
 	ActionStatus         string `gorm:"type:varchar(2)"`
 	Priority             string `gorm:"type:varchar(2)"`
 	DueDate              string `gorm:"type:varchar(8)"`
+	DepartmentCode       string `gorm:"type:varchar(20)"`
+	TeamsCode            string `gorm:"type:varchar(20)"`
 	WfActionAssignmentID uint
 	//WfTaskExecutionLogs []WfTaskExecutionLog
 }
@@ -105,13 +107,15 @@ type WfTask struct {
 	gorm.Model
 	types.CModel
 	RequestID          uint
-	TaskName           string `gorm:"type:varchar(20)"`
+	TaskName           string `gorm:"type:varchar(100)"`
 	TaskDescription    string `gorm:"type:longtext"`
 	SeqNo              uint
 	SlaDuration        uint
 	TaskStatus         string `gorm:"type:varchar(2)"`
 	Priority           string `gorm:"type:varchar(2)"`
 	DueDate            string `gorm:"type:varchar(8)"`
+	DepartmentCode     string `gorm:"type:varchar(20)"`
+	TeamsCode          string `gorm:"type:varchar(20)"`
 	WfTaskAssignmentID uint
 	//WfActions           []WfAction
 	//WfTaskExecutionLogs []WfTaskExecutionLog
@@ -127,4 +131,28 @@ type WfRequest struct {
 	ReqRefType     string `gorm:"type:varchar(20)"`
 	ReqStatus      string `gorm:"type:varchar(20)"`
 	//WfTasks        []WfTask
+}
+
+type UserDepartment struct {
+	gorm.Model
+	types.CModel
+	DepartmentCode  string `gorm:"type:varchar(20)"`
+	TeamsCode       string `gorm:"type:varchar(20)"`
+	UserID          string `gorm:"type:varchar(20)"`
+	UserDesignation string `gorm:"type:varchar(20)"`
+	UserLevel       string `gorm:"type:varchar(20)"`
+}
+
+type WfUserReminder struct {
+	gorm.Model
+	types.CModel
+	UserId         uint
+	ReminderRef    string `gorm:"type:varchar(20)"`
+	ReminderOn     string `gorm:"type:varchar(20)"`
+	ReminderNote   string `gorm:"type:varchar(20)"`
+	ReminderDatime time.Time
+	ReminderType   string `gorm:"type:varchar(20)"`
+	PhoneNo        string `gorm:"type:varchar(20)"`
+	Email          string `gorm:"type:varchar(20)"`
+	ReminderPerson string `gorm:"type:varchar(50)"`
 }

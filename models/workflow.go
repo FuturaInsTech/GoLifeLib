@@ -160,6 +160,7 @@ type WfUserReminder struct {
 // View Models
 type TaskView struct {
 	ID              uint      `gorm:"column:id"`
+	CompanyID       uint      `gorm:"column:company_id"`
 	RequestID       uint      `gorm:"column:request_id"`
 	TaskName        string    `gorm:"column:task_name"`
 	TaskDescription string    `gorm:"column:task_description"`
@@ -170,6 +171,8 @@ type TaskView struct {
 	DueDate         string    `gorm:"column:due_date"`
 	DepartmentCode  string    `gorm:"column:department_code"`
 	TeamsCode       string    `gorm:"column:teams_code"`
+	CreatedAt       time.Time `gorm:"column:created_at"`
+	UpdatedID       uint64    `gorm:"column:updated_id"`
 	AssignedTo      uint      `gorm:"column:assigned_to"`
 	AssignedAt      time.Time `gorm:"column:assigned_at"`
 	StartedAt       time.Time `gorm:"column:started_at"`

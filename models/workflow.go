@@ -180,7 +180,7 @@ type TaskView struct {
 	SlaViolation    bool      `gorm:"column:sla_violation"`
 	Comments        string    `gorm:"column:comments"`
 	Attachments     string    `gorm:"column:attachments"`
-	AssignedUser    uint      `gorm:"column:assigned_user"`
+	AssignedUser    string    `gorm:"column:assigned_user"`
 }
 
 // TableName overrides the default table name for GORM

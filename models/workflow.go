@@ -197,7 +197,7 @@ type ActionView struct {
 	ActionDescription string    `gorm:"column:action_description"`
 	SeqNo             uint      `gorm:"column:seq_no"`
 	SlaDuration       uint      `gorm:"column:sla_duration"`
-	TaskStatus        string    `gorm:"column:task_status"`
+	ActionStatus      string    `gorm:"column:action_status"`
 	Priority          string    `gorm:"column:priority"`
 	DueDate           string    `gorm:"column:due_date"`
 	DepartmentCode    string    `gorm:"column:department_code"`

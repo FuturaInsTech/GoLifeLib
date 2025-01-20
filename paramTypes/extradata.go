@@ -2320,7 +2320,10 @@ type W0004Data struct {
 	FieldArray []W0004
 }
 type W0004 struct {
-	Action string // W0003
+	Action      string // W0003
+	SeqNo       float64
+	MandInd     string //P0050
+	SlaDuration float64
 }
 
 func (m *W0004Data) ParseData(datamap map[string]interface{}) {
@@ -2347,7 +2350,10 @@ type W0005Data struct {
 	FieldArray []W0005
 }
 type W0005 struct {
-	Task string // W0002
+	Task        string // W0002
+	SeqNo       float64
+	MandInd     string //P0050
+	SlaDuration float64
 }
 
 func (m *W0005Data) ParseData(datamap map[string]interface{}) {

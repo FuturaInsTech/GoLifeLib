@@ -193,8 +193,8 @@ type ActionView struct {
 	ID                uint      `gorm:"column:id"`
 	CompanyID         uint      `gorm:"column:company_id"`
 	TaskID            uint      `gorm:"column:task_id"`
-	ActionName        string    `gorm:"column:action_id"`
-	ActionDescription string    `gorm:"column:action_id"`
+	ActionName        string    `gorm:"column:action_name"`
+	ActionDescription string    `gorm:"column:action_description"`
 	SeqNo             uint      `gorm:"column:seq_no"`
 	SlaDuration       uint      `gorm:"column:sla_duration"`
 	TaskStatus        string    `gorm:"column:task_status"`

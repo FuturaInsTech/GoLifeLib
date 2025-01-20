@@ -187,3 +187,37 @@ type TaskView struct {
 func (TaskView) TableName() string {
 	return "TaskView" // The name of your database view
 }
+
+// View Models Action View
+type ActionView struct {
+	ID                uint      `gorm:"column:id"`
+	CompanyID         uint      `gorm:"column:company_id"`
+	TaskID            uint      `gorm:"column:task_id"`
+	ActionID          uint      `gorm:"column:action_id"`
+	ActionName        string    `gorm:"column:action_id"`
+	ActionDescription string    `gorm:"column:action_id"`
+	SeqNo             uint      `gorm:"column:seq_no"`
+	SlaDuration       uint      `gorm:"column:sla_duration"`
+	TaskStatus        string    `gorm:"column:task_status"`
+	Priority          string    `gorm:"column:priority"`
+	DueDate           string    `gorm:"column:due_date"`
+	DepartmentCode    string    `gorm:"column:department_code"`
+	TeamsCode         string    `gorm:"column:teams_code"`
+	CreatedAt         time.Time `gorm:"column:created_at"`
+	UpdatedID         uint64    `gorm:"column:updated_id"`
+	TaskName          string    `gorm:"column:task_name"`
+	TaskDescription   string    `gorm:"column:task_description"`
+	AssignedTo        uint      `gorm:"column:assigned_to"`
+	AssignedAt        time.Time `gorm:"column:assigned_at"`
+	StartedAt         time.Time `gorm:"column:started_at"`
+	CompletedAt       time.Time `gorm:"column:completed_at"`
+	SlaViolation      bool      `gorm:"column:sla_violation"`
+	Comments          string    `gorm:"column:comments"`
+	Attachments       string    `gorm:"column:attachments"`
+	AssignedUser      string    `gorm:"column:assigned_user"`
+}
+
+// TableName overrides the default table name for GORM
+func (ActionView) TableName() string {
+	return "ActionView" // The name of your database view
+}

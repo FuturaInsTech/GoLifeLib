@@ -3,7 +3,7 @@ package initializers
 // Table Name should start with Capital Letter
 func SyncDatabase() {
 	// All Drop Down Come First
-	// DB.AutoMigrate(&models.Language{})
+	DB.AutoMigrate(&models.Language{})
 	// DB.AutoMigrate(&models.Currency{})
 	// DB.AutoMigrate(&models.Gender{})
 	// DB.AutoMigrate(&models.Salutation{})

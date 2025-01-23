@@ -109,5 +109,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WfRequest{})
 	// DB.AutoMigrate(&models.UserDepartment{})
 	// DB.AutoMigrate(&models.WfUserReminder{})
+	DB.AutoMigrate(&models.ReqCall{})
+	DB.AutoMigrate(&models.ReqProof{})
 
 }

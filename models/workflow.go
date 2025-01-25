@@ -7,16 +7,18 @@ import (
 	"gorm.io/gorm"
 )
 
-// type WorkflowComments struct {
-// 	gorm.Model
-// 	types.CModel
-// 	PolicyID        uint
-// 	ClientID        uint
-// 	UserID          uint
-// 	Sequence        uint
-// 	WorkflowComment string `gorm:"type:varchar(2500)"`
-// 	CommentProof    string `gorm:"type:longtext"`
-// }
+type WfComments struct {
+	gorm.Model
+	types.CModel
+	TaskID          uint
+	ActionID        uint
+	UserID          uint
+	Sequence        uint
+	WorkflowComment string `gorm:"type:varchar(2500)"`
+	CommentProof    string `gorm:"type:longtext"`
+	AssignedTo      uint
+	StatusSelected  string `gorm:"type:varchar(2)"`
+}
 
 type WorkflowRules struct {
 	types.CModel

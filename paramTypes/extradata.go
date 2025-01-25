@@ -2520,3 +2520,59 @@ func (m *W0011Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// Task Status
+type W0012Data struct {
+	FieldArray []W0012
+}
+type W0012 struct {
+	Status string // p0050
+}
+
+func (m *W0012Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0012Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// Action Status
+type W0013Data struct {
+	FieldArray []W0013
+}
+type W0013 struct {
+	Status string // p0050
+}
+
+func (m *W0013Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0013Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

@@ -5,7 +5,7 @@ import "github.com/FuturaInsTech/gi/models"
 // Table Name should start with Capital Letter
 func SyncDatabase() {
 	// All Drop Down Come First
-	DB.AutoMigrate(&models.Language{})
+	//DB.AutoMigrate(&models.Language{})
 	// DB.AutoMigrate(&models.Currency{})
 	// DB.AutoMigrate(&models.Gender{})
 	// DB.AutoMigrate(&models.Salutation{})
@@ -118,6 +118,6 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WfUserReminder{})
 	// DB.AutoMigrate(&models.ReqCall{})
 	// DB.AutoMigrate(&models.ReqProof{})
-	// DB.AutoMigrate(&models.WfComment{})
+	DB.AutoMigrate(&models.WfComment{})
 
 }

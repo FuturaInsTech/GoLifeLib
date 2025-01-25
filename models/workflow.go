@@ -157,17 +157,6 @@ type WfUserReminder struct {
 	ReminderPerson string `gorm:"type:varchar(50)"`
 }
 
-type WfComment struct {
-	gorm.Model
-	types.CModel
-	TaskId         uint
-	ActionId       uint
-	AssignedUserID uint
-	Sequence       uint
-	Comment        string `gorm:"type:varchar(2500)"`
-	CommentProof   string `gorm:"type:longtext"`
-}
-
 // View Models
 type TaskView struct {
 	ID              uint      `gorm:"column:id"`
@@ -230,4 +219,15 @@ type ActionView struct {
 // TableName overrides the default table name for GORM
 func (ActionView) TableName() string {
 	return "ActionView" // The name of your database view
+}
+
+type WfComment struct {
+	gorm.Model
+	types.CModel
+	TaskId         uint
+	ActionId       uint
+	AssignedUserID uint
+	Sequence       uint
+	Comment        string `gorm:"type:varchar(2500)"`
+	CommentProof   string `gorm:"type:longtext"`
 }

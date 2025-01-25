@@ -16,8 +16,9 @@ type WfComments struct {
 	Sequence        uint
 	WorkflowComment string `gorm:"type:varchar(2500)"`
 	CommentProof    string `gorm:"type:longtext"`
-	AssignedTo      uint
-	StatusSelected  string `gorm:"type:varchar(2)"`
+	// additional fields for record keeping
+	AssignedTo     uint
+	StatusSelected string `gorm:"type:varchar(2)"`
 }
 
 type WorkflowRules struct {

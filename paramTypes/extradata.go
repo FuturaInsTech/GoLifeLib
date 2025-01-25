@@ -1307,13 +1307,10 @@ func (m *P0040Data) GetFormattedData(datamap map[string]string) map[string]inter
 // P0041 SA Band for Medical Requirements
 
 type P0041Data struct {
-	SaBands []P0041
+	SumAssured []P0041
 }
-
 type P0041 struct {
-	Ages []P0041Age
-}
-type P0041Age struct {
+	Sa    float64
 	Age   uint
 	Codes []string
 }

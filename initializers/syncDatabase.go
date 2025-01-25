@@ -1,9 +1,11 @@
 package initializers
 
+import "github.com/FuturaInsTech/gi/models"
+
 // Table Name should start with Capital Letter
 func SyncDatabase() {
 	// All Drop Down Come First
-	// DB.AutoMigrate(&models.Language{})
+	DB.AutoMigrate(&models.Language{})
 	// DB.AutoMigrate(&models.Currency{})
 	// DB.AutoMigrate(&models.Gender{})
 	// DB.AutoMigrate(&models.Salutation{})
@@ -15,7 +17,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.Transaction{})
 	// DB.AutoMigrate(&models.TDFRule{})
 	// DB.AutoMigrate(&models.Permission{})
-	// DB.AutoMigrate(models.LeadChannel{})
+	// DB.AutoMigrate(&models.LeadChannel{})
 	// DB.AutoMigrate(&models.User{})
 	// DB.AutoMigrate(&models.Coverage{})
 	// DB.AutoMigrate(&models.Load{})
@@ -31,21 +33,19 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.Agency{})
 	// DB.AutoMigrate(models.LeadDetail{})
 	// DB.AutoMigrate(models.LeadFollowup{})
-	// DB.AutoMigrate(&models.Quotation{})
+
 	// DB.AutoMigrate(&models.LeadAllocation{})
 	// DB.AutoMigrate(&models.Campaign{})
 	// DB.AutoMigrate(&models.CampaignComp{})
-	// DB.AutoMigrate(&quotation.QHeader{})
-	// DB.AutoMigrate(&quotation.QDetail{})
-	// DB.AutoMigrate(&quotation.QBenIllValue{})
+
 	// DB.AutoMigrate(&models.FieldValidator{})
 	// DB.AutoMigrate(&models.Level{})
 	// DB.AutoMigrate(&models.Policy{})
 	// DB.AutoMigrate(&models.Benefit{})
 	// DB.AutoMigrate(&models.Extra{})
 	// DB.AutoMigrate(&models.PHistory{})
-	// DB.AutoMigrate(models.GlType{})
-	// DB.AutoMigrate(models.AccountCode{})
+	// DB.AutoMigrate(&models.GlType{})
+	// DB.AutoMigrate(&models.AccountCode{})
 	// DB.AutoMigrate(&models.GlMove{})
 	// DB.AutoMigrate(&models.GlBal{})
 	// DB.AutoMigrate(&models.Receipt{})
@@ -61,13 +61,20 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.Nominee{})
 	// DB.AutoMigrate(&models.DeathH{})
 	// DB.AutoMigrate(&models.DeathD{})
+
+	// Following Should be deleted
 	// DB.AutoMigrate(&quotation.Qcommunication{})
+	// DB.AutoMigrate(&models.Quotation{})
+	// DB.AutoMigrate(&quotation.QHeader{})
+	// DB.AutoMigrate(&quotation.QDetail{})
+	// DB.AutoMigrate(&quotation.QBenIllValue{})
+
 	// DB.AutoMigrate(&models.Payer{})
 	// DB.AutoMigrate(&models.SaChange{})
 	// DB.AutoMigrate(&models.Assignee{})
-	// DB.AutoMigrate((&models.Addcomponent{}))
+	// DB.AutoMigrate(&models.Addcomponent{})
 	// DB.AutoMigrate(&models.Mrta{})
-	// DB.AutoMigrate((&models.SurrH{}))
+	// DB.AutoMigrate(&models.SurrH{})
 	// DB.AutoMigrate(&models.SurrD{})
 	// DB.AutoMigrate(&models.BusinessDate{})
 	// DB.AutoMigrate(&models.MaturityH{})
@@ -109,6 +116,8 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WfRequest{})
 	// DB.AutoMigrate(&models.UserDepartment{})
 	// DB.AutoMigrate(&models.WfUserReminder{})
-	//DB.AutoMigrate(&models.WfComment{})
+	// DB.AutoMigrate(&models.ReqCall{})
+	// DB.AutoMigrate(&models.ReqProof{})
+	// DB.AutoMigrate(&models.WfComment{})
 
 }

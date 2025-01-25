@@ -26,6 +26,5 @@ type Address struct {
 	MedProviders     []MedProvider
 	Receipts         []Receipt
 	Payments         []Payment
-	// Agencies         []Agency
-
+	//Agencies         []Agency
 }

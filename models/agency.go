@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
 	"github.com/FuturaInsTech/GoLifeLib/types"
 	"gorm.io/gorm"
 )
@@ -26,5 +25,5 @@ type Agency struct {
 	BankID          uint
 	//Communications  []Communication
 	Policies []Policy
-	QHeaders []quotation.QHeader
+	//QHeaders []quotation.QHeader
 }

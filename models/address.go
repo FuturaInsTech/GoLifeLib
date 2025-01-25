@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
 	"github.com/FuturaInsTech/GoLifeLib/types"
 	"gorm.io/gorm"
 )
@@ -21,10 +20,10 @@ type Address struct {
 	AddressStartDate string `gorm:"type:varchar(8)"`
 	AddressEndDate   string `gorm:"type:varchar(8)"`
 	ClientID         uint
-	QHeaders         []quotation.QHeader
-	Policies         []Policy
-	MedProviders     []MedProvider
-	Receipts         []Receipt
-	Payments         []Payment
+	//QHeaders         []quotation.QHeader
+	Policies     []Policy
+	MedProviders []MedProvider
+	Receipts     []Receipt
+	Payments     []Payment
 	//Agencies         []Agency
 }

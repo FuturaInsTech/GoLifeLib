@@ -1,7 +1,6 @@
 package models
 
 import (
-	"github.com/FuturaInsTech/GoLifeLib/models/quotation"
 	"gorm.io/gorm"
 )
 
@@ -37,28 +36,28 @@ type Company struct {
 	LeadAllocations []LeadAllocation
 	Clients         []Client
 	Addresses       []Address
-	QHeaders        []quotation.QHeader
-	QDetails        []quotation.QDetail
-	UserGroups      []UserGroup
+	//QHeaders        []quotation.QHeader
+	//QDetails        []quotation.QDetail
+	UserGroups []UserGroup
 	// Agencies        []Agency
 	FieldValidators []FieldValidator
 	Levels          []Level
-	QBenIllValues   []quotation.QBenIllValue
-	Banks           []Bank
-	Permissions     []Permission
-	Extras          []Extra
-	Policies        []Policy
-	Benefits        []Benefit
-	PHistories      []PHistory
-	GlTypes         []GlType
-	AccCodes        []AccountCode
-	GlBals          []GlBal
-	Receipts        []Receipt
-	Tdfhs           []Tdfh
-	TDFRules        []TDFRule
-	TDFPolicies     []TDFPolicy
-	Communications  []Communication
-	LeadFollowups   []LeadFollowup
+	//QBenIllValues   []quotation.QBenIllValue
+	Banks          []Bank
+	Permissions    []Permission
+	Extras         []Extra
+	Policies       []Policy
+	Benefits       []Benefit
+	PHistories     []PHistory
+	GlTypes        []GlType
+	AccCodes       []AccountCode
+	GlBals         []GlBal
+	Receipts       []Receipt
+	Tdfhs          []Tdfh
+	TDFRules       []TDFRule
+	TDFPolicies    []TDFPolicy
+	Communications []Communication
+	LeadFollowups  []LeadFollowup
 	//CreatedAt time.Time
 	//UpdatedAt time.Time
 	Transactions      []Transaction

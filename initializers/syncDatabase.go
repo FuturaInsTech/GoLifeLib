@@ -1,6 +1,6 @@
 package initializers
 
-import "github.com/FuturaInsTech/gi/models"
+import "github.com/FuturaInsTech/models"
 
 // Table Name should start with Capital Letter
 func SyncDatabase() {

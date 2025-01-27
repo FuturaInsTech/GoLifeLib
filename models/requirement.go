@@ -28,3 +28,23 @@ type ReqProof struct {
 	ReqcallID uint
 	ProofImg  string `gorm:"type:longtext"`
 }
+
+type ReqBill struct {
+	gorm.Model
+	types.CModel
+	MedId           uint
+	InvoieNo        uint
+	InvoiceDate     string `gorm:"type:varchar(08)"`
+	InvoiceClient   uint
+	InvoicePolicy   uint
+	ExaminationDate string `gorm:"type:varchar(08)"`
+	InvoiceAmount   float64
+	CreatedDate     string `gorm:"type:varchar(08)"`
+	ReconcileStatus string `gorm:"type:varchar(02)"`
+	ReconcileDate   string `gorm:"type:varchar(08)"`
+	ReconcileAmount float64
+	PayFlag         string `gorm:"type:varchar(02)"`
+	PayDate         string `gorm:"type:varchar(08)"`
+	PayReference    uint
+	PayType         string `gorm:"type:varchar(02)"`
+}

@@ -7,20 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type WfComments struct {
-	gorm.Model
-	types.CModel
-	TaskID          uint
-	ActionID        uint
-	UserID          uint
-	Sequence        uint
-	WorkflowComment string `gorm:"type:varchar(2500)"`
-	CommentProof    string `gorm:"type:longtext"`
-	// additional fields for record keeping
-	AssignedTo     uint
-	StatusSelected string `gorm:"type:varchar(2)"`
-}
-
 type WorkflowRules struct {
 	types.CModel
 	WorkflowType         string `gorm:"primaryKey;type:varchar(20)"`
@@ -233,4 +219,7 @@ type WfComment struct {
 	Sequence       uint
 	Comment        string `gorm:"type:varchar(2500)"`
 	CommentProof   string `gorm:"type:longtext"`
+	// additional fields for record keeping
+	//	AssignedTo     uint
+	//	StatusSelected string `gorm:"type:varchar(2)"`
 }

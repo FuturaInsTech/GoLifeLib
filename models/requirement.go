@@ -19,6 +19,7 @@ type ReqCall struct { //RequirementCall
 	RemindDate   string `gorm:"type:varchar(08)"`
 	ReqStatus    string `gorm:"type:varchar(20)"` // P0050
 	MedId        uint
+	PayClient    uint
 }
 
 type ReqProof struct {

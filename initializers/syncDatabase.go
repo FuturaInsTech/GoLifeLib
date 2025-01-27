@@ -1,7 +1,5 @@
 package initializers
 
-import "github.com/FuturaInsTech/GoLifeLib/models"
-
 // Table Name should start with Capital Letter
 func SyncDatabase() {
 	// All Drop Down Come First
@@ -118,6 +116,6 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WfUserReminder{})
 	// DB.AutoMigrate(&models.ReqCall{})
 	// DB.AutoMigrate(&models.ReqProof{})
-	DB.AutoMigrate(&models.WfComment{})
+	//DB.AutoMigrate(&models.WfComment{})
 
 }

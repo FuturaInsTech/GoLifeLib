@@ -20,6 +20,7 @@ type ReqCall struct { //RequirementCall
 	ReqStatus    string `gorm:"type:varchar(20)"` // P0050
 	MedId        uint
 	PayClientID  uint
+	Remarks      string `gorm:"type:varchar(160)"`
 }
 
 type ReqProof struct {
@@ -32,19 +33,21 @@ type ReqProof struct {
 type ReqBill struct {
 	gorm.Model
 	types.CModel
-	MedId           uint
-	InvoieNo        uint
-	InvoiceDate     string `gorm:"type:varchar(08)"`
-	InvoiceClient   uint
-	InvoicePolicy   uint
-	ExaminationDate string `gorm:"type:varchar(08)"`
-	InvoiceAmount   float64
-	CreatedDate     string `gorm:"type:varchar(08)"`
-	ReconcileStatus string `gorm:"type:varchar(02)"`
-	ReconcileDate   string `gorm:"type:varchar(08)"`
-	ReconcileAmount float64
-	PayFlag         string `gorm:"type:varchar(02)"`
-	PayDate         string `gorm:"type:varchar(08)"`
-	PayReference    uint
-	PayType         string `gorm:"type:varchar(02)"`
+	MedId            uint
+	InvoieNo         uint
+	InvoiceDate      string `gorm:"type:varchar(08)"`
+	InvoiceClient    uint
+	InvoicePolicy    uint
+	ExaminationDate  string `gorm:"type:varchar(08)"`
+	InvoiceAmount    float64
+	InvoiceRemarks   string `gorm:"type:varchar(160)"`
+	CreatedDate      string `gorm:"type:varchar(08)"`
+	ReconcileStatus  string `gorm:"type:varchar(02)"`
+	ReconcileDate    string `gorm:"type:varchar(08)"`
+	ReconcileAmount  float64
+	ReconcileRemarks string `gorm:"type:varchar(160)"`
+	PayType          string `gorm:"type:varchar(02)"`
+	PayFlag          string `gorm:"type:varchar(02)"`
+	PayDate          string `gorm:"type:varchar(08)"`
+	PayReference     uint
 }

@@ -5148,6 +5148,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "30":
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
+				case oLetType == "31":
+					oData := GetReqData(iCompany, iPolicy)
+					resultMap["ReqWork"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 				case oLetType == "99":
@@ -13374,4 +13377,78 @@ func GetTeamDes(iTeamCoad string, iCompany uint, iLanguage uint) (oDepCoad strin
 
 	return shortdes
 
+}
+
+// #210
+// Get Requirement Data - Printing Purpose Only
+// Inputs: Company, Policy
+//
+// # Outputs  Requirement Data for the Policyas an Interface
+//
+// ©  FuturaInsTech
+func GetReqData(iCompany uint, iPolicy uint) []interface{} {
+	reqArray := make([]interface{}, 0)
+	var reqcall []models.ReqCall
+	var txn *gorm.DB
+
+	initializers.DB.Find(&reqcall, "company_id = ? and id = ? and req_status", iCompany, iPolicy, "O")
+	for i := 0; i < len(reqcall); i++ {
+		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, oMedEmail, _, _ := GetMedInfo(iCompany, reqcall[i].MedId, txn)
+		resultOut := map[string]interface{}{
+			"ID":            IDtoPrint(reqcall[i].ID),
+			"PolicyID":      IDtoPrint(reqcall[i].PolicyID),
+			"ClientID":      IDtoPrint(reqcall[i].ClientID),
+			"ReqType":       reqcall[i].ReqType,
+			"ReqCode":       reqcall[i].ReqCode,
+			"ReqDesc":       "Dummy",
+			"MedProvName":   oMedName,
+			"MedProAddress": oMedAddress,
+			"MedProPin":     oMedPin,
+			"MedProState":   oMedState,
+			"MedPhone":      oMedPhone,
+			"MedEmail":      oMedEmail,
+			"RemDate":       DateConvert(reqcall[i].RemindDate),
+		}
+		reqArray = append(reqArray, resultOut)
+	}
+
+	return reqArray
+}
+
+func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddress string, oPin string, oState string, oPhone string, oEmail string, oBank string, oErr string) {
+	var medprov models.MedProvider
+	result := txn.Find(&medprov, "company_id = ? and id = ?", iCompany, iMedProv)
+	if result.Error != nil {
+		oErr = "Medical Provider Not Found"
+		return "", "", "", "", "", "", "", oErr
+	}
+	oName = medprov.MedProviderName
+	var clnt models.Client
+	result = txn.Find(&clnt, "company_id = ? and id = ?", iCompany, medprov.ClientID)
+	if result.Error != nil {
+		oErr = "Medical Provider Client Not Found"
+		return "", "", "", "", "", "", "", oErr
+	}
+	oPhone = clnt.ClientAltMobCode + " " + clnt.ClientMobile
+	oEmail = clnt.ClientEmail + "&" + clnt.ClientAltEmail
+
+	var address models.Address
+	result = txn.Find(&address, "company_id = ? and id = ?", iCompany, medprov.AddressID)
+	if result.Error != nil {
+		oErr = "Medical Provider Address Not Found"
+		return "", "", "", "", "", "", "", oErr
+	}
+
+	oAddress = address.AddressLine1 + "," + address.AddressLine2 + " " + address.AddressLine3 + " " + address.AddressLine4 + " " + address.AddressLine5
+	oPin = address.AddressPostCode
+	oState = address.AddressState
+	var bank models.Bank
+	result = txn.Find(&address, "company_id = ? and id = ?", iCompany, medprov.BankID)
+	if result.Error != nil {
+		oErr = "Medical Provider Bank Not Found"
+		return "", "", "", "", "", "", "", oErr
+	}
+	oBank = bank.BankCode + "-" + bank.BankAccountNo
+
+	return
 }

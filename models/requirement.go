@@ -51,3 +51,11 @@ type ReqBill struct {
 	PayDate          string `gorm:"type:varchar(08)"`
 	PayReference     uint
 }
+
+type UserLimit struct {
+	gorm.Model
+	types.CModel
+	HistoryCode string `gorm:"type:varchar(05)"`
+	From        float64
+	To          float64
+}

@@ -55,6 +55,7 @@ type ReqBill struct {
 type UserLimit struct {
 	gorm.Model
 	types.CModel
+	UserId      uint
 	HistoryCode string `gorm:"type:varchar(05)"`
 	From        float64
 	To          float64

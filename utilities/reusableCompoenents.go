@@ -5148,7 +5148,7 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "30":
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
-				case oLetType == "31":
+				case oLetType == "36":
 					oData := GetReqData(iCompany, iPolicy)
 					resultMap["ReqWork"] = oData
 				case oLetType == "98":
@@ -5398,6 +5398,9 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "30":
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
+				case oLetType == "36":
+					oData := GetReqData(iCompany, iPolicy)
+					resultMap["ReqWork"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -13391,16 +13394,17 @@ func GetReqData(iCompany uint, iPolicy uint) []interface{} {
 	var reqcall []models.ReqCall
 	var txn *gorm.DB
 
-	initializers.DB.Find(&reqcall, "company_id = ? and id = ? and req_status", iCompany, iPolicy, "O")
+	initializers.DB.Find(&reqcall, "company_id = ? and id = ? and req_status", iCompany, iPolicy, "P")
 	for i := 0; i < len(reqcall); i++ {
 		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, oMedEmail, _, _ := GetMedInfo(iCompany, reqcall[i].MedId, txn)
+		oDesc := ""
 		resultOut := map[string]interface{}{
 			"ID":            IDtoPrint(reqcall[i].ID),
 			"PolicyID":      IDtoPrint(reqcall[i].PolicyID),
 			"ClientID":      IDtoPrint(reqcall[i].ClientID),
 			"ReqType":       reqcall[i].ReqType,
 			"ReqCode":       reqcall[i].ReqCode,
-			"ReqDesc":       "Dummy",
+			"ReqDesc":       oDesc,
 			"MedProvName":   oMedName,
 			"MedProAddress": oMedAddress,
 			"MedProPin":     oMedPin,

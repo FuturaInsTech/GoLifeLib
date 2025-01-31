@@ -13392,12 +13392,14 @@ func GetTeamDes(iTeamCoad string, iCompany uint, iLanguage uint) (oDepCoad strin
 func GetReqData(iCompany uint, iPolicy uint) []interface{} {
 	reqArray := make([]interface{}, 0)
 	var reqcall []models.ReqCall
-	var txn *gorm.DB
+	//var txn *gorm.DB
+	txn := initializers.DB.Begin()
 
-	initializers.DB.Find(&reqcall, "company_id = ? and id = ? and req_status", iCompany, iPolicy, "P")
+	initializers.DB.Find(&reqcall, "company_id = ? and policy_id = ? and req_status = ?", iCompany, iPolicy, "P")
 	for i := 0; i < len(reqcall); i++ {
 		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, oMedEmail, _, _ := GetMedInfo(iCompany, reqcall[i].MedId, txn)
-		oDesc := ""
+		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, reqcall[i].ReqCode)
+
 		resultOut := map[string]interface{}{
 			"ID":            IDtoPrint(reqcall[i].ID),
 			"PolicyID":      IDtoPrint(reqcall[i].PolicyID),
@@ -13418,7 +13420,6 @@ func GetReqData(iCompany uint, iPolicy uint) []interface{} {
 
 	return reqArray
 }
-
 func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddress string, oPin string, oState string, oPhone string, oEmail string, oBank string, oErr string) {
 	var medprov models.MedProvider
 	result := txn.Find(&medprov, "company_id = ? and id = ?", iCompany, iMedProv)

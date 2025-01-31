@@ -1452,7 +1452,7 @@ func ValidateStatus(iCompany uint, iMethod string, iDate string, iStatus string)
 	fmt.Println("Transaction Foound !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", iHistoryCode)
 	err := GetItemD(int(iCompany), "P0029", iHistoryCD, iDate, &extradata)
 
-	fmt.Println("Newstatus", iStatus, p0029data.Statuses[1].CurrentStatus, p0029data.Statuses[1].ToBeStatus)
+	// fmt.Println("Newstatus", iStatus, p0029data.Statuses[0].CurrentStatus, p0029data.Statuses[0].ToBeStatus)
 	if err != nil {
 		return oStatus, oHistory
 	} else {

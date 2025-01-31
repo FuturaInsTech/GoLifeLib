@@ -35,6 +35,7 @@ type WfTaskAssignment struct {
 	types.CModel
 	TaskID       uint
 	AssignedTo   uint
+	AssignedFrom uint
 	AssignedAt   time.Time
 	StartedAt    time.Time
 	CompletedAt  time.Time
@@ -49,6 +50,7 @@ type WfActionAssignment struct {
 	TaskID       uint
 	ActionID     uint
 	AssignedTo   uint
+	AssignedFrom uint
 	AssignedAt   time.Time
 	StartedAt    time.Time
 	CompletedAt  time.Time
@@ -84,6 +86,7 @@ type WfAction struct {
 	SeqNo                uint
 	SlaDuration          uint
 	ActionStatus         string `gorm:"type:varchar(2)"`
+	UpdatedStatusAt      time.Time
 	Priority             string `gorm:"type:varchar(2)"`
 	DueDate              string `gorm:"type:varchar(8)"`
 	DepartmentCode       string `gorm:"type:varchar(20)"`
@@ -101,6 +104,7 @@ type WfTask struct {
 	SeqNo              uint
 	SlaDuration        uint
 	TaskStatus         string `gorm:"type:varchar(2)"`
+	UpdatedStatusAt    time.Time
 	Priority           string `gorm:"type:varchar(2)"`
 	DueDate            string `gorm:"type:varchar(8)"`
 	DepartmentCode     string `gorm:"type:varchar(20)"`

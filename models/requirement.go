@@ -21,6 +21,8 @@ type ReqCall struct { //RequirementCall
 	MedId        uint
 	PayClientID  uint
 	Remarks      string `gorm:"type:varchar(160)"`
+	InvoieNo     uint   // Update Invoice No from ReqBill
+	InvoiceDate  string `gorm:"type:varchar(08)"` // Update Invoice Date from ReqBill
 }
 
 type ReqProof struct {

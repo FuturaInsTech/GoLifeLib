@@ -35,23 +35,24 @@ type ReqProof struct {
 type ReqBill struct {
 	gorm.Model
 	types.CModel
-	MedId            uint
-	InvoieNo         uint
-	InvoiceDate      string `gorm:"type:varchar(08)"`
-	InvoiceClient    uint
-	InvoicePolicy    uint
-	ExaminationDate  string `gorm:"type:varchar(08)"`
-	InvoiceAmount    float64
-	InvoiceRemarks   string `gorm:"type:varchar(160)"`
-	CreatedDate      string `gorm:"type:varchar(08)"`
-	ReconcileStatus  string `gorm:"type:varchar(02)"`
-	ReconcileDate    string `gorm:"type:varchar(08)"`
-	ReconcileAmount  float64
-	ReconcileRemarks string `gorm:"type:varchar(160)"`
-	PayType          string `gorm:"type:varchar(02)"`
-	PayFlag          string `gorm:"type:varchar(02)"`
-	PayDate          string `gorm:"type:varchar(08)"`
-	PayReference     uint
+	MedId                uint
+	InvoieNo             uint
+	InvoiceDate          string `gorm:"type:varchar(08)"`
+	InvoiceClient        uint
+	InvoicePolicy        uint
+	InvoiceAmountReqCode string `gorm:"type:varchar(20)"` // P0050
+	ExaminationDate      string `gorm:"type:varchar(08)"`
+	InvoiceAmount        float64
+	InvoiceRemarks       string  `gorm:"type:varchar(160)"`
+	CreatedDate          string  `gorm:"type:varchar(08)"`
+	ReconcileStatus      string  `gorm:"type:varchar(02)"` // P0050  AR- Automatic Reconciliation
+	ReconcileDate        string  `gorm:"type:varchar(08)"` // Current Date
+	ReconcileAmount      float64 // Reocnciliation Amount
+	ReconcileRemarks     string  `gorm:"type:varchar(160)"`
+	PayType              string  `gorm:"type:varchar(02)"`
+	PayFlag              string  `gorm:"type:varchar(02)"`
+	PayDate              string  `gorm:"type:varchar(08)"`
+	PayReference         uint
 }
 
 type UserLimit struct {

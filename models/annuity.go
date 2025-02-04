@@ -21,4 +21,6 @@ type Annuity struct {
 	AnnCurrDate  string `gorm:"type:varchar(08)"` //20250201
 	AnnNxtDate   string `gorm:"type:varchar(08)"` //20250301
 	AnnFreq      string `gorm:"type:varchar(02)"` //12
+	CntCurr      string `gorm:"type:varchar(03)"`
+	PayCurr      string `gorm:"type:varchar(03)"`
 }

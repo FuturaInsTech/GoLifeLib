@@ -85,6 +85,7 @@ type WfAction struct {
 	ActionDescription    string `gorm:"type:longtext"`
 	SeqNo                uint
 	SlaDuration          uint
+	SlaDurationType      string `gorm:"type:varchar(2)"`
 	ActionStatus         string `gorm:"type:varchar(2)"`
 	UpdatedStatusAt      time.Time
 	Priority             string `gorm:"type:varchar(2)"`
@@ -103,6 +104,7 @@ type WfTask struct {
 	TaskDescription    string `gorm:"type:longtext"`
 	SeqNo              uint
 	SlaDuration        uint
+	SlaDurationType    string `gorm:"type:varchar(2)"`
 	TaskStatus         string `gorm:"type:varchar(2)"`
 	UpdatedStatusAt    time.Time
 	Priority           string `gorm:"type:varchar(2)"`

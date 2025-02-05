@@ -2233,10 +2233,11 @@ func (m *P0073Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 // Workflow Param
 type W0001Data struct {
-	RequestType string // P0050
-	Department  string // W0006
-	Team        string // W0008
-	SLA         string // W0009
+	RequestType     string  // P0050
+	Department      string  // W0006
+	Team            string  // W0008
+	SLADuration     float64 // W0009
+	SLADurationType string  // W0009
 }
 
 func (m *W0001Data) ParseData(datamap map[string]interface{}) {
@@ -2259,11 +2260,12 @@ func (m *W0001Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type W0002Data struct {
-	TaskType     string // P0050
-	Department   string // W0006
-	Team         string // W0008
-	SLA          string // W0009
-	ReassignedBy string // assignedto, manager, head
+	TaskType        string  // P0050
+	Department      string  // W0006
+	Team            string  // W0008
+	SLADuration     float64 // W0009
+	SLADurationType string  // W0009
+	ReassignedBy    string  // assignedto, manager, head
 }
 
 func (m *W0002Data) ParseData(datamap map[string]interface{}) {
@@ -2286,12 +2288,13 @@ func (m *W0002Data) GetFormattedData(datamap map[string]string) map[string]inter
 }
 
 type W0003Data struct {
-	ActionType   string // P0050
-	Department   string // W0006
-	Team         string // W0008
-	SLA          string // W0009
-	TranCode     string // table:Transaction
-	ReassignedBy string // assignedto, manager, head
+	ActionType      string  // P0050
+	Department      string  // W0006
+	Team            string  // W0008
+	SLADuration     float64 // W0009
+	SLADurationType string  // W0009
+	TranCode        string  // table:Transaction
+	ReassignedBy    string  // assignedto, manager, head
 }
 
 func (m *W0003Data) ParseData(datamap map[string]interface{}) {
@@ -2317,10 +2320,11 @@ type W0004Data struct {
 	FieldArray []W0004
 }
 type W0004 struct {
-	Action      string // W0003
-	SeqNo       float64
-	MandInd     string //P0050
-	SlaDuration float64
+	Action          string // W0003
+	SeqNo           float64
+	MandInd         string  //P0050
+	SLADuration     float64 // W0009
+	SLADurationType string  // W0009
 }
 
 func (m *W0004Data) ParseData(datamap map[string]interface{}) {
@@ -2347,10 +2351,11 @@ type W0005Data struct {
 	FieldArray []W0005
 }
 type W0005 struct {
-	Task        string // W0002
-	SeqNo       float64
-	MandInd     string //P0050
-	SlaDuration float64
+	Task            string // W0002
+	SeqNo           float64
+	MandInd         string  //P0050
+	SLADuration     float64 // W0009
+	SLADurationType string  // W0009
 }
 
 func (m *W0005Data) ParseData(datamap map[string]interface{}) {

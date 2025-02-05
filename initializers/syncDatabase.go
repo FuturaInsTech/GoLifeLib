@@ -118,5 +118,6 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.ReqProof{})
 	//DB.AutoMigrate(&models.WfComment{})
 	// DB.AutoMigrate(&models.UserLimit{})
+	// DB.AutoMigrate(&models.Annuity{})
 
 }

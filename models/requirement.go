@@ -40,7 +40,7 @@ type ReqBill struct {
 	InvoiceDate      string `gorm:"type:varchar(08)"`
 	InvoiceClient    uint
 	InvoicePolicy    uint
-	InvoiceReqCode   string `gorm:"type:varchar(20)"` // P0050
+	InvoiceReqCode   string `gorm:"type:varchar(05)"` // P0050
 	ExaminationDate  string `gorm:"type:varchar(08)"`
 	InvoiceAmount    float64
 	InvoiceRemarks   string  `gorm:"type:varchar(160)"`

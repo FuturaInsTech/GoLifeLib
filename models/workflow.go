@@ -85,6 +85,7 @@ type WfAction struct {
 	ActionDescription    string `gorm:"type:longtext"`
 	SeqNo                uint
 	SlaDuration          uint
+	SlaDurationType      string `gorm:"type:varchar(2)"`
 	ActionStatus         string `gorm:"type:varchar(2)"`
 	UpdatedStatusAt      time.Time
 	Priority             string `gorm:"type:varchar(2)"`
@@ -103,6 +104,7 @@ type WfTask struct {
 	TaskDescription    string `gorm:"type:longtext"`
 	SeqNo              uint
 	SlaDuration        uint
+	SlaDurationType    string `gorm:"type:varchar(2)"`
 	TaskStatus         string `gorm:"type:varchar(2)"`
 	UpdatedStatusAt    time.Time
 	Priority           string `gorm:"type:varchar(2)"`
@@ -159,6 +161,7 @@ type TaskView struct {
 	TaskDescription string    `gorm:"column:task_description"`
 	SeqNo           uint      `gorm:"column:seq_no"`
 	SlaDuration     uint      `gorm:"column:sla_duration"`
+	SlaDurationType string    `gorm:"column:sla_duration_type"`
 	TaskStatus      string    `gorm:"column:task_status"`
 	Priority        string    `gorm:"column:priority"`
 	DueDate         string    `gorm:"column:due_date"`
@@ -190,6 +193,7 @@ type ActionView struct {
 	ActionDescription string    `gorm:"column:action_description"`
 	SeqNo             uint      `gorm:"column:seq_no"`
 	SlaDuration       uint      `gorm:"column:sla_duration"`
+	SlaDurationType   string    `gorm:"column:sla_duration_type"`
 	ActionStatus      string    `gorm:"column:action_status"`
 	Priority          string    `gorm:"column:priority"`
 	DueDate           string    `gorm:"column:due_date"`

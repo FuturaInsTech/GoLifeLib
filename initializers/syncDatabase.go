@@ -1,5 +1,7 @@
 package initializers
 
+import "github.com/FuturaInsTech/GoLifeLib/models"
+
 // Table Name should start with Capital Letter
 func SyncDatabase() {
 	// All Drop Down Come First

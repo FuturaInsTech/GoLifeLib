@@ -1,0 +1,115 @@
+// From MS HTM file to Web HTML file
+// Replace <span class=SpellE> tags around variables
+
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strings"
+)
+
+// JoinHTMLAttributes takes a multi-line HTML string and joins attributes into a single line.
+func JoinHTMLAttributes(html string) string {
+	// Preserve blank lines by temporarily marking them
+	placeholder := "__BLANK_LINE__"
+	compactHTML := strings.ReplaceAll(html, "\n\n", placeholder)
+
+	// Remove all remaining single newlines (join lines)
+	re := regexp.MustCompile(`\n+`)              // Match one or more newlines
+	compactHTML = re.ReplaceAllString(compactHTML, " ") // Replace newlines with space
+
+	// Restore blank lines
+	compactHTML = strings.ReplaceAll(compactHTML, placeholder, "\n\n")
+
+	// Remove newlines and excessive whitespace
+	compactHTML = regexp.MustCompile(`\s{2,}`).ReplaceAllString(compactHTML, " ") // Collapse multiple spaces
+
+	// Trim any unnecessary spaces at the start or end
+	return strings.TrimSpace(compactHTML)
+}
+
+// StripSpellESpanTags removes Spelling & Grammer non-standard tags but keeps others.
+func StripSpellESpanTags(input string) string {
+	// Regular expression to match <span> tags with class=SpellE
+	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?SpellE["']?[^>]*>(.*?)</span>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `$1`)
+}
+
+func processHTMLFile(inputFilePath, outputFilePath string) {
+	// Open the input file
+	inputFile, err := os.Open(inputFilePath)
+	if err != nil {
+		fmt.Printf("Error opening input file: %v\n", err)
+		return
+	}
+	defer inputFile.Close()
+
+	// Read the input file content
+	content, err := io.ReadAll(inputFile)
+	if err != nil {
+		fmt.Printf("Error reading input file: %v\n", err)
+		return
+	}
+
+	// JoinHTMLAttributes takes a multi-line HTML string and joins attributes into a single line
+	joinedContent := JoinHTMLAttributes(string(content))
+
+	// Remove spell check nonstandard Apply the replacement function
+	processedContent := StripSpellESpanTags(string(joinedContent))
+
+	// Write the processed content to the output file
+	err = os.WriteFile(outputFilePath, []byte(processedContent), 0644)
+	if err != nil {
+		fmt.Printf("Error writing to output file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Processed HTML content written to %s\n", outputFilePath)
+}
+
+func main() {
+	var inputFile string
+	var outputFile string
+	// os.Args contains the command-line arguments.
+	// os.Args[0] is the program name.
+	// os.Args[1:] are the actual arguments.
+	args := os.Args[1:]
+
+	if len(args) == 0 {
+		fmt.Println("Error: No arguments provided.")
+		fmt.Println("Usage: ", os.Args[0], "<inputFile> <outputFile>")
+		os.Exit(1) // Exit with a non-zero status to indicate an error
+	}
+
+	// Check if  1 out of 2 arguments are provided
+	if len(args) == 1 {
+
+		fmt.Println("  Args:", os.Args)
+		fmt.Println("  In Progress...")
+		inputFile = os.Args[1]
+		outputFile = "outfile.gohtml"
+		fmt.Println("Default output file is outfile.gohtml")
+	}
+
+	// Check if  2 out of 2 arguments are provided
+	if len(args) == 2 {
+		fmt.Println("  Args:", os.Args)
+		fmt.Println("  In Progress...")
+		inputFile = os.Args[1]
+		outputFile = os.Args[2]
+	}
+	htm2html(inputFile, outputFile)
+}
+
+func htm2html(inputFile string, outputFile string) {
+	// Input and output file paths
+	inputFilePath := inputFile
+	outputFilePath := outputFile
+
+	// Process the file
+	processHTMLFile(inputFilePath, outputFilePath)
+}

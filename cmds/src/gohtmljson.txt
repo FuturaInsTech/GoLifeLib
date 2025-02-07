@@ -135,11 +135,18 @@ func JoinHTMLAttributes(html string) string {
 	return strings.TrimSpace(compactHTML)
 }
 
-// StripSpellESpanTags removes Spelling & Grammer non-standard tags but keeps others.
+// Strip SpellE & GramE SpanTags removes Spelling & Grammer non-standard tags but keeps others.
 // Used in htm2html processing
 func StripSpellESpanTags(input string) string {
 	// Regular expression to match <span> tags with class=SpellE
 	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?SpellE["']?[^>]*>(.*?)</span>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `$1`)
+}
+
+func StripGramESpanTags(input string) string {
+	// Regular expression to match <span> tags with class=GramE
+	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?GramE["']?[^>]*>(.*?)</span>`)
 	// Replace matches with the content inside the tags
 	return re.ReplaceAllString(input, `$1`)
 }
@@ -165,7 +172,8 @@ func processHTMLFile(inputFilePath, outputFilePath string) {
 	joinedContent := JoinHTMLAttributes(string(content))
 
 	// Remove spell check nonstandard Apply the replacement function
-	processedContent := StripSpellESpanTags(string(joinedContent))
+	firstpassContent := StripSpellESpanTags(string(joinedContent))
+	processedContent := StripGramESpanTags(string(firstpassContent))
 
 	// Write the processed content to the output file
 	err = os.WriteFile(outputFilePath, []byte(processedContent), 0644)
@@ -354,7 +362,8 @@ func escapeAttribute(value string) string {
 // updateImagePaths processes the HTML nodes to update image paths
 // Used in html2gohtml processing
 func updateImagePaths(n *html.Node, cpysrcFolder, cpydestFolder, imgdestFolder string) error {
-	if n.Type == html.ElementNode && n.Data == "img" {
+	if n.Type == html.ElementNode &&
+		(n.Data == "img" || n.Data == "v:imagedata") {
 		for i, attr := range n.Attr {
 			if attr.Key == "src" {
 				oldSrc := attr.Val

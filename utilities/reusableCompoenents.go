@@ -13457,7 +13457,7 @@ func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddr
 
 	return
 }
-func TDFAnnPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+func TDFAnnPN1(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
 	var annuity models.Annuity
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule

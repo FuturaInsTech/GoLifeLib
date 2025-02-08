@@ -13457,3 +13457,60 @@ func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddr
 
 	return
 }
+func TDFAnnPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var annuity models.Annuity
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+
+	}
+	result = txn.First(&annuity, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+
+	if result.Error != nil {
+		//	txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+
+	if result.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = annuity.AnnNxtDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = annuity.AnnNxtDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		return "", nil
+	}
+}

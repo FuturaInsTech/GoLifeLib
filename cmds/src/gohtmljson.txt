@@ -135,7 +135,16 @@ func JoinHTMLAttributes(html string) string {
 	return strings.TrimSpace(compactHTML)
 }
 
-// Strip SpellE & GramE SpanTags removes Spelling & Grammer non-standard tags but keeps others.
+// Replace v:imagedata Tags with img tag
+// Used in htm2html processing
+func ReplaceImageDataTagWithImgTag(input string) string {
+	// Regular expression to find <v:imagedata ... />
+	re := regexp.MustCompile(`<v:imagedata([^>]*)\/?>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `<img${1}/>`)
+}
+
+// Strip SpellE SpanTags removes Spelling Eror non-standard tags but keeps others.
 // Used in htm2html processing
 func StripSpellESpanTags(input string) string {
 	// Regular expression to match <span> tags with class=SpellE
@@ -144,6 +153,8 @@ func StripSpellESpanTags(input string) string {
 	return re.ReplaceAllString(input, `$1`)
 }
 
+// Strip GramE SpanTags removes Grammer Eror non-standard tags but keeps others.
+// Used in htm2html processing
 func StripGramESpanTags(input string) string {
 	// Regular expression to match <span> tags with class=GramE
 	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?GramE["']?[^>]*>(.*?)</span>`)
@@ -171,9 +182,13 @@ func processHTMLFile(inputFilePath, outputFilePath string) {
 	// JoinHTMLAttributes takes a multi-line HTML string and joins attributes into a single line
 	joinedContent := JoinHTMLAttributes(string(content))
 
-	// Remove spell check nonstandard Apply the replacement function
-	firstpassContent := StripSpellESpanTags(string(joinedContent))
-	processedContent := StripGramESpanTags(string(firstpassContent))
+	// Correct HTM file tags for HTML standards.....
+	// 1. Replacing v:imagedata tags with img tag
+	// 2. Removing Spelling & Grammer Error nonstandard tags
+	firstpassContent := ReplaceImageDataTagWithImgTag(string(joinedContent))
+	secondpassContent := StripSpellESpanTags(string(firstpassContent))
+	processedContent := StripGramESpanTags(string(secondpassContent))
+	// End of Corrections
 
 	// Write the processed content to the output file
 	err = os.WriteFile(outputFilePath, []byte(processedContent), 0644)

@@ -11,6 +11,28 @@ import (
 	"strings"
 )
 
+// Function to check if required files exist
+func checkInputFilesExist(arg string) {
+
+	jFile := arg + ".json"
+	hFile := ""
+	// Check for JSON file
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+	// File names to check depending upon runopt value
+	hFile = arg + ".gohtml"
+
+	// Check for HTML File it shall be htm or html or gohtml depending on runopt
+	if _, err := os.Stat(hFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("Both files '%s' and '%s' exist. Start Processing...\n", jFile, hFile)
+}
+
 // JoinHTMLAttributes takes a multi-line HTML string and joins attributes into a single line.
 func JoinHTMLAttributes(html string) string {
 	// Preserve blank lines by temporarily marking them
@@ -18,7 +40,7 @@ func JoinHTMLAttributes(html string) string {
 	compactHTML := strings.ReplaceAll(html, "\n\n", placeholder)
 
 	// Remove all remaining single newlines (join lines)
-	re := regexp.MustCompile(`\n+`)              // Match one or more newlines
+	re := regexp.MustCompile(`\n+`)                     // Match one or more newlines
 	compactHTML = re.ReplaceAllString(compactHTML, " ") // Replace newlines with space
 
 	// Restore blank lines
@@ -29,6 +51,20 @@ func JoinHTMLAttributes(html string) string {
 
 	// Trim any unnecessary spaces at the start or end
 	return strings.TrimSpace(compactHTML)
+}
+
+// Function to clean <o:p></o:p> tags to manage blank lines
+// Used in htm2html processing
+func cleanOEmptyP(input string) string {
+	// Regex pattern to match <o:p></o:p> (with optional spaces)
+	re := regexp.MustCompile(`(?i)<o:p>\s*</o:p>`)
+	// Remove the matched tag instead of replacing it with blank
+	a := re.ReplaceAllString(input, "")
+
+	// Replace <o:p>&nbsp;</o:p> with <p>&nbsp;</p> to ensure blank lines render correctly
+	re = regexp.MustCompile(`<o:p>\s*&nbsp;\s*</o:p>`)
+	// Replace the matched tag with <br>
+	return re.ReplaceAllString(a, "<br>")
 }
 
 // Replace v:imagedata Tags with img tag
@@ -78,12 +114,14 @@ func processHTMLFile(inputFilePath, outputFilePath string) {
 	joinedContent := JoinHTMLAttributes(string(content))
 
 	// Correct HTM file tags for HTML standards.....
-	// 1. Replacing v:imagedata tags with img tag
+	// 1. Replacing v:imagedata tags with img tag & <o:p>&nbsp</o:p> with <br> tag
 	// 2. Removing Spelling & Grammer Error nonstandard tags
-	firstpassContent := ReplaceImageDataTagWithImgTag(string(joinedContent))
-	secondpassContent := StripSpellESpanTags(string(firstpassContent))
-	processedContent := StripGramESpanTags(string(secondpassContent))
+	firstpassContent := cleanOEmptyP(string(joinedContent))
+	secondpassContent := ReplaceImageDataTagWithImgTag(string(firstpassContent))
+	thirdpassContent := StripSpellESpanTags(string(secondpassContent))
+	processedContent := StripGramESpanTags(string(thirdpassContent))
 	// End of Corrections
+
 	// Write the processed content to the output file
 	err = os.WriteFile(outputFilePath, []byte(processedContent), 0644)
 	if err != nil {
@@ -97,34 +135,27 @@ func processHTMLFile(inputFilePath, outputFilePath string) {
 func main() {
 	var inputFile string
 	var outputFile string
-	// os.Args contains the command-line arguments.
-	// os.Args[0] is the program name.
-	// os.Args[1:] are the actual arguments.
-	args := os.Args[1:]
 
-	if len(args) == 0 {
-		fmt.Println("Error: No arguments provided.")
-		fmt.Println("Usage: ", os.Args[0], "<inputFile> <outputFile>")
-		os.Exit(1) // Exit with a non-zero status to indicate an error
+	var iFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> ...")
+		fmt.Println("Usage: cmd <basefilename> ...")
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
 	}
 
-	// Check if  1 out of 2 arguments are provided
-	if len(args) == 1 {
+	inputFile = iFile + ".htm"
+	outputFile = iFile + ".html"
 
-		fmt.Println("  Args:", os.Args)
-		fmt.Println("  In Progress...")
-		inputFile = os.Args[1]
-		outputFile = "outfile.gohtml"
-		fmt.Println("Default output file is outfile.gohtml")
-	}
+	// Check if the required files exist
+	checkInputFilesExist(iFile)
+	fmt.Println("  In Progress...")
 
-	// Check if  2 out of 2 arguments are provided
-	if len(args) == 2 {
-		fmt.Println("  Args:", os.Args)
-		fmt.Println("  In Progress...")
-		inputFile = os.Args[1]
-		outputFile = os.Args[2]
-	}
 	htm2html(inputFile, outputFile)
 }
 
@@ -135,4 +166,6 @@ func htm2html(inputFile string, outputFile string) {
 
 	// Process the file
 	processHTMLFile(inputFilePath, outputFilePath)
+
+	fmt.Println("HTML generated successfully: ", outputFile)
 }

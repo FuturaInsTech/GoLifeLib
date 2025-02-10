@@ -46,5 +46,5 @@ type Benefit struct {
 	IlpSummaries     []IlpSummary
 	IlpSwitchHeaders []IlpSwitchHeader
 	IlpSwitchFunds   []IlpSwitchFund
-	Anuities         []Annuity
+	Annuities        []Annuity
 }

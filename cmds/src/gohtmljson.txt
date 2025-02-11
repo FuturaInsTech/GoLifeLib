@@ -19,6 +19,7 @@ import (
 	"html/template"
 	"unicode"
 
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"golang.org/x/net/html"
 )
 
@@ -28,8 +29,9 @@ func main() {
 	var gohtmlFileName string
 	var jsonFileName string
 	var outfileFileName string
+	var pdfFileName string
 
-	var argument string
+	var iFile string
 	var runoption string
 
 	// Check the number of command-line arguments
@@ -37,38 +39,45 @@ func main() {
 		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> [<runoption>] ...")
 		fmt.Println("Usage: cmd <basefilename> [<runoption>] ...")
 	} else if len(os.Args) == 3 {
-		argument = os.Args[1]
+		iFile = os.Args[1]
 		runoption = os.Args[2]
 	} else if len(os.Args) == 2 {
-		argument = os.Args[1]
+		iFile = os.Args[1]
 		runoption = "0"
 	} else {
 		fmt.Printf("Error: No arguments provided.\n")
 		os.Exit(1)
 	}
 
-	htmFileName = argument + ".htm"
-	htmlFileName = argument + ".html"
-	gohtmlFileName = argument + ".gohtml"
-	jsonFileName = argument + ".json"
-	outfileFileName = argument + "-outfile.html"
+	htmFileName = iFile + ".htm"
+	htmlFileName = iFile + ".html"
+	gohtmlFileName = iFile + ".gohtml"
+	jsonFileName = iFile + ".json"
+	outfileFileName = iFile + "-outfile.html"
+	pdfFileName = iFile + ".pdf"
 
 	// Check if the required files exist
-	checkInputFilesExist(argument, runoption)
+	checkInputFilesExist(iFile, runoption)
 	fmt.Println("  In Progress...")
 
 	if runoption == "2" {
 		// Create outfile html file to verify the correctness of gohtml file
-		testgohtmljson(gohtmlFileName, jsonFileName, outfileFileName)
+		testgohtmljson(gohtmlFileName, jsonFileName, outfileFileName, iFile)
 		fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		pdfgohtmljson(gohtmlFileName, jsonFileName, pdfFileName, iFile)
+		fmt.Println("...pdfgohtmljson completed successfully...")
 	}
 	if runoption == "1" {
 		// Create gohtmlFile for using in testgohtmljson processing
 		html2gohtml(htmlFileName, gohtmlFileName)
 		fmt.Println("...html2gohtml completed successfully...")
 		// Create outfile html file to verify the correctness of gohtml file
-		testgohtmljson(gohtmlFileName, jsonFileName, outfileFileName)
+		testgohtmljson(gohtmlFileName, jsonFileName, outfileFileName, iFile)
 		fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		pdfgohtmljson(gohtmlFileName, jsonFileName, pdfFileName, iFile)
+		fmt.Println("...pdfgohtmljson completed successfully...")
 	}
 	if runoption == "0" {
 		// Create htmlFile for using in html2gohtml processing
@@ -78,8 +87,11 @@ func main() {
 		html2gohtml(htmlFileName, gohtmlFileName)
 		fmt.Println("...html2gohtml completed successfully...")
 		// Create outfile html file to verify the correctness of gohtml file
-		testgohtmljson(gohtmlFileName, jsonFileName, outfileFileName)
+		testgohtmljson(gohtmlFileName, jsonFileName, outfileFileName, iFile)
 		fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		pdfgohtmljson(gohtmlFileName, jsonFileName, pdfFileName, iFile)
+		fmt.Println("...pdfgohtmljson completed successfully...")
 	}
 
 }
@@ -135,6 +147,20 @@ func JoinHTMLAttributes(html string) string {
 	return strings.TrimSpace(compactHTML)
 }
 
+// Function to clean <o:p></o:p> tags to manage blank lines
+// Used in htm2html processing
+func cleanOEmptyP(input string) string {
+	// Regex pattern to match <o:p></o:p> (with optional spaces)
+	re := regexp.MustCompile(`(?i)<o:p>\s*</o:p>`)
+	// Remove the matched tag instead of replacing it with blank
+	a := re.ReplaceAllString(input, "")
+
+	// Replace <o:p>&nbsp;</o:p> with <p>&nbsp;</p> to ensure blank lines render correctly
+	re = regexp.MustCompile(`<o:p>\s*&nbsp;\s*</o:p>`)
+	// Replace the matched tag with <br>
+	return re.ReplaceAllString(a, "<br>")
+}
+
 // Replace v:imagedata Tags with img tag
 // Used in htm2html processing
 func ReplaceImageDataTagWithImgTag(input string) string {
@@ -183,11 +209,12 @@ func processHTMLFile(inputFilePath, outputFilePath string) {
 	joinedContent := JoinHTMLAttributes(string(content))
 
 	// Correct HTM file tags for HTML standards.....
-	// 1. Replacing v:imagedata tags with img tag
+	// 1. Replacing v:imagedata tags with img tag & <o:p>&nbsp</o:p> with <br> tag
 	// 2. Removing Spelling & Grammer Error nonstandard tags
-	firstpassContent := ReplaceImageDataTagWithImgTag(string(joinedContent))
-	secondpassContent := StripSpellESpanTags(string(firstpassContent))
-	processedContent := StripGramESpanTags(string(secondpassContent))
+	firstpassContent := cleanOEmptyP(string(joinedContent))
+	secondpassContent := ReplaceImageDataTagWithImgTag(string(firstpassContent))
+	thirdpassContent := StripSpellESpanTags(string(secondpassContent))
+	processedContent := StripGramESpanTags(string(thirdpassContent))
 	// End of Corrections
 
 	// Write the processed content to the output file
@@ -749,7 +776,7 @@ func createFuncMap() template.FuncMap {
 }
 
 // Used in testgohtmljson processing
-func testgohtmljson(templateFile string, jsonFile string, outFile string) {
+func testgohtmljson(gohtmlFile string, jsonFile string, outFile string, iFile string) {
 	// Read the HTML file
 	jsonData, err := os.ReadFile(jsonFile)
 	if err != nil {
@@ -764,9 +791,29 @@ func testgohtmljson(templateFile string, jsonFile string, outFile string) {
 		log.Fatalf("Error parsing JSON: %v", err)
 	}
 
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, iFile)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
 	// Parse and execute template
 	funcMap := createFuncMap()
-	tmpl, err := template.New(templateFile).Funcs(funcMap).ParseFiles(templateFile)
+	tmpl, err := template.New(gohtmlFile).Funcs(funcMap).Parse(modifiedContent)
 	if err != nil {
 		log.Fatalf("Error loading template: %v", err)
 	}
@@ -783,6 +830,103 @@ func testgohtmljson(templateFile string, jsonFile string, outFile string) {
 		log.Fatalf("Error executing template: %v", err)
 	}
 	fmt.Printf("Test outfile created successfully at: %s\n", outFile)
+}
+
+// Used in pdfgohtmljson processing
+func pdfgohtmljson(gohtmlFile string, jsonFile string, pdfFile string, iFile string) {
+
+	// Open the JSON file
+	jFile, err := os.Open(jsonFile)
+	if err != nil {
+		log.Fatalf("Failed to open JSON file: %v", err)
+	}
+	defer jFile.Close()
+
+	// Read the JSON file content
+	var data map[string]interface{}
+	jsonBytes, err := io.ReadAll(jFile)
+	if err != nil {
+		log.Fatalf("Failed to read JSON file: %v", err)
+	}
+
+	// Parse the JSON data
+	err = json.Unmarshal(jsonBytes, &data)
+	if err != nil {
+		log.Fatalf("Failed to parse JSON: %v", err)
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, iFile)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
+	// Parse the .gohtml template
+	templateFile := gohtmlFile
+	funcMap := createFuncMap()
+	tmpl, err := template.New(templateFile).Funcs(funcMap).Parse(modifiedContent)
+	if err != nil {
+		log.Fatalf("Failed to parse template: %v", err)
+	}
+
+	// Render the template with data
+	//var buf strings.Builder
+	var buf bytes.Buffer
+
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		log.Fatalf("Failed to execute template: %v", err)
+	}
+
+	// Generate a PDF from the rendered HTML
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		log.Fatalf("Failed to create PDF generator: %v", err)
+	}
+
+	// Add the rendered HTML as a page
+	var page *wkhtmltopdf.PageReader
+	//pdfg.AddPage(wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes())))
+
+	page = wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
+	//page = wkhtmltopdf.NewPageReader(strings.NewReader(buf.String()))
+
+	page.EnableLocalFileAccess.Set(true)
+	pdfg.AddPage(page)
+
+	// Set PDF printing Orientation
+	pdfg.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+
+	// Set PDF printing page size
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+
+	// Create the PDF
+	err = pdfg.Create()
+	if err != nil {
+		log.Fatalf("Failed to generate PDF: %v", err)
+	}
+
+	// Save the PDF to a file
+	err = pdfg.WriteFile(pdfFile)
+	if err != nil {
+		log.Fatalf("Failed to save PDF: %v", err)
+	}
+
+	fmt.Println("PDF generated successfully: ", pdfFile)
 }
 
 ////// END OF PROGRAM //////////////////////////////////////////

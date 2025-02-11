@@ -1,4 +1,4 @@
-// To test GOHTML template with JSON Data to create a merged html file
+// Use GOHTML template with JSON Data to create a merged html file
 
 package main
 
@@ -8,9 +8,32 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+// Function to check if required files exist
+func checkInputFilesExist(arg string) {
+
+	jFile := arg + ".json"
+	hFile := ""
+	// Check for JSON file
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+	// File names to check depending upon runopt value
+	hFile = arg + ".gohtml"
+
+	// Check for HTML File it shall be htm or html or gohtml depending on runopt
+	if _, err := os.Stat(hFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("Both files '%s' and '%s' exist. Start Processing...\n", jFile, hFile)
+}
 
 // Used in testgohtmljson processing
 func formatInteger(famt string, ctype byte) string {
@@ -96,7 +119,7 @@ func formatNumber(value interface{}, fds string) string {
 	} else {
 		integralpart = parts[0]
 	}
-	
+
 	if len(parts) > 1 {
 		decimalpart = formatDecimal(parts[1], fds[1])
 		famount = integralpart + decimalpart
@@ -106,46 +129,44 @@ func formatNumber(value interface{}, fds string) string {
 	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
 }
 
-func main() {
-
-	var templateFile string
-	var jsonFile string
-	var outFile string
-	// os.Args contains the command-line arguments.
-	// os.Args[0] is the program name.
-	// os.Args[1:] are the actual arguments.
-	args := os.Args[1:]
-
-	if len(args) == 0 || len(args) == 1 {
-		fmt.Println("Error: No arguments provided.")
-		fmt.Println("Usage: ", os.Args[0], "<templateFile> <jsonFile> <outFile>")
-		os.Exit(1) // Exit with a non-zero status to indicate an error
+// Custom template functions
+func createFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"formatNumber": formatNumber,
 	}
-
-	// Check if  2 out of 3 arguments are provided
-	if len(args) == 2 {
-
-		fmt.Println("  Args:", os.Args)
-		fmt.Println("  In Progress...")
-		templateFile = os.Args[1]
-		jsonFile = os.Args[2]
-		outFile = "outfile.html"
-		fmt.Println("Default output file is outfile.gohtml")
-	}
-
-	// Check if  2 out of 4 arguments are provided
-	if len(args) == 3 {
-		fmt.Println("  Args:", os.Args)
-		fmt.Println("  In Progress...")
-		templateFile = os.Args[1]
-		jsonFile = os.Args[2]
-		outFile = os.Args[3]
-	}
-
-	testgohtmljson(templateFile, jsonFile, outFile)
 }
 
-func testgohtmljson(templateFile string, jsonFile string, outFile string) {
+func main() {
+
+	var gohtmlFile string
+	var jsonFile string
+	var outFile string
+
+	var iFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> ...")
+		fmt.Println("Usage: cmd <basefilename> ...")
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	gohtmlFile = iFile + ".gohtml"
+	jsonFile = iFile + ".json"
+	outFile = iFile + "-outfile.html"
+
+	// Check if the required files exist
+	checkInputFilesExist(iFile)
+	fmt.Println("  In Progress...")
+
+	testgohtmljson(gohtmlFile, jsonFile, outFile, iFile)
+}
+
+func testgohtmljson(gohtmlFile string, jsonFile string, outFile string, iFile string) {
 	// Read the HTML file
 	jsonData, err := os.ReadFile(jsonFile)
 	if err != nil {
@@ -160,9 +181,29 @@ func testgohtmljson(templateFile string, jsonFile string, outFile string) {
 		log.Fatalf("Error parsing JSON: %v", err)
 	}
 
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, iFile)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
 	// Parse and execute template
 	funcMap := createFuncMap()
-	tmpl, err := template.New(templateFile).Funcs(funcMap).ParseFiles(templateFile)
+	tmpl, err := template.New(gohtmlFile).Funcs(funcMap).Parse(modifiedContent)
 	if err != nil {
 		log.Fatalf("Error loading template: %v", err)
 	}
@@ -178,11 +219,5 @@ func testgohtmljson(templateFile string, jsonFile string, outFile string) {
 	if err != nil {
 		log.Fatalf("Error executing template: %v", err)
 	}
-}
-
-// Custom template functions
-func createFuncMap() template.FuncMap {
-	return template.FuncMap{
-		"formatNumber": formatNumber,
-	}
+	fmt.Println("Outfile HTML generated successfully: ", outFile)
 }

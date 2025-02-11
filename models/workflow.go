@@ -157,6 +157,7 @@ type TaskView struct {
 	ID              uint      `gorm:"column:id"`
 	CompanyID       uint      `gorm:"column:company_id"`
 	RequestID       uint      `gorm:"column:request_id"`
+	ReqName         string    `gorm:"column:req_name"`
 	TaskName        string    `gorm:"column:task_name"`
 	TaskDescription string    `gorm:"column:task_description"`
 	SeqNo           uint      `gorm:"column:seq_no"`

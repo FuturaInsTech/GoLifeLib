@@ -13519,9 +13519,9 @@ func TDFAnnPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *
 
 // This function to get User Name by providing Company No and User id
 
-func GetUserName(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, oErr error) {
+func GetUserName(iCompany uint, iUserId uint) (oName string, oErr error) {
 	var usrenq models.User
-	result := txn.Find(&usrenq, "company_id = ? and id = ?", iCompany, iUserId)
+	result := initializers.DB.Find(&usrenq, "company_id = ? and id = ?", iCompany, iUserId)
 	if result.Error != nil {
 		return "", result.Error
 	}

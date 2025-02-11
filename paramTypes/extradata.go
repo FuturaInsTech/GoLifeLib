@@ -2325,6 +2325,9 @@ type W0004 struct {
 	MandInd         string  //P0050
 	SLADuration     float64 // W0009
 	SLADurationType string  // W0009
+	Red             float64
+	Amber           float64
+	Green           float64
 }
 
 func (m *W0004Data) ParseData(datamap map[string]interface{}) {
@@ -2356,6 +2359,9 @@ type W0005 struct {
 	MandInd         string  //P0050
 	SLADuration     float64 // W0009
 	SLADurationType string  // W0009
+	Red             float64
+	Amber           float64
+	Green           float64
 }
 
 func (m *W0005Data) ParseData(datamap map[string]interface{}) {
@@ -2581,3 +2587,32 @@ func (m *W0013Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// type W0014Data struct {
+// 	FieldArray []W0014
+// }
+// type W0014 struct {
+// 	Percentage         float64
+// 	ColourCode         string
+
+// }
+
+// func (m *W0014Data) ParseData(datamap map[string]interface{}) {
+// 	jsonStr, err := json.Marshal(datamap)
+
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	// Convert json string to struct
+
+// 	if err := json.Unmarshal(jsonStr, &m); err != nil {
+// 		fmt.Println(err)
+// 	}
+
+// }
+
+// func (m *W0014Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+// 	return nil
+
+// }

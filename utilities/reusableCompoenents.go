@@ -10634,10 +10634,12 @@ func ValidatePolicyData(policyenq models.Policy, langid uint, iHistoryCode strin
 	}
 
 	//#002 UW Date is less than PropsalDate
-	if policyenq.PUWDate < policyenq.ProposalDate {
-		shortCode := "GL540" // UW Date is less than PropsalDate
-		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
-		return errors.New(shortCode + ":" + longDesc)
+	if policyenq.PUWDate != "" {
+		if policyenq.PUWDate < policyenq.ProposalDate {
+			shortCode := "GL540" // UW Date is less than PropsalDate
+			longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+		}
 	}
 
 	//#003 Frequency is Inalid

@@ -13516,3 +13516,73 @@ func TDFAnnPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *
 		return "", nil
 	}
 }
+
+// This function to get User Name by providing Company No and User id
+
+func GetUserName(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, oErr error) {
+	var usrenq models.User
+	result := txn.Find(&usrenq, "company_id = ? and id = ?", iCompany, iUserId)
+	if result.Error != nil {
+		return "", result.Error
+	}
+	return usrenq.Name, nil
+}
+
+// TDF Function For Annuities
+func TDFAnniPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
+	var annuity models.Annuity
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+
+	}
+	result = txn.First(&annuity, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		//	txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+
+	if result.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = annuity.AnnNxtDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = annuity.AnnNxtDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+
+		return "", nil
+	}
+}

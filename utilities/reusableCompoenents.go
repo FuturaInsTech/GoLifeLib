@@ -5399,8 +5399,12 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
 				case oLetType == "36":
-					oData := GetReqData(iCompany, iPolicy)
-					resultMap["ReqWork"] = oData
+					oData := GetReqData(iCompany, iPolicy, iClient)
+					for _, item := range oData {
+						for key, value := range item.(map[string]interface{}) {
+							resultMap[key] = value
+						}
+					}
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -13391,37 +13395,25 @@ func GetTeamDes(iTeamCoad string, iCompany uint, iLanguage uint) (oDepCoad strin
 // # Outputs  Requirement Data for the Policyas an Interface
 //
 // ©  FuturaInsTech
-func GetReqData(iCompany uint, iPolicy uint) []interface{} {
+
+func GetReqData(iCompany uint, iPolicy uint, iClient uint) []interface{} {
 	reqArray := make([]interface{}, 0)
-	var reqcall []models.ReqCall
-	//var txn *gorm.DB
+
 	txn := initializers.DB.Begin()
 
-	initializers.DB.Find(&reqcall, "company_id = ? and policy_id = ? and req_status = ?", iCompany, iPolicy, "P")
-	for i := 0; i < len(reqcall); i++ {
-		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, oMedEmail, _, _ := GetMedInfo(iCompany, reqcall[i].MedId, txn)
-		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, reqcall[i].ReqCode)
-
-		resultOut := map[string]interface{}{
-			"ID":            IDtoPrint(reqcall[i].ID),
-			"PolicyID":      IDtoPrint(reqcall[i].PolicyID),
-			"ClientID":      IDtoPrint(reqcall[i].ClientID),
-			"ReqType":       reqcall[i].ReqType,
-			"ReqCode":       reqcall[i].ReqCode,
-			"ReqDesc":       oDesc,
-			"MedProvName":   oMedName,
-			"MedProAddress": oMedAddress,
-			"MedProPin":     oMedPin,
-			"MedProState":   oMedState,
-			"MedPhone":      oMedPhone,
-			"MedEmail":      oMedEmail,
-			"RemDate":       DateConvert(reqcall[i].RemindDate),
-		}
-		reqArray = append(reqArray, resultOut)
+	resultMap, err := GetReqComm(iCompany, iPolicy, iClient, txn)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return nil // Return nil if there was an error
 	}
 
+	// Append resultMap (from GetReqComm) as the last element
+	reqArray = append(reqArray, resultMap)
+
+	// Return the array of all results
 	return reqArray
 }
+
 func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddress string, oPin string, oState string, oPhone string, oEmail string, oBank string, oErr string) {
 	var medprov models.MedProvider
 	result := txn.Find(&medprov, "company_id = ? and id = ?", iCompany, iMedProv)
@@ -13446,7 +13438,7 @@ func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddr
 		return "", "", "", "", "", "", "", oErr
 	}
 
-	oAddress = address.AddressLine1 + "," + address.AddressLine2 + " " + address.AddressLine3 + " " + address.AddressLine4 + " " + address.AddressLine5
+	oAddress = address.AddressLine1 + "," + address.AddressLine2 + "," + address.AddressLine3 + "," + address.AddressLine4 + "," + address.AddressLine5
 	oPin = address.AddressPostCode
 	oState = address.AddressState
 	var bank models.Bank
@@ -13585,4 +13577,61 @@ func TDFAnniPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 
 		return "", nil
 	}
+}
+
+func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[string]interface{}, error) {
+	var reqcall []models.ReqCall
+	var client models.Client
+	var address models.Address
+
+	medDetailsArray := make([]string, 0) // Array for medDetails
+	reqCodeArray := make([]string, 0)    // Array for ReqCode
+	reqIDArray := make([]uint, 0)        // Array for Req.ID
+	remiderdateArray := make([]string, 0)
+
+	// txn := initializers.DB.Begin()
+
+	txn.Find(&reqcall, "company_id = ? and policy_id = ? and req_status = ?", iCompany, iPolicy, "P")
+	txn.Find(&client, "company_id = ? and id = ?", iCompany, iClient)
+	txn.Find(&address, "company_id = ? and client_id = ?", iCompany, iClient)
+
+	// Populate data from reqcall
+	for _, req := range reqcall {
+		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, _, _, _ := GetMedInfo(iCompany, req.MedId, txn)
+		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, req.ReqCode)
+
+		medDetails := fmt.Sprintf("%s, %s, %s, %s, %s", oMedName, oMedAddress, oMedPin, oMedState, oMedPhone)
+		medDetailsArray = append(medDetailsArray, medDetails) // Store medDetails in the array
+
+		reqCodeArray = append(reqCodeArray, oDesc) // Store ReqCode in the array
+
+		reqIDArray = append(reqIDArray, req.ID) // Store Req.ID in the array
+		remiderdateArray = append(remiderdateArray, req.RemindDate)
+	}
+
+	// Create resultMap and include all data from clientInfo
+	resultMap := make(map[string]interface{})
+
+	// Include all data directly (without the "clientInfo" label)
+	clientInfo := map[string]interface{}{
+		"ClientFullName":   client.ClientLongName,
+		"ClientSalutation": client.Salutation,
+		"AddressLine1":     address.AddressLine1,
+		"AddressLine2":     address.AddressLine2,
+		"AddressLine3":     address.AddressLine3,
+		"AddressLine4":     address.AddressLine4,
+		"AddressState":     address.AddressState,
+		"AddressCountry":   address.AddressCountry,
+		"PolicyId":         iPolicy,
+		"MedDetails":       medDetailsArray,
+		"ReqCodes":         reqCodeArray,
+		"ReqIDs":           reqIDArray,
+		"Reminderdates":    remiderdateArray,
+	}
+
+	for key, value := range clientInfo {
+		resultMap[key] = value
+	}
+
+	return resultMap, nil
 }

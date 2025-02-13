@@ -5148,9 +5148,9 @@ func CreateCommunications(iCompany uint, iHistoryCode string, iTranno uint, iDat
 				case oLetType == "30":
 					oData := GetClientWorkData(iCompany, iClientWork)
 					resultMap["ClientWork"] = oData
-				case oLetType == "36":
-					oData := GetReqData(iCompany, iPolicy)
-					resultMap["ReqWork"] = oData
+				// case oLetType == "36":
+				// 	oData := GetReqData(iCompany, iPolicy)
+				// 	resultMap["ReqWork"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 				case oLetType == "99":

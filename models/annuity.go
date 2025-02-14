@@ -23,4 +23,6 @@ type Annuity struct {
 	AnnNxtDate   string  `gorm:"type:varchar(08)"` //20250301
 	AnnPecentage float64
 	AnnAmount    float64 // Annuity Amount
+	Paymentno    uint    // Payment Table ID
+	Paystatus    string  `gorm:"type:varchar(02)"` // PR - Processed , PN - Pending
 }

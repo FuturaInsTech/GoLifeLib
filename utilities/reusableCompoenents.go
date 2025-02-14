@@ -13462,7 +13462,7 @@ func TDFAnnPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *
 		return "", result.Error
 
 	}
-	result = txn.First(&annuity, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	result = txn.First(&annuity, "company_id = ? and policy_id = ? and paystatus = ?", iCompany, iPolicy, "PN")
 
 	if result.Error != nil {
 		//	txn.Rollback()
@@ -13634,4 +13634,119 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 	}
 
 	return resultMap, nil
+}
+
+// This Method to create payments for the payable entry.  It can be used wherever we need
+// Automatic Approval and Payment Creation
+func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, txn *gorm.DB) (oPayno uint, oErr error) {
+	oPayno = 0
+	var bankenq models.Bank
+	result := txn.Find(&bankenq, "id = ?", iBank)
+	if result.Error != nil {
+		return oPayno, result.Error
+	}
+
+	// Get Payment Type Accounting Code for Creation
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
+
+	err := GetItemD(int(iCompany), "P0055", iTypeofPayment, iDate, &extradatap0055)
+	if err != nil {
+		return oPayno, err
+	}
+	iCrBank := p0055data.GlAccount
+	iFSC := p0055data.BankCode
+	iCrAccount := iCrAcc + "-" + iCrBank // BankAccount-KVB
+
+	// Debit
+	glcode := iDrAcc
+	var acccode models.AccountCode
+	result = txn.First(&acccode, "company_id = ? and account_code = ? ", iCompany, glcode)
+	if result.RowsAffected == 0 {
+		return oPayno, result.Error
+	}
+	var iSequenceno uint64
+	iSequenceno++
+	iAccountCodeID := acccode.ID
+	iAccAmount := iAmount
+	iAccCurry := iAccCurr
+	iAccountCode := glcode
+	iEffectiveDate := iDate
+	iGlAmount := iAmount
+
+	iGlRdocno := int(iPolicy)
+	var iGlRldgAcct string
+	//iGlRldgAcct := strconv.Itoa(int(iClient))
+	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+	iGlRldgAcct = strconv.Itoa(int(iPolicy))
+	iGlSign := "+"
+	iTranno := 0
+
+	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
+
+	if err != nil {
+		return oPayno, err
+	}
+	// Credit
+
+	glcode = iCrAcc
+	var acccode1 models.AccountCode
+	result = txn.First(&acccode1, "company_id = ? and account_code = ? ", iCompany, glcode)
+	if result.RowsAffected == 0 {
+		return oPayno, result.Error
+	}
+
+	iSequenceno++
+	iAccountCodeID = acccode1.ID
+	iAccAmount = iAmount
+	iAccCurry = iAccCurr
+	iAccountCode = iCrAccount
+	iEffectiveDate = iDate
+	iGlAmount = iAmount
+
+	iGlRdocno = int(iPolicy)
+
+	//iGlRldgAcct := strconv.Itoa(int(iClient))
+	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+	iGlRldgAcct = strconv.Itoa(int(iPolicy))
+	iGlSign = "-"
+	iTranno = 1
+
+	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
+
+	if err != nil {
+		return oPayno, err
+	}
+
+	// Write Payment
+	var paycrt models.Payment
+	paycrt.AccAmount = iAmount
+	paycrt.AccCurry = iAccCurr
+	paycrt.AddressID = iAddress
+	paycrt.BankAccountNo = bankenq.BankAccountNo
+	paycrt.BankIFSC = bankenq.BankCode
+	paycrt.Branch = "HO"
+	paycrt.CheckerUserID = 1
+	paycrt.ClientID = iClient
+	paycrt.CompanyID = iCompany
+	paycrt.CurrentDate = iEffectiveDate
+	paycrt.DateOfPayment = iEffectiveDate
+	paycrt.InsurerBankAccNo = iCrAccount
+	paycrt.InsurerBankIFSC = iFSC
+	paycrt.PaymentAccount = "AnnuityPayment"
+	paycrt.PolicyID = iPolicy
+	paycrt.TypeOfPayment = iTypeofPayment
+	paycrt.UpdatedID = 1
+	paycrt.MakerUserID = 2
+	paycrt.Reason = iReason
+	paycrt.Status = "AP"
+	result = txn.Save(&paycrt)
+
+	if result.Error != nil {
+		return oPayno, result.Error
+	}
+	oPayno = paycrt.ID
+	return oPayno, nil
 }

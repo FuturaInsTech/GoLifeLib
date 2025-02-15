@@ -41,7 +41,8 @@ type Q0005Data struct {
 	NoLapseGuaranteeMonths int
 	SpecialRevivalMonths   int
 	AplLoanMethod          string
-	NfoMethod              []string //p0050
+	NfoMethod              []string //P0050
+	UnderwitingReq         string   // P0050 YESNO
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {

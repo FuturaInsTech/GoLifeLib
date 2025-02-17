@@ -31,7 +31,7 @@ type GlMove struct {
 type AgtExt struct {
 	gorm.Model
 	types.CModel
-	glmoveid   uint
+	Glmoveid   uint
 	GlRdocno   string `gorm:"type:varchar(20)"`
 	GlRldgAcct string `gorm:"type:varchar(30)"`
 	// GlCurry           string `gorm:"type:varchar(03)"`

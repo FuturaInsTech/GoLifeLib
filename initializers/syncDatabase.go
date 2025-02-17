@@ -21,7 +21,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.User{})
 	// DB.AutoMigrate(&models.Coverage{})
 	// DB.AutoMigrate(&models.Load{})
-	DB.AutoMigrate(&models.Client{})
+	// DB.AutoMigrate(&models.Client{})
 	// DB.AutoMigrate(&models.ParamDesc{})
 	// DB.AutoMigrate(&models.Param{})
 	// DB.AutoMigrate(&models.Address{})
@@ -41,7 +41,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.FieldValidator{})
 	// DB.AutoMigrate(&models.Level{})
 	// DB.AutoMigrate(&models.Policy{})
-	DB.AutoMigrate(&models.Benefit{})
+	// DB.AutoMigrate(&models.Benefit{})
 	// DB.AutoMigrate(&models.Extra{})
 	// DB.AutoMigrate(&models.PHistory{})
 	// DB.AutoMigrate(&models.GlType{})
@@ -120,6 +120,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.ReqProof{})
 	//DB.AutoMigrate(&models.WfComment{})
 	// DB.AutoMigrate(&models.UserLimit{})
-	DB.AutoMigrate(&models.Annuity{})
+	// DB.AutoMigrate(&models.Annuity{})
+	DB.AutoMigrate(&models.AgtExt{})
 
 }

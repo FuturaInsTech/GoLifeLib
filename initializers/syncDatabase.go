@@ -30,7 +30,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.UinMaster{})
 	// DB.AutoMigrate(&models.Error{})
 	// DB.AutoMigrate(&models.Bank{})
-	// DB.AutoMigrate(&models.Agency{})
+	DB.AutoMigrate(&models.Agency{})
 	// DB.AutoMigrate(models.LeadDetail{})
 	// DB.AutoMigrate(models.LeadFollowup{})
 

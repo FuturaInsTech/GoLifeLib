@@ -23,6 +23,7 @@ type Agency struct {
 	// AddressID         uint
 	LeadAllocations []LeadAllocation
 	BankID          uint
+	AddressID       uint
 	//Communications  []Communication
 	Policies []Policy
 	//QHeaders []quotation.QHeader

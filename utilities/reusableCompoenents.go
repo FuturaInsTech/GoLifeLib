@@ -13735,7 +13735,7 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	paycrt.DateOfPayment = iEffectiveDate
 	paycrt.InsurerBankAccNo = iCrAccount
 	paycrt.InsurerBankIFSC = iFSC
-	paycrt.PaymentAccount = "AnnuityPayment"
+	paycrt.PaymentAccount = iCrAcc
 	paycrt.PolicyID = iPolicy
 	paycrt.TypeOfPayment = iTypeofPayment
 	paycrt.UpdatedID = 1

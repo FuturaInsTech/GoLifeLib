@@ -43,6 +43,7 @@ type Q0005Data struct {
 	AplLoanMethod          string
 	NfoMethod              []string //P0050
 	UnderwitingReq         string   // P0050 YESNO
+	BankReq                string   //P0050 YESNO
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {

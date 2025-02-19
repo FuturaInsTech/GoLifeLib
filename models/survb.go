@@ -15,4 +15,5 @@ type SurvB struct {
 	PaidDate      string `gorm:"type:varchar(08)"` //Paid Date
 	Amount        float64
 	SBPercentage  float64 //Percentage
+	PaymentID     uint
 }

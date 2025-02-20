@@ -263,6 +263,7 @@ type Q0006Data struct {
 	BenefitType          string    // Health,CI,Waiver,Pension etc., P0050
 	CommissionOnExtraInd string    //P0050 Yes/No
 	UlSwitchMethod       string    //P0050
+	CovrFamily           string
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {

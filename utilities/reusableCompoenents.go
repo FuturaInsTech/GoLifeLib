@@ -13638,7 +13638,7 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 
 // This Method to create payments for the payable entry.  It can be used wherever we need
 // Automatic Approval and Payment Creation
-func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, txn *gorm.DB) (oPayno uint, oErr error) {
+func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, txn *gorm.DB) (oPayno uint, oErr error) {
 	oPayno = 0
 	var bankenq models.Bank
 	result := txn.Find(&bankenq, "id = ?", iBank)
@@ -13680,7 +13680,6 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
 	iGlRldgAcct = strconv.Itoa(int(iPolicy))
 	iGlSign := "+"
-	iTranno := 0
 
 	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
 		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
@@ -13689,6 +13688,34 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 		return oPayno, err
 	}
 	// Credit
+	// Write Payment
+	var paycrt models.Payment
+	paycrt.AccAmount = iAmount
+	paycrt.AccCurry = iAccCurr
+	paycrt.AddressID = iAddress
+	paycrt.BankAccountNo = bankenq.BankAccountNo
+	paycrt.BankIFSC = bankenq.BankCode
+	paycrt.Branch = "HO"
+	paycrt.CheckerUserID = 1
+	paycrt.ClientID = iClient
+	paycrt.CompanyID = iCompany
+	paycrt.CurrentDate = iEffectiveDate
+	paycrt.DateOfPayment = iEffectiveDate
+	paycrt.InsurerBankAccNo = iCrAccount
+	paycrt.InsurerBankIFSC = iFSC
+	paycrt.PaymentAccount = iCrAcc
+	paycrt.PolicyID = iPolicy
+	paycrt.TypeOfPayment = iTypeofPayment
+	paycrt.UpdatedID = 1
+	paycrt.MakerUserID = 2
+	paycrt.Reason = iReason
+	paycrt.Status = "AP"
+	result = txn.Save(&paycrt)
+
+	if result.Error != nil {
+		return oPayno, result.Error
+	}
+	oPayno = paycrt.ID
 
 	glcode = iCrAcc
 	var acccode1 models.AccountCode
@@ -13705,7 +13732,8 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	iEffectiveDate = iDate
 	iGlAmount = iAmount
 
-	iGlRdocno = int(iPolicy)
+	//iGlRdocno = int(iPolicy)
+	iGlRdocno = int(oPayno)
 
 	//iGlRldgAcct := strconv.Itoa(int(iClient))
 	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
@@ -13720,33 +13748,5 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 		return oPayno, err
 	}
 
-	// Write Payment
-	var paycrt models.Payment
-	paycrt.AccAmount = iAmount
-	paycrt.AccCurry = iAccCurr
-	paycrt.AddressID = iAddress
-	paycrt.BankAccountNo = bankenq.BankAccountNo
-	paycrt.BankIFSC = bankenq.BankCode
-	paycrt.Branch = "HO"
-	paycrt.CheckerUserID = 1
-	paycrt.ClientID = iClient
-	paycrt.CompanyID = iCompany
-	paycrt.CurrentDate = iEffectiveDate
-	paycrt.DateOfPayment = iEffectiveDate
-	paycrt.InsurerBankAccNo = iCrAccount
-	paycrt.InsurerBankIFSC = iFSC
-	paycrt.PaymentAccount = "AnnuityPayment"
-	paycrt.PolicyID = iPolicy
-	paycrt.TypeOfPayment = iTypeofPayment
-	paycrt.UpdatedID = 1
-	paycrt.MakerUserID = 2
-	paycrt.Reason = iReason
-	paycrt.Status = "AP"
-	result = txn.Save(&paycrt)
-
-	if result.Error != nil {
-		return oPayno, result.Error
-	}
-	oPayno = paycrt.ID
 	return oPayno, nil
 }

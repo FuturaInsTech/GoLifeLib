@@ -43,6 +43,7 @@ type Q0005Data struct {
 	AplLoanMethod          string
 	NfoMethod              []string //P0050
 	UnderwitingReq         string   // P0050 YESNO
+	BankReq                string   //P0050 YESNO
 }
 
 func (m *Q0005Data) ParseData(datamap map[string]interface{}) {
@@ -262,6 +263,7 @@ type Q0006Data struct {
 	BenefitType          string    // Health,CI,Waiver,Pension etc., P0050
 	CommissionOnExtraInd string    //P0050 Yes/No
 	UlSwitchMethod       string    //P0050
+	CovrFamily           string
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {

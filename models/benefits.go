@@ -33,6 +33,7 @@ type Benefit struct {
 	IlpMortalityDate string `gorm:"type:varchar(08)"`
 	IlpFee           float64
 	IlpFeeDate       string `gorm:"type:varchar(08)"`
+	CovrFamily       string `gorm:"type:varchar(01)"`
 	Extras           []Extra
 	SurvBs           []SurvB
 	MedReqs          []MedReq

@@ -1,0 +1,319 @@
+// JSON Checker - Checks json structure errors
+// Usage: cmd <basefilename> [<skipcommasct>] [N]
+// basefilename has to be a text file.
+// skip texts separated with commas if json struct is after given comma count.
+
+package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+)
+
+// extractJSON extracts JSON data after skipcommasct count of commas
+func extractJSON(line string, skipcommasct int) (string, int, int) {
+	commaCount := 0
+	inBraces := false
+	inBrackets := false
+	startIdx, endIdx := -1, -1
+
+	for i, char := range line {
+		switch char {
+		case '{':
+			if commaCount == skipcommasct && !inBraces {
+				startIdx = i
+			}
+			inBraces = true
+		case '}':
+			inBraces = false
+			if commaCount == skipcommasct {
+				endIdx = i + 1
+			}
+		case '[':
+			if commaCount == skipcommasct && !inBrackets {
+				startIdx = i
+			}
+			inBrackets = true
+		case ']':
+			inBrackets = false
+			if commaCount == skipcommasct {
+				endIdx = i + 1
+			}
+		case ',':
+			if !inBraces && !inBrackets {
+				commaCount++
+			}
+		}
+
+		if commaCount > skipcommasct && endIdx != -1 {
+			break
+		}
+	}
+
+	if startIdx != -1 && endIdx != -1 {
+		return line[startIdx:endIdx], startIdx, endIdx
+	}
+	return "", -1, -1
+}
+
+// checkJSON validates JSON and returns the exact byte position of the error
+func checkJSON(jsonData string) (bool, string, int) {
+	var js interface{}
+	decoder := json.NewDecoder(strings.NewReader(jsonData))
+	decoder.UseNumber() // Preserves numbers without converting to float64
+
+	for {
+		if err := decoder.Decode(&js); err != nil {
+			if syntaxErr, ok := err.(*json.SyntaxError); ok {
+				return false, err.Error(), int(syntaxErr.Offset)
+			}
+			return false, err.Error(), -1
+		}
+		break
+	}
+
+	return true, "", -1
+}
+
+// removeDuplicateDoubleQuotes removes " from "", except
+// when "" is preceded by ":" and followed by ","
+func removeDuplicateDoubleQuotes(line string) string {
+	var result strings.Builder
+	i := 0
+	for i < len(line)-1 {
+		// Check if we have a double quote pair `""`
+		if line[i] == '"' && line[i+1] == '"' {
+			// Check if it is preceded by `:` and followed by `,`, `)`, `]`, or `}`
+			if i > 0 && line[i-1] == ':' &&
+				i+2 < len(line) &&
+				(line[i+2] == ',' || line[i+2] == ')' ||
+					line[i+2] == ']' || line[i+2] == '}') {
+				// Keep `""` as it is
+				result.WriteString(`""`)
+			} else {
+				// Replace `""` with `"`
+				result.WriteByte('"')
+			}
+			i += 2 // Skip the next quote since we processed a pair
+		} else {
+			result.WriteByte(line[i])
+			i++
+		}
+	}
+
+	// Append the last character if it's not processed in the loop
+	if i < len(line) {
+		result.WriteByte(line[i])
+	}
+
+	return result.String()
+}
+
+// removeQuotesAroundBraces removes '"' in '"{' and in '}"'  }
+func removeQuotesAroundBraces(line string) string {
+	var result strings.Builder
+	i := 0
+	for i < len(line)-1 {
+		// Check if we have a double quote pair `""`
+		if line[i] == '"' && (line[i+1] == '{' || line[i+1] == '[') ||
+			(line[i] == '}' || line[i] == ']') && line[i+1] == '"' {
+			// Replace `"{` with `{` or '}"' with '}' and
+			// Replace `"[` with `[` or ']"' with ']'
+			if line[i+1] == '{' {
+				result.WriteByte('{')
+			} else if line[i] == '}' {
+				result.WriteByte('}')
+			} else if line[i+1] == '[' {
+				result.WriteByte('[')
+			} else if line[i] == ']' {
+				result.WriteByte(']')
+			}
+			i += 2 // Skip the next quote since we processed a pair
+		} else {
+			result.WriteByte(line[i])
+			i++
+		}
+	}
+
+	// Append the last character if it's not processed in the loop
+	if i < len(line) {
+		result.WriteByte(line[i])
+	}
+
+	return result.String()
+}
+
+// removeDoubleReverseSlashes removes '\\'
+func removeDoubleReverseSlashes(line string) string {
+	var result strings.Builder
+	i := 0
+	for i < len(line)-1 {
+		// Check if we have a double quote pair `\\`
+		if line[i] == '\\' && line[i+1] == '\\' {
+			// Replace `\\` with blank
+			result.WriteString("")
+			i += 2 // Skip the next quote since we processed a pair
+		} else {
+			result.WriteByte(line[i])
+			i++
+		}
+	}
+	// Append the last character if it's not processed in the loop
+	if i < len(line) {
+		result.WriteByte(line[i])
+	}
+	return result.String()
+}
+
+// changeFolderSeparator changes '\' as '/'
+func changeFolderSeparator(line string) string {
+	var result strings.Builder
+	i := 0
+	for i < len(line)-1 {
+		// Check if we have a reverseslash folder separator '\`
+		if line[i] == '\\' {
+			// Replace `\\` with '/'
+			result.WriteByte('/')
+			i += 1
+		} else {
+			result.WriteByte(line[i])
+			i++
+		}
+	}
+	// Append the last character if it's not processed in the loop
+	if i < len(line) {
+		result.WriteByte(line[i])
+	}
+	return result.String()
+}
+
+func main() {
+	var inputFileName string
+	var lpFileName string
+
+	var iFile string
+	var skipcommasct string
+	var cleanfile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 4 {
+		fmt.Println("Error: Too many arguments provided... ")
+		fmt.Println("Usage: cmd <basefilename> [<skipcommasct>] [N]...")
+	} else if len(os.Args) == 4 {
+		iFile = os.Args[1]
+		skipcommasct = os.Args[2]
+		cleanfile = os.Args[3]
+	} else if len(os.Args) == 3 {
+		iFile = os.Args[1]
+		skipcommasct = os.Args[2]
+		cleanfile = "Y"
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+		skipcommasct = "0"
+		cleanfile = "Y"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		fmt.Printf("Usage: cmd <basefilename> [<skipcommasct>] [N] ...")
+		os.Exit(1)
+	}
+
+	inputFileName = iFile + ".txt"
+	lpFileName = iFile + "-lp.txt"
+
+	// Step 1: Read the file and modify content in memory
+	inputFile, err := os.Open(inputFileName)
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer inputFile.Close()
+
+	if cleanfile == "Y" || cleanfile == "y" {
+		var modifiedLines []string
+		scanner := bufio.NewScanner(inputFile)
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			changedLine1 := removeDuplicateDoubleQuotes(line)
+			changedLine2 := removeDoubleReverseSlashes(changedLine1)
+			changedLine3 := removeQuotesAroundBraces(changedLine2)
+			changedLine4 := changeFolderSeparator(changedLine3)
+			modifiedLines = append(modifiedLines, changedLine4)
+		}
+
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Error reading file:", err)
+			return
+		}
+
+		// Step 2: Overwrite the original file with corrected content
+		inputFile.Close() // Close before writing
+		err = os.WriteFile(inputFileName, []byte(strings.Join(modifiedLines, "\n")+"\n"), 0644)
+		if err != nil {
+			fmt.Println("Error writing to input file:", err)
+			return
+		}
+
+		fmt.Println("Input File CleanUp Attempted....")
+		fmt.Println("   1. Removal of Duplicate DoubleQuotes....")
+		fmt.Println("   2. Removal of Double Reverse Slashes....")
+		fmt.Println("   3. Removal of Quotes Around Braces....")
+		fmt.Println("   4. Changing Folder Separator from \\ to /....")
+		fmt.Println(" ")
+		fmt.Println("Corrected Input File is Checked for JSON Structure Issues...")
+
+		// Step 3: Reopen corrected file for JSON validation
+		inputFile, err = os.Open(inputFileName)
+		if err != nil {
+			fmt.Println("Error reopening file:", err)
+			return
+		}
+		defer inputFile.Close()
+	}
+
+	// Step 4: Create output file for writing error lines and positions
+	errorOutputFile, err := os.Create(lpFileName)
+	if err != nil {
+		fmt.Println("Error creating output file:", err)
+		return
+	}
+	defer errorOutputFile.Close()
+
+	errorOutputFile.WriteString("line_num, pos\n")
+	scanner := bufio.NewScanner(inputFile)
+	lineNum := 0
+
+	// Step 5: Process each line for JSON validation
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Text()
+
+		// Extract JSON data after skipcommasct count of commas
+		cp, _ := strconv.Atoi(skipcommasct)
+		jsonData, jsonStartPos, _ := extractJSON(line, cp)
+		if jsonData == "" {
+			fmt.Printf("Skipping line %d: JSON block not found\n", lineNum)
+			continue
+		}
+
+		// Validate JSON
+		isValid, errMsg, jsonErrPos := checkJSON(jsonData)
+		if !isValid {
+			actualErrorPos := jsonStartPos + jsonErrPos
+			fmt.Printf("Invalid JSON at line %d (Column: %d): %s\n", lineNum, actualErrorPos, errMsg)
+
+			// Write to output file the errored line and positon
+			errorOutputFile.WriteString(fmt.Sprintf("%d, %d\n", lineNum, actualErrorPos))
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading corrected file:", err)
+	}
+
+	fmt.Println("JSON validation complete. Error Lines and Positions are saved in ", lpFileName)
+}

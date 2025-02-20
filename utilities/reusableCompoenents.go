@@ -2914,6 +2914,7 @@ func GetDeathAmount(iCompany uint, iPolicy uint, iProduct string, iCoverage stri
 		}
 		oAmount = mrtaenq.BSumAssured
 		return
+
 	default:
 		oAmount = 0
 		return
@@ -3140,6 +3141,19 @@ func GetDeathAmountN(iCompany uint, iPolicy uint, iProduct string, iCoverage str
 			return
 		}
 		oAmount = mrtaenq.BSumAssured
+		return
+	case ideathMethod == "DC009":
+		var annuity models.Annuity
+		result = txn.Find(&annuity, "policy_id = ?", iPolicy)
+		if result.Error != nil {
+			return
+		}
+		oIntrestRate := 6.00
+		_, _, _, days, _, _, _, _ := NoOfDays(annuity.AnnStartDate, iEffectiveDate)
+		inoofinstalments := NewNoOfInstalments(annuity.AnnStartDate, annuity.AnnCurrDate)
+		oCompoundint := CompoundInterest(iSA, oIntrestRate, float64(days))
+		oPaidValue := inoofinstalments * int(annuity.AnnAmount)
+		oAmount = iSA + oCompoundint - float64(oPaidValue)
 		return
 	default:
 		oAmount = 0
@@ -3496,6 +3510,19 @@ func GetSurrenderAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiv
 	case iSurrMethod == "SM003": // Return of SA or Fund Value whichever is Highter
 		oAmount = 0
 		break
+	case iSurrMethod == "SM004":
+		var annuity models.Annuity
+		txn := initializers.DB.Begin()
+		result := txn.Find(&annuity, "policy_id = ?", iPolicy)
+		if result.Error != nil {
+			return 0
+		}
+		oIntrestRate := 6.00
+		_, _, _, days, _, _, _, _ := NoOfDays(annuity.AnnStartDate, iEffectiveDate)
+		inoofinstalments := NewNoOfInstalments(annuity.AnnStartDate, annuity.AnnCurrDate)
+		oCompoundint := CompoundInterest(iSumAssured, oIntrestRate, float64(days))
+		oPaidValue := inoofinstalments * int(annuity.AnnAmount)
+		oAmount = iSumAssured + oCompoundint - float64(oPaidValue)
 	default:
 		oAmount = 0
 		return
@@ -5444,7 +5471,7 @@ func GetName(iCompany uint, iClient uint) string {
 	oName := ""
 	result := initializers.DB.Find(&clientenq, "company_id = ? and id = ?", iCompany, iClient)
 
-	if result != nil {
+	if result.Error != nil {
 		return oName
 	}
 	oName = clientenq.ClientLongName + " " + clientenq.ClientShortName + " " + clientenq.ClientSurName

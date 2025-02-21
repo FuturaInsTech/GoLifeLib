@@ -29,6 +29,7 @@ type Policy struct {
 	BankID          uint
 	PayingAuthority uint   // Paying Authority Client
 	NfoMethod       string `gorm:"type:varchar(05)"` //q0005
+	PFamily         string `gorm:"type:varchar(05)"` //q0005
 	Benefits        []Benefit
 	PHistories      []PHistory
 	Extras          []Extra

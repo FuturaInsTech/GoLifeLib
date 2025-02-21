@@ -3143,13 +3143,14 @@ func GetDeathAmountN(iCompany uint, iPolicy uint, iProduct string, iCoverage str
 		oAmount = mrtaenq.BSumAssured
 		return
 	case ideathMethod == "DC009":
+		// Important. Note. Annuity has multiple records, we need to pick up the latest record in the table
 		var annuity models.Annuity
-		result = txn.Find(&annuity, "policy_id = ?", iPolicy)
+		result = txn.Last(&annuity, "policy_id = ?", iPolicy)
 		if result.Error != nil {
 			return
 		}
 		oIntrestRate := 6.00
-		_, _, _, days, _, _, _, _ := NoOfDays(annuity.AnnStartDate, iEffectiveDate)
+		_, _, _, days, _, _, _, _ := NoOfDays(iEffectiveDate, annuity.AnnStartDate)
 		inoofinstalments := NewNoOfInstalments(annuity.AnnStartDate, annuity.AnnCurrDate)
 		oCompoundint := CompoundInterest(iSA, oIntrestRate, float64(days))
 		oPaidValue := inoofinstalments * int(annuity.AnnAmount)

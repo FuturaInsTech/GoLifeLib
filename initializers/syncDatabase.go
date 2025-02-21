@@ -106,7 +106,6 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.WfTask{})
 	DB.AutoMigrate(&models.WfTaskAssignment{})
 	DB.AutoMigrate(&models.WfTaskExecutionLog{})
-	DB.AutoMigrate(&models.WorkflowPolicy{})
 
 	DB.AutoMigrate(&models.WfTaskAssignment{})
 	DB.AutoMigrate(&models.WfActionAssignment{})
@@ -121,6 +120,6 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.WfComment{})
 	DB.AutoMigrate(&models.UserLimit{})
 	DB.AutoMigrate(&models.Annuity{})
-	//DB.AutoMigrate(&models.AgtExt{})
+	DB.AutoMigrate(&models.AgtExt{})
 
 }

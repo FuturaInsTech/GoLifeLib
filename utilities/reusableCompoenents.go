@@ -3151,7 +3151,7 @@ func GetDeathAmountN(iCompany uint, iPolicy uint, iProduct string, iCoverage str
 		}
 		oIntrestRate := 6.00
 		_, _, _, days, _, _, _, _ := NoOfDays(iEffectiveDate, annuity.AnnStartDate)
-		inoofinstalments := NewNoOfInstalments(annuity.AnnStartDate, annuity.AnnCurrDate)
+		inoofinstalments := NewNoOfInstalments(annuity.AnnStartDate, annuity.AnnCurrDate) + 1
 		oCompoundint := CompoundInterest(iSA, oIntrestRate, float64(days))
 		oPaidValue := inoofinstalments * int(annuity.AnnAmount)
 		oAmount = iSA + oCompoundint - float64(oPaidValue)

@@ -3514,13 +3514,13 @@ func GetSurrenderAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiv
 	case iSurrMethod == "SM004":
 		var annuity models.Annuity
 		txn := initializers.DB.Begin()
-		result := txn.Find(&annuity, "policy_id = ?", iPolicy)
+		result := txn.Last(&annuity, "policy_id = ?", iPolicy)
 		if result.Error != nil {
 			return 0
 		}
 		oIntrestRate := 6.00
-		_, _, _, days, _, _, _, _ := NoOfDays(annuity.AnnStartDate, iEffectiveDate)
-		inoofinstalments := NewNoOfInstalments(annuity.AnnStartDate, annuity.AnnCurrDate)
+		_, _, _, days, _, _, _, _ := NoOfDays(iEffectiveDate, annuity.AnnStartDate)
+		inoofinstalments := NewNoOfInstalments(annuity.AnnStartDate, annuity.AnnCurrDate) + 1
 		oCompoundint := CompoundInterest(iSumAssured, oIntrestRate, float64(days))
 		oPaidValue := inoofinstalments * int(annuity.AnnAmount)
 		oAmount = iSumAssured + oCompoundint - float64(oPaidValue)

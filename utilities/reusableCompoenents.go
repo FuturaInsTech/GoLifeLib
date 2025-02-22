@@ -13627,8 +13627,11 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 	for _, req := range reqcall {
 		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, _, _, _ := GetMedInfo(iCompany, req.MedId, txn)
 		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, req.ReqCode)
-
-		medDetails := fmt.Sprintf("%s, %s, %s, %s, %s", oMedName, oMedAddress, oMedPin, oMedState, oMedPhone)
+		// When Medical Provider is Empty Do not Print Blank Address
+		medDetails := ""
+		if req.MedId != 0 {
+			medDetails = fmt.Sprintf("%s, %s, %s, %s, %s", oMedName, oMedAddress, oMedPin, oMedState, oMedPhone)
+		}
 		medDetailsArray = append(medDetailsArray, medDetails) // Store medDetails in the array
 
 		reqCodeArray = append(reqCodeArray, oDesc) // Store ReqCode in the array

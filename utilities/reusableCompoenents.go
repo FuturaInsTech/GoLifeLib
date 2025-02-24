@@ -1253,7 +1253,7 @@ func GetMaxTranno(iCompany uint, iPolicy uint, iMethod string, iEffDate string, 
 	if result.Error != nil {
 		return iMethod, 0
 	}
-	iHistoryCD := transaction.Method
+	iHistoryCD := transaction.TranCode
 	var phistory models.PHistory
 	var maxtranno float64 = 0
 
@@ -1445,7 +1445,7 @@ func ValidateStatus(iCompany uint, iMethod string, iDate string, iStatus string)
 		return oStatus, oHistory
 	}
 
-	iHistoryCD := transaction.Method
+	iHistoryCD := transaction.TranCode
 	oHistory = iHistoryCD
 	var p0029data paramTypes.P0029Data
 	var extradata paramTypes.Extradata = &p0029data
@@ -3225,7 +3225,7 @@ func GetTranCode(iCompany uint, iDescription string) (otrancode string) {
 		return "Not Found"
 	}
 
-	otrancode = transaction.Method
+	otrancode = transaction.TranCode
 	return
 }
 
@@ -10493,7 +10493,7 @@ func GetMaxTrannoN(iCompany uint, iPolicy uint, iMethod string, iEffDate string,
 	if result.Error != nil {
 		return result.Error, iMethod, 0
 	}
-	iHistoryCD := transaction.Method
+	iHistoryCD := transaction.TranCode
 	var phistory models.PHistory
 	var maxtranno float64 = 0
 

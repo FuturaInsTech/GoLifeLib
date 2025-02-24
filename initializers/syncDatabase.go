@@ -14,7 +14,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.ContHeader{})
 	// DB.AutoMigrate(&models.CompanyStatus{})
 	// DB.AutoMigrate(&models.Company{})
-	// DB.AutoMigrate(&models.Transaction{})
+	DB.AutoMigrate(&models.Transaction{})
 	// DB.AutoMigrate(&models.TDFRule{})
 	// DB.AutoMigrate(&models.Permission{})
 	// DB.AutoMigrate(&models.LeadChannel{})

@@ -32,4 +32,6 @@ type Communication struct {
 	DepartmentHead       string          `gorm:"type:varchar(50)"`
 	TemplatePath         string          `gorm:"type:varchar(50)"`
 	PDFPath              string          `gorm:"type:varchar(50)"`
+	Print                string          `gorm:"type:varchar(01)"`
+	PrintDate            string          `gorm:"type:varchar(08)"`
 }

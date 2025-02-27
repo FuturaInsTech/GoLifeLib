@@ -13669,7 +13669,7 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 
 // This Method to create payments for the payable entry.  It can be used wherever we need
 // Automatic Approval and Payment Creation
-func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, txn *gorm.DB) (oPayno uint, oErr error) {
+func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, iPayStatus string, txn *gorm.DB) (oPayno uint, oErr error) {
 	oPayno = 0
 	var bankenq models.Bank
 	result := txn.Find(&bankenq, "id = ?", iBank)
@@ -13740,7 +13740,7 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	paycrt.UpdatedID = 1
 	paycrt.MakerUserID = 2
 	paycrt.Reason = iReason
-	paycrt.Status = "AP"
+	paycrt.Status = iPayStatus
 	result = txn.Save(&paycrt)
 
 	if result.Error != nil {

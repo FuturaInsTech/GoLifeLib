@@ -13627,6 +13627,7 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 	for _, req := range reqcall {
 		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, _, _, _ := GetMedInfo(iCompany, req.MedId, txn)
 		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, req.ReqCode)
+		effDate, _ := ConvertYYYYMMDD(req.RemindDate)
 		// When Medical Provider is Empty Do not Print Blank Address
 		medDetails := ""
 		if req.MedId != 0 {
@@ -13637,7 +13638,7 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 		reqCodeArray = append(reqCodeArray, oDesc) // Store ReqCode in the array
 
 		reqIDArray = append(reqIDArray, req.ID) // Store Req.ID in the array
-		remiderdateArray = append(remiderdateArray, req.RemindDate)
+		remiderdateArray = append(remiderdateArray, effDate)
 	}
 
 	// Create resultMap and include all data from clientInfo
@@ -13653,7 +13654,7 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 		"AddressLine4":     address.AddressLine4,
 		"AddressState":     address.AddressState,
 		"AddressCountry":   address.AddressCountry,
-		"PolicyId":         iPolicy,
+		"PolicyId":         IDtoPrint(iPolicy),
 		"MedDetails":       medDetailsArray,
 		"ReqCodes":         reqCodeArray,
 		"ReqIDs":           reqIDArray,

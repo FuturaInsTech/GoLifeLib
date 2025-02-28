@@ -3,6 +3,7 @@ package utilities
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 func FormatIndianNumber(amount float64) string {
@@ -36,4 +37,14 @@ func FormatIndianNumber(amount float64) string {
 	}
 
 	return indianFormatted + "." + decimal
+}
+
+func ConvertYYYYMMDD(inputDate string) (string, error) {
+	iDate, err := time.Parse("20060102", inputDate)
+	if err != nil {
+		return "", err
+	}
+	outputDateStr := iDate.Format("02/01/2006")
+
+	return outputDateStr, nil
 }

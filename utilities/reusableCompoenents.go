@@ -5433,6 +5433,12 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 							resultMap[key] = value
 						}
 					}
+				case oLetType == "37":
+					oData := PolicyDep(iCompany, iPolicy)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -13781,4 +13787,54 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	}
 
 	return oPayno, nil
+}
+func PolicyDep(iCompany uint, iPolicy uint) map[string]interface{} {
+	var polenq models.Policy
+	result := initializers.DB.Where("company_id = ? AND id = ?", iCompany, iPolicy).Find(&polenq)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var clnt models.Client
+	result = initializers.DB.Where("company_id = ? AND id = ?", iCompany, polenq.ClientID).Find(&clnt)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var address models.Address
+	result = initializers.DB.Where("company_id = ? AND id = ?", iCompany, polenq.ClientID).Find(&address)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var pymt models.Payment
+	result = initializers.DB.Where("company_id = ? AND policy_id = ?", iCompany, iPolicy).Find(&pymt)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Payment not found"}
+	}
+
+	var glbal models.GlBal
+	result = initializers.DB.Where("company_id = ? AND gl_rdocno = ? ", iCompany, iPolicy).Find(&glbal)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "GlBal not found"}
+	}
+
+	// Create a result map for each loan bill
+	resultOut := map[string]interface{}{
+		"ClientFullName":   clnt.ClientLongName,
+		"ClientSalutation": clnt.Salutation,
+		"AddressLine1":     address.AddressLine1,
+		"AddressLine2":     address.AddressLine2,
+		"AddressLine3":     address.AddressLine3,
+		"AddressLine4":     address.AddressLine4,
+		"AddressState":     address.AddressState,
+		"AddressCountry":   address.AddressCountry,
+		"PaymentType":      pymt.TypeOfPayment,
+		"PaymentId":        pymt.ID,
+		"PaymentDate":      DateConvert(pymt.CurrentDate),
+		"Amount":           glbal.ContractAmount,
+		"policyid":         polenq.ID,
+	}
+
+	return resultOut
 }

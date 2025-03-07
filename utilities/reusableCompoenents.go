@@ -13777,7 +13777,6 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
 	iGlRldgAcct = strconv.Itoa(int(iPolicy))
 	iGlSign = "-"
-	iTranno = 1
 
 	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
 		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/FuturaInsTech/GoLifeLib/types"
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -27,4 +28,11 @@ type User struct {
 	CompanyID               uint
 	UserStatusID            uint
 	BusinessDates           []BusinessDate
+}
+
+type UserExt struct {
+	gorm.Model
+	types.CModel
+	UserID     uint
+	UserClient uint
 }

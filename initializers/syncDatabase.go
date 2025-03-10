@@ -109,7 +109,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WfTaskAssignment{})
 	// DB.AutoMigrate(&models.WfActionAssignment{})
 	// DB.AutoMigrate(&models.WfTaskExecutionLog{})
-	// DB.AutoMigrate(&models.WfAction{})
+	DB.AutoMigrate(&models.WfAction{})
 	// DB.AutoMigrate(&models.WfTask{})
 	// DB.AutoMigrate(&models.WfRequest{})
 	// DB.AutoMigrate(&models.UserDepartment{})

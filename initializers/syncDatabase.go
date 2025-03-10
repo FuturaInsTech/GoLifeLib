@@ -120,5 +120,6 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.UserLimit{})
 	// DB.AutoMigrate(&models.Annuity{})
 	// DB.AutoMigrate(&models.AgtExt{})
+	DB.AutoMigrate(&models.UserExt{})
 
 }

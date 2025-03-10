@@ -83,6 +83,7 @@ type WfAction struct {
 	TaskID               uint
 	ActionName           string `gorm:"type:varchar(100)"`
 	ActionDescription    string `gorm:"type:longtext"`
+	TranCode             string `gorm:"type:varchar(10)"`
 	SeqNo                uint
 	SlaDuration          uint
 	SlaDurationType      string `gorm:"type:varchar(2)"`
@@ -192,6 +193,7 @@ type ActionView struct {
 	TaskID            uint      `gorm:"column:task_id"`
 	ActionName        string    `gorm:"column:action_name"`
 	ActionDescription string    `gorm:"column:action_description"`
+	TranCode          string    `gorm:"column:tran_code"`
 	SeqNo             uint      `gorm:"column:seq_no"`
 	SlaDuration       uint      `gorm:"column:sla_duration"`
 	SlaDurationType   string    `gorm:"column:sla_duration_type"`
@@ -211,6 +213,8 @@ type ActionView struct {
 	SlaViolation      bool      `gorm:"column:sla_violation"`
 	Comments          string    `gorm:"column:comments"`
 	Attachments       string    `gorm:"column:attachments"`
+	ReqRefData        string    `gorm:"column:req_ref_data"`
+	ReqRefType        string    `gorm:"column:req_ref_type"`
 	AssignedUser      string    `gorm:"column:assigned_user"`
 }
 

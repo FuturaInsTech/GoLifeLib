@@ -1166,6 +1166,11 @@ type P0033Data struct {
 	CompanyPhone         string
 	DepartmentName       string
 	DepartmentHead       string
+	SenderPassword       string
+	SMTPServer           string
+	SMTPPort             int
+	Body                 string
+	Subject              string
 }
 
 func (m *P0033Data) ParseData(datamap map[string]interface{}) {

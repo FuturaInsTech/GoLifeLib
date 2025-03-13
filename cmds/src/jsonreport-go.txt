@@ -1,0 +1,795 @@
+// Report Generation Utility Program
+// To create PDF Output files using JSON formatted report generation data
+// alongwith report control data and standard gohtml file.
+// Sree 09 March 2025
+// Requisites: GoHTML File is to be existing in same name as Command Name with .gohtml extension
+// Usage: cmd jsonfilename
+
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type AggregationFields struct {
+	Count   map[string]bool `json:"Count"`
+	Total   map[string]bool `json:"Total"`
+	Average map[string]bool `json:"Average"`
+}
+
+// Struct for input JSON
+type InputData struct {
+	CoName      string                   `json:"CoName"`
+	CoAddress   string                   `json:"CoAddress"`
+	Title       string                   `json:"Title"`
+	Records     []map[string]interface{} `json:"Records"`
+	Aggregation AggregationFields        `json:"Aggregation"`
+	Layout      map[string]interface{}   `json:"Layout"`
+	Formats     map[string]interface{}   `json:"Formats"`
+}
+
+type ReportData struct {
+	CoName        string                     `json:"CoName"`
+	CoAddress     string                     `json:"CoAddress"`
+	Title         string                     `json:"Title"`
+	Date          string                     `json:"Date"`
+	Orientation   string                     `json:"Orientation"`
+	AlignLeft     []string                   `json:"AlignLeft"`
+	AlignCenter   []string                   `json:"AlignCenter"`
+	AlignRight    []string                   `json:"AlignRight"`
+	Context       []interface{}              `json:"Context"`
+	Headers       []interface{}              `json:"Headers"`
+	Formats       map[string]string          `json:"Formats"`
+	Pages         [][]map[string]interface{} `json:"Pages"`
+	TotalPages    int                        `json:"TotalPages"`
+	PageSubtotals []map[string]interface{}   `json:"PageSubtotals"`
+	FinalTotals   map[string]interface{}     `json:"FinalTotals"`
+	FinalCounts   map[string]interface{}     `json:"FinalCounts"`
+	FinalAverages map[string]interface{}     `json:"FinalAverage"`
+}
+
+// Helper functions for Go templates
+func add1(i int) int {
+	return i + 1
+}
+func sub1(i int) int {
+	return i - 1
+}
+
+func mul1(a, b int) int {
+	return a * b
+}
+
+func mod1(a, b int) int {
+	return a % b
+}
+
+// until generates a slice of integers from 0 to n-1
+func until(n int) []int {
+	result := make([]int, n)
+	for i := range result {
+		result[i] = i
+	}
+	return result
+}
+
+// func inListInterface(list []interface{}, item string) bool {
+// 	for _, v := range list {
+// 		if str, ok := v.(string); ok && str == item {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
+func inList(list []string, item string) bool {
+	for _, v := range list {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func formatInteger(famt string, ctype byte) string {
+	// Handle the Indian and Western numbering formats
+	n := len(famt)
+	if n <= 3 {
+		// No formatting needed for numbers with 3 or fewer digits
+		return famt
+	}
+
+	// Format the first three digits (thousands)
+	result := famt[n-3:]
+
+	if ctype == 'a' || ctype == 'A' {
+		// Format the remaining digits in groups of two (lakhs, crores, etc.)
+		for i := n - 3; i > 0; i -= 2 {
+			start := i - 2
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+	if ctype == 'c' || ctype == 'C' {
+		// Format the remaining digits in groups of three (millions, billions, etc.)
+		for i := n - 3; i > 0; i -= 3 {
+			start := i - 3
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+
+	// Return the formatted integer
+	return result
+}
+
+func formatDecimal(famt string, ctype byte) string {
+	decimalpart := ""
+	decimallen, _ := strconv.Atoi(string(ctype))
+	//damt, _ := strconv.Atoi(string(famt))
+	var decimalFloat float64 = 0
+	if decimallen == 0 {
+		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
+	} else {
+		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
+	}
+	if decimallen == 0 {
+		return decimalpart
+	} else {
+		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
+		decimalpart = fmt.Sprintf(formatString, decimalFloat)
+		decimalpart = decimalpart[1:] // Remove the leading "0"
+		return decimalpart
+	}
+}
+
+func formatNumber(value interface{}, fds string) string {
+	integralpart := ""
+	decimalpart := ""
+	famt := ""
+	famount := ""
+	decimallen, _ := strconv.Atoi(string(fds[1]))
+	if _, ok := value.(float64); ok {
+		famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(int); ok {
+		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(string); ok {
+		famt = value.(string)
+	}
+	parts := strings.Split(famt, ".")
+	if fds[0] == 'a' || fds[0] == 'A' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'c' || fds[0] == 'C' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'd' || fds[0] == 'D' {
+		integralpart = parts[0]
+	} else {
+		integralpart = parts[0]
+	}
+
+	if len(parts) > 1 {
+		decimalpart = formatDecimal(parts[1], fds[1])
+		famount = integralpart + decimalpart
+	} else {
+		famount = integralpart
+	}
+	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+// Function to extract pagewise subtotals and final totals
+func extractAggregationFields(jsonData map[string]interface{}) AggregationFields {
+	aggFields := AggregationFields{
+		Count:   make(map[string]bool),
+		Total:   make(map[string]bool),
+		Average: make(map[string]bool),
+	}
+
+	// Debug: Print raw Aggregation field
+	aggregationRaw, exists := jsonData["Aggregation"]
+	if !exists {
+		fmt.Println("Error: 'Aggregation' field not found in JSON data")
+		return aggFields
+	}
+
+	//Debugging: Print Raw Aggregation Data
+	//fmt.Printf("Raw Aggregation Data: %+v\n", aggregationRaw)
+
+	agg, ok := aggregationRaw.(map[string]interface{})
+	if !ok {
+		fmt.Println("Error: 'Aggregation' field is not a map")
+		return aggFields
+	}
+
+	// Debug: Print individual aggregation fields
+	//fmt.Printf("Extracting Count: %+v\n", agg["Count"])
+	//fmt.Printf("Extracting Total: %+v\n", agg["Total"])
+	//fmt.Printf("Extracting Average: %+v\n", agg["Average"])
+
+	// Extract Count fields
+	if countFields, ok := agg["Count"].([]interface{}); ok {
+		for _, field := range countFields {
+			if fieldStr, ok := field.(string); ok {
+				aggFields.Count[fieldStr] = true
+			} else {
+				fmt.Printf("Warning: Non-string value in Count: %+v\n", field)
+			}
+		}
+	} else {
+		fmt.Println("Error: 'Count' field is not a list")
+	}
+
+	// Extract Total fields
+	if totalFields, ok := agg["Total"].([]interface{}); ok {
+		for _, field := range totalFields {
+			if fieldStr, ok := field.(string); ok {
+				aggFields.Total[fieldStr] = true
+			} else {
+				fmt.Printf("Warning: Non-string value in Total: %+v\n", field)
+			}
+		}
+	} else {
+		fmt.Println("Error: 'Total' field is not a list")
+	}
+
+	// Extract Average fields
+	if avgFields, ok := agg["Average"].([]interface{}); ok {
+		for _, field := range avgFields {
+			if fieldStr, ok := field.(string); ok {
+				aggFields.Average[fieldStr] = true
+			} else {
+				fmt.Printf("Warning: Non-string value in Average: %+v\n", field)
+			}
+		}
+	} else {
+		fmt.Println("Error: 'Average' field is not a list")
+	}
+
+	// Debug: Print extracted aggregation fields
+	//fmt.Printf("Extracted Aggregation Fields: %+v\n", aggFields)
+
+	return aggFields
+}
+
+// Function to compute pagewise subtotals and final totals
+func computeAggregates(pages [][]map[string]interface{}, aggFields AggregationFields) ([]map[string]interface{}, map[string]interface{}, map[string]interface{}, map[string]interface{}) {
+	subTotals := make([]map[string]interface{}, len(pages))
+	finalTotals := make(map[string]float64)
+	finalCount := make(map[string]int)   // To track count for count fields
+	countTracker := make(map[string]int) // For average calculation tracking
+
+	for i, page := range pages {
+		pageTotal := make(map[string]float64)
+		pageCount := make(map[string]int) // To track count for count fields
+
+		for _, record := range page {
+			// Process "Total" Fields
+			for field := range aggFields.Total {
+				if value, ok := record[field].(float64); ok {
+					pageTotal[field] += value
+					finalTotals[field] += value
+				} else if value, ok := record[field].(int); ok {
+					pageTotal[field] += float64(value)
+					finalTotals[field] += float64(value)
+				}
+			}
+
+			// Process "Count" Fields
+			for field := range aggFields.Count {
+				if _, exists := record[field]; exists {
+					pageCount[field]++  // Count how many times the field appears
+					finalCount[field]++ // Count how many times the field appears
+				}
+			}
+
+			// Process "Average" Fields
+			for field := range aggFields.Average {
+				if value, ok := record[field].(float64); ok {
+					pageTotal[field] += value
+					finalTotals[field] += value
+					countTracker[field]++
+				} else if value, ok := record[field].(int); ok {
+					pageTotal[field] += float64(value)
+					finalTotals[field] += float64(value)
+					countTracker[field]++
+				}
+			}
+		}
+
+		// Store page subtotal (only including required fields)
+		subTotals[i] = make(map[string]interface{})
+		for field := range aggFields.Total {
+			subTotals[i][field] = pageTotal[field]
+		}
+		for field := range aggFields.Count {
+			subTotals[i][field] = pageCount[field] // Store the count for that page
+		}
+		for field := range aggFields.Average {
+			if countTracker[field] > 0 {
+				subTotals[i][field] = pageTotal[field] / float64(countTracker[field])
+			} else {
+				subTotals[i][field] = 0 // Avoid division by zero
+			}
+		}
+	}
+
+	// Compute final totals (only for required fields)
+	finalTotalMap := make(map[string]interface{})
+	finalCountMap := make(map[string]interface{})
+	finalAverageMap := make(map[string]interface{})
+	for field := range aggFields.Total {
+		finalTotalMap[field] = finalTotals[field]
+	}
+	for field := range aggFields.Count {
+		finalCountMap[field] = finalCount[field] // Final count of records
+	}
+	for field := range aggFields.Average {
+		if countTracker[field] > 0 {
+			finalAverageMap[field] = finalTotals[field] / float64(finalCount[field])
+		} else {
+			finalAverageMap[field] = 0
+		}
+	}
+
+	return subTotals, finalTotalMap, finalCountMap, finalAverageMap
+}
+
+// Custom struct to maintain key order
+type OrderedMap struct {
+	Keys   []string
+	Values map[string]interface{}
+}
+
+// OrderedMarshal converts an interface{} into a JSON []byte, preserving key order
+func OrderedMarshal(input interface{}) ([]byte, error) {
+	switch v := input.(type) {
+	case map[string]interface{}:
+		// ?? Handle map[string]interface{} while maintaining order
+		var ordered OrderedMap
+		ordered.Values = v
+		for key := range v {
+			ordered.Keys = append(ordered.Keys, key)
+		}
+		return ordered.MarshalJSON()
+	case []interface{}:
+		// ?? Handle arrays recursively
+		var buf bytes.Buffer
+		buf.WriteByte('[')
+		for i, item := range v {
+			if i > 0 {
+				buf.WriteByte(',')
+			}
+			itemJSON, err := OrderedMarshal(item)
+			if err != nil {
+				return nil, err
+			}
+			buf.Write(itemJSON)
+		}
+		buf.WriteByte(']')
+		return buf.Bytes(), nil
+	default:
+		// ?? Handle primitives (strings, numbers, bool, etc.)
+		return json.Marshal(input)
+	}
+}
+
+// MarshalJSON serializes OrderedMap while keeping key order intact
+func (o OrderedMap) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+
+	for i, key := range o.Keys {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+
+		// Marshal key
+		keyJSON, _ := json.Marshal(key)
+		buf.Write(keyJSON)
+		buf.WriteByte(':')
+
+		// Marshal value (recursively handling nested structures)
+		valueJSON, err := OrderedMarshal(o.Values[key])
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(valueJSON)
+	}
+
+	buf.WriteByte('}')
+	return buf.Bytes(), nil
+}
+
+// Custom OrderedUnmarshal function to preserve key order using json.Decoder
+func (o *OrderedMap) OrderedUnmarshal(data []byte) error {
+	o.Values = make(map[string]interface{})
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+
+	// Read opening `{`
+	if _, err := decoder.Token(); err != nil {
+		return err
+	}
+
+	// Read key-value pairs
+	for decoder.More() {
+		// Read key
+		token, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		key := token.(string)
+
+		// Read value
+		var value interface{}
+		if err := decoder.Decode(&value); err != nil {
+			return err
+		}
+
+		// Store key in order and value in map
+		o.Keys = append(o.Keys, key)
+		//o.Keys = append([]string{key}, o.Keys...)
+		o.Values[key] = value
+
+		// Debug print to check key insertion order
+		fmt.Println("Inserted key:", key)
+	}
+	// Read closing `}`
+	if _, err := decoder.Token(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+
+	var iFile string
+	var gFile string
+	var jsonFileName string
+	var gohtmlFileName string
+	var gohtmlFilePath string
+	var htmlFileName string
+	var pdfFileName string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <jsonfilename>")
+		fmt.Println("Usage: cmd <jsonfilename> ...")
+	} else if len(os.Args) == 2 {
+		gFile = os.Args[0]
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	gohtmlFileName = gFile + ".gohtml"
+	jsonFileName = iFile + ".json"
+	htmlFileName = iFile + ".html"
+	pdfFileName = iFile + ".pdf"
+
+	// Get the current working directory to build gohtmlFilePath Variable value
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	gohtmlFilePath = filepath.Join(cwdPath, gohtmlFileName)
+
+	// Read JSON file
+	jsonFile, err := os.ReadFile(jsonFileName)
+	if err != nil {
+		fmt.Println("Error reading JSON file:", err)
+		return
+	}
+
+	// Parse JSON into a temporary map to correctly extract aggregation fields
+	var jsonData map[string]interface{}
+	err = json.Unmarshal(jsonFile, &jsonData)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+		return
+	}
+
+	// Extract aggregation fields correctly
+	inputData := InputData{
+		CoName:      jsonData["CoName"].(string),
+		CoAddress:   jsonData["CoAddress"].(string),
+		Title:       jsonData["Title"].(string),
+		Aggregation: extractAggregationFields(jsonData),
+		Formats:     jsonData["Formats"].(map[string]interface{}),
+	}
+
+	// Extract context
+	contextData, ok := jsonData["Context"].([]interface{})
+	if !ok {
+		fmt.Println("Error: 'Context' field missing or incorrect format")
+		return
+	}
+
+	// Apply the formatting rules to the Context Data
+	var formattedData []interface{}
+	for _, record := range contextData {
+		var key string
+		var value interface{}
+		if m, ok := record.(map[string]interface{}); ok {
+			// Extract the first key-value pair
+			for k, v := range m {
+				key = k
+				value = v
+				// Check if the key exists in Formats
+				if format, exists := inputData.Formats[key]; exists {
+					value = formatNumber(value, format.(string)) // Apply formatting
+				}
+				// Append the key-value pair as a map in []interface{}
+				formattedData = append(formattedData, map[string]interface{}{key: value})
+			}
+		}
+	}
+	// Save the formatted key value apir back to contextData to process further
+	contextData = formattedData
+
+	// Extract records
+	recordsData, ok := jsonData["Records"].([]interface{})
+	if !ok {
+		fmt.Println("Error: 'Records' field missing or incorrect format")
+		return
+	}
+
+	// Extract headers from the first record in the same order
+	headers, ok := jsonData["Order"].([]interface{})
+	if !ok {
+		fmt.Println("Error: 'Records' field missing or incorrect format")
+		return
+	}
+
+	// Convert records to the correct type and also keep the record in same order of fields in header
+	for _, record := range recordsData {
+		if recordMap, ok := record.(map[string]interface{}); ok {
+			orderedRecord := make(map[string]interface{})
+			// Populate the orderedRecord map based on headers order
+			for _, header := range headers {
+				if value, exists := recordMap[header.(string)]; exists {
+					orderedRecord[header.(string)] = value
+				} else {
+					orderedRecord[header.(string)] = "" // Handle missing keys gracefully
+				}
+			}
+			inputData.Records = append(inputData.Records, orderedRecord)
+		}
+	}
+
+	alignData := jsonData["AlignFields"].(map[string]interface{})
+	// Extract Alignment Fields [alignleft, aligncenter, alignright]
+	var alignleft []string
+	if rawList, ok := alignData["AlignLeft"].([]interface{}); ok {
+		for _, v := range rawList {
+			if str, ok := v.(string); ok {
+				alignleft = append(alignleft, str)
+			}
+		}
+	}
+
+	var aligncenter []string
+	if rawList, ok := alignData["AlignCenter"].([]interface{}); ok {
+		for _, v := range rawList {
+			if str, ok := v.(string); ok {
+				aligncenter = append(aligncenter, str)
+			}
+		}
+	}
+
+	var alignright []string
+	if rawList, ok := alignData["AlignRight"].([]interface{}); ok {
+		for _, v := range rawList {
+			if str, ok := v.(string); ok {
+				alignright = append(alignright, str)
+			}
+		}
+	}
+	// Extract Layout PageSize and Orientation from JSON
+	layoutData := jsonData["Layout"].(map[string]interface{})
+	pageSize := "Legal"        // Default page size
+	orientation := "Landscape" // Default orientation
+	pageTotalReq := "N"
+	recordsPerPage := 18 // Max records per page
+	linesPerPage := 18   // initial value
+
+	//	if layoutExists {
+	if val, ok := layoutData["Orientation"].(string); ok {
+		if lines, ok := layoutData["Lines"].(string); ok {
+			linesPerPage, _ = strconv.Atoi(lines)
+		}
+		if val == "P" {
+			orientation = "Portrait"
+			pageSize = "Letter"
+			contextlength := len(contextData)
+			if (contextlength % 2) != 0 {
+				fmt.Println("Context Length is not in multiples of 2 for Portrait Orientation:", err)
+				return
+			}
+			contextlines := contextlength / 2
+			recordsPerPage = linesPerPage - contextlines
+		}
+		if val == "L" {
+			orientation = "Landscape"
+			contextlength := len(contextData)
+			if (contextlength % 3) != 0 {
+				fmt.Println("Context Length is not in multiples of 3 for Landscape Orientation:", err)
+				return
+			}
+			contextlines := contextlength / 3
+			recordsPerPage = linesPerPage - contextlines
+		}
+	}
+
+	if val, ok := layoutData["PageTotal"].(string); ok {
+		pageTotalReq = val
+	}
+	//	}
+
+	// Paginate records (split into chunks of 30) and calculate subtotals
+	var pages [][]map[string]interface{}
+	//var subtotals []Subtotal
+
+	for i := 0; i < len(inputData.Records); i += recordsPerPage {
+		end := i + recordsPerPage
+		if end > len(inputData.Records) {
+			end = len(inputData.Records)
+		}
+
+		page := inputData.Records[i:end]
+		pages = append(pages, page)
+	}
+
+	pagesubTotals, finalTotal, finalCount, finalAverage := computeAggregates(pages, inputData.Aggregation)
+
+	// Apply formatNumber formatting for Records and maintain field order
+	for _, page := range pages {
+		for i, record := range page {
+			orderedRecord := make(map[string]interface{})
+			for _, key := range headers { // Ensure order based on headers
+				if value, exists := record[key.(string)]; exists {
+					if format, exists := inputData.Formats[key.(string)]; exists {
+						orderedRecord[key.(string)] = formatNumber(value, format.(string))
+					} else {
+						orderedRecord[key.(string)] = value
+					}
+				}
+			}
+			page[i] = orderedRecord // Replace with ordered map
+		}
+	}
+
+	// Apply formatNumber formatting for Page Sub Totals
+	for pageIndex, subtotalMap := range pagesubTotals {
+		for field := range inputData.Aggregation.Count {
+			if format, exists := inputData.Formats[field]; exists {
+				pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
+			}
+		}
+		for field := range inputData.Aggregation.Total {
+			if format, exists := inputData.Formats[field]; exists {
+				pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
+			}
+		}
+		for field := range inputData.Aggregation.Average {
+			if format, exists := inputData.Formats[field]; exists {
+				pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
+			}
+		}
+	}
+
+	// Apply formatNumber formatting for Final Totals
+	for field := range inputData.Aggregation.Count {
+		if format, exists := inputData.Formats[field]; exists {
+			finalCount[field] = formatNumber(finalCount[field], format.(string))
+		}
+	}
+	for field := range inputData.Aggregation.Total {
+		if format, exists := inputData.Formats[field]; exists {
+			finalTotal[field] = formatNumber(finalTotal[field], format.(string))
+		}
+	}
+	for field := range inputData.Aggregation.Average {
+		if format, exists := inputData.Formats[field]; exists {
+			finalAverage[field] = formatNumber(finalAverage[field], format.(string))
+		}
+	}
+
+	// Prepare ReportData
+	var data ReportData
+	if pageTotalReq == "Y" {
+		data = ReportData{
+			CoName:        inputData.CoName,
+			CoAddress:     inputData.CoAddress,
+			Title:         inputData.Title,
+			Date:          time.Now().Format("02 Jan 06 03:04:05 PM"),
+			Orientation:   orientation,
+			AlignLeft:     alignleft,
+			AlignCenter:   aligncenter,
+			AlignRight:    alignright,
+			Context:       contextData,
+			Headers:       headers,
+			Pages:         pages,
+			TotalPages:    len(pages),
+			PageSubtotals: pagesubTotals,
+			FinalTotals:   finalTotal,
+			FinalCounts:   finalCount,
+			FinalAverages: finalAverage,
+		}
+	} else {
+		data = ReportData{
+			CoName:      inputData.CoName,
+			CoAddress:   inputData.CoAddress,
+			Title:       inputData.Title,
+			Date:        time.Now().Format("02 Jan 06 03:04:05 PM"),
+			Orientation: orientation,
+			AlignLeft:   alignleft,
+			AlignCenter: aligncenter,
+			AlignRight:  alignright,
+			Context:     contextData,
+			Headers:     headers,
+			Pages:       pages,
+			TotalPages:  len(pages),
+		}
+	}
+
+	// Define template functions (for formatting numbers and math operations)
+	funcMap := template.FuncMap{
+		"add1":         add1,
+		"sub1":         sub1,
+		"mul1":         mul1,
+		"mod1":         mod1,
+		"until":        until,
+		"inList":       inList,
+		"formatNumber": formatNumber,
+	}
+	// Load and execute HTML template
+	tmpl, err := template.New(gohtmlFileName).Funcs(funcMap).ParseFiles(gohtmlFilePath)
+	if err != nil {
+		fmt.Println("Error loading template:", err)
+		return
+	}
+
+	// Generate HTML file
+	htmlFile, err := os.Create(htmlFileName)
+	if err != nil {
+		fmt.Println("Error creating HTML file:", err)
+		return
+	}
+	defer htmlFile.Close()
+
+	err = tmpl.Execute(htmlFile, data)
+	if err != nil {
+		fmt.Println("Error executing template:", err)
+		return
+	}
+
+	htmlFile.Close() // Ensure the file is properly closed before converting
+
+	// Convert HTML to PDF using wkhtmltopdf
+	cmd := exec.Command("wkhtmltopdf", "--page-size", pageSize, "--orientation", orientation, htmlFileName, pdfFileName)
+
+	err = cmd.Run()
+	if err != nil {
+		fmt.Println("Error generating PDF:", err)
+		return
+	}
+
+	fmt.Println("PDF agtcom generated successfully:", pdfFileName)
+}

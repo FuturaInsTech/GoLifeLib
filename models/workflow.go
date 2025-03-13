@@ -188,34 +188,35 @@ func (TaskView) TableName() string {
 
 // View Models Action View
 type ActionView struct {
-	ID                uint      `gorm:"column:id"`
-	CompanyID         uint      `gorm:"column:company_id"`
-	TaskID            uint      `gorm:"column:task_id"`
-	ActionName        string    `gorm:"column:action_name"`
-	ActionDescription string    `gorm:"column:action_description"`
-	TranCode          string    `gorm:"column:tran_code"`
-	SeqNo             uint      `gorm:"column:seq_no"`
-	SlaDuration       uint      `gorm:"column:sla_duration"`
-	SlaDurationType   string    `gorm:"column:sla_duration_type"`
-	ActionStatus      string    `gorm:"column:action_status"`
-	Priority          string    `gorm:"column:priority"`
-	DueDate           string    `gorm:"column:due_date"`
-	DepartmentCode    string    `gorm:"column:department_code"`
-	TeamsCode         string    `gorm:"column:teams_code"`
-	CreatedAt         time.Time `gorm:"column:created_at"`
-	UpdatedID         uint64    `gorm:"column:updated_id"`
-	TaskName          string    `gorm:"column:task_name"`
-	TaskDescription   string    `gorm:"column:task_description"`
-	AssignedTo        uint      `gorm:"column:assigned_to"`
-	AssignedAt        time.Time `gorm:"column:assigned_at"`
-	StartedAt         time.Time `gorm:"column:started_at"`
-	CompletedAt       time.Time `gorm:"column:completed_at"`
-	SlaViolation      bool      `gorm:"column:sla_violation"`
-	Comments          string    `gorm:"column:comments"`
-	Attachments       string    `gorm:"column:attachments"`
-	ReqRefData        string    `gorm:"column:req_ref_data"`
-	ReqRefType        string    `gorm:"column:req_ref_type"`
-	AssignedUser      string    `gorm:"column:assigned_user"`
+	ID                 uint      `gorm:"column:id"`
+	CompanyID          uint      `gorm:"column:company_id"`
+	TaskID             uint      `gorm:"column:task_id"`
+	ActionName         string    `gorm:"column:action_name"`
+	ActionDescription  string    `gorm:"column:action_description"`
+	TranCode           string    `gorm:"column:tran_code"`
+	SeqNo              uint      `gorm:"column:seq_no"`
+	SlaDuration        uint      `gorm:"column:sla_duration"`
+	SlaDurationType    string    `gorm:"column:sla_duration_type"`
+	ActionStatus       string    `gorm:"column:action_status"`
+	Priority           string    `gorm:"column:priority"`
+	DueDate            string    `gorm:"column:due_date"`
+	DepartmentCode     string    `gorm:"column:department_code"`
+	TeamsCode          string    `gorm:"column:teams_code"`
+	CreatedAt          time.Time `gorm:"column:created_at"`
+	UpdatedID          uint64    `gorm:"column:updated_id"`
+	TaskName           string    `gorm:"column:task_name"`
+	TaskDescription    string    `gorm:"column:task_description"`
+	ActionAssignmentId uint      `gorm:"column:action_assignment_id"`
+	AssignedTo         uint      `gorm:"column:assigned_to"`
+	AssignedAt         time.Time `gorm:"column:assigned_at"`
+	StartedAt          time.Time `gorm:"column:started_at"`
+	CompletedAt        time.Time `gorm:"column:completed_at"`
+	SlaViolation       bool      `gorm:"column:sla_violation"`
+	Comments           string    `gorm:"column:comments"`
+	Attachments        string    `gorm:"column:attachments"`
+	ReqRefData         string    `gorm:"column:req_ref_data"`
+	ReqRefType         string    `gorm:"column:req_ref_type"`
+	AssignedUser       string    `gorm:"column:assigned_user"`
 }
 
 // TableName overrides the default table name for GORM

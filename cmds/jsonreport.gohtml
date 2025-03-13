@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: navy; font-size: 22px; text-align: center; }
+        h2 { color: black; font-size: 16px; text-align: center; }
+        h3 { color: black; font-size: 11px; text-align: center; }
+        h4 { color: black; font-size: 12px; text-align: right; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid black; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .footer { text-align: center; font-size: 12px; margin-top: 20px; }
+        .page-break { page-break-after: always; }
+        .bold { font-weight: bold; }
+        .context-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: fixed; }
+        .context-table td { border: 1px solid #ddd; padding: 10px; }
+        .context-key { background-color: #f4f4f4; font-weight: bold; width: 25%; }
+        .context-value { background-color: #fafafa; width: 25%; }
+        .context-table tr:nth-child(even) { background-color: #f9f9f9; }
+        .right-align { text-align: right; }
+        .center-align { text-align: center; }
+        .left-align { text-align: left; }
+    </style>
+</head>
+<body>
+
+{{range $pageIndex, $page := .Pages}}
+    <div class="page">
+        <!-- Header -->
+        <h2>{{$.CoName}}</h2>
+        <h3>{{$.CoAddress}}</h3>
+        <h1>{{$.Title}}</h1> 
+        <h4>Date: {{$.Date}}</h4>
+
+<!-- Context Data -->
+{{if $.Context}}
+<table class="context-table">
+    {{ $pairCount := 2 }}  <!-- Default: 2 values per row (Portrait) -->
+    
+    {{ if eq $.Orientation "Landscape" }}
+		{{ with 3 }} {{ $pairCount = . }} {{ end }}<!-- Landscape: 3 values per row -->
+    {{ end }}
+
+    {{$count := 0}}
+    <tr>
+    {{range $index, $contextRow := $.Context}}
+	{{$isRightAligned := false}}
+	    {{range $key, $value := $contextRow}}
+		<!-- Check if the key is in AlignRight list -->
+		{{range $.AlignRight}}
+		   {{if eq (printf "%v" .) (printf "%v" $key)}}
+				{{$isRightAligned = true}}
+			{{end}}
+		{{end}}
+		    <td class="context-key">{{$key}}</td>
+            <td class="context-value {{if $isRightAligned}}right-align{{end}}">{{$value}}</td>
+            {{$count = add1 $count}}
+
+            <!-- Start new row after every $pairCount values -->
+            {{if eq (mod1 $count $pairCount) 0}}</tr><tr>{{end}}  
+        {{end}}
+    {{end}}
+
+	<!-- Close row if there are remaining unclosed cells -->
+	{{if ne (mod1 $count $pairCount) 0}}
+		</tr>
+	{{end}}
+</table>
+{{end}}
+		
+        <!-- Table -->
+        <table>
+            <tr>
+                {{range $.Headers}}
+                    <th class="center-align">{{.}}</th>
+                {{end}}
+            </tr>
+
+            {{range $records := $page}}
+            <tr>
+                {{range $.Headers}}
+                    <td 
+                        {{if inList $.AlignRight .}} class="right-align"
+                        {{else if inList $.AlignLeft .}} class="left-align"
+                        {{else if inList $.AlignCenter .}} class="center-align"
+                        {{end}}>
+                        {{ $value := index $records . }} <!-- Get field value -->
+                        {{with index $.Formats .}}
+                            {{ $value . }}  <!-- Apply formatting if available -->
+                        {{else}}
+                            {{$value}}  <!-- Print raw value if no formatting -->
+                        {{end}}
+                    </td>
+                {{end}}
+            </tr>
+            {{end}}
+
+            <!-- Page Subtotal -->
+            {{if and $.PageSubtotals}}
+            <tr class="bold">
+                {{range $.Headers}}
+                    <td class="center-align">
+					{{with index (index $.PageSubtotals $pageIndex) .}}{{.}}{{end}}</td>
+                {{end}}
+            </tr>
+            {{end}}
+        </table>
+
+        <!-- Footer -->
+        <div class="footer">Page {{$pageIndex | add1}} of {{$.TotalPages}}</div>
+
+        <!-- Add Page Break Except for Last Page -->
+        {{if lt $pageIndex (sub1 $.TotalPages)}}
+            <div class="page-break"></div>
+        {{end}}
+    </div>
+{{end}}
+
+
+<!-- Add Page Break Before Final Totals -->
+   <div class="page-break"></div>
+		
+<!-- Final Totals on Last Page -->
+{{if and $.PageSubtotals}}
+<div class="page">
+   <div class="page">
+        <!-- Header -->
+        <h2>{{$.CoName}}</h2>
+        <h3>{{$.CoAddress}}</h3>
+        <h1>{{$.Title}}</h1> 
+        <h4>Date: {{$.Date}}</h4>
+
+<!-- Context Data -->
+{{if $.Context}}
+<table class="context-table">
+    {{ $pairCount := 2 }}  <!-- Default: 2 values per row (Portrait) -->
+    
+    {{ if eq $.Orientation "Landscape" }}
+		{{ with 3 }} {{ $pairCount = . }} {{ end }}<!-- Landscape: 3 values per row -->
+    {{ end }}
+
+    {{$count := 0}}
+    <tr>
+    {{range $index, $contextRow := $.Context}}
+	{{$isRightAligned := false}}
+	    {{range $key, $value := $contextRow}}
+		<!-- Check if the key is in AlignRight list -->
+		{{range $.AlignRight}}
+		   {{if eq (printf "%v" .) (printf "%v" $key)}}
+				{{$isRightAligned = true}}
+			{{end}}
+		{{end}}
+		    <td class="context-key">{{$key}}</td>
+            <td class="context-value {{if $isRightAligned}}right-align{{end}}">{{$value}}</td>
+            {{$count = add1 $count}}
+
+            <!-- Start new row after every $pairCount values -->
+            {{if eq (mod1 $count $pairCount) 0}}</tr><tr>{{end}}  
+        {{end}}
+    {{end}}
+
+	<!-- Close row if there are remaining unclosed cells -->
+	{{if ne (mod1 $count $pairCount) 0}}
+		</tr>
+	{{end}}
+</table>
+{{end}}
+
+    <h1>Final Summary</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="center-align">Final Counts</th>
+                <th class="center-align">Final Totals</th>
+                <th class="center-align">Final Averages</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <!-- Final Counts -->
+                <td>
+                    {{range $key, $value := $.FinalCounts}}
+                        {{if $value}} <!-- Ignore nil or blank values -->
+                        <div class="center-align"><strong>{{$key}}:</strong> {{$value}}</div>
+                        {{end}}
+                    {{end}}
+                </td>
+
+                <!-- Final Totals -->
+                <td>
+                    {{range $key, $value := $.FinalTotals}}
+                        {{if $value}} <!-- Ignore nil or blank values -->
+                        <div class="center-align"><strong>{{$key}}:</strong> {{$value}}</div>
+                        {{end}}
+                    {{end}}
+                </td>
+
+                <!-- Final Averages -->
+                <td>
+                    {{range $key, $value := $.FinalAverages}}
+                        {{if $value}} <!-- Ignore nil or blank values -->
+                        <div class="center-align"><strong>{{$key}}:</strong> {{$value}}</div>
+                        {{end}}
+                    {{end}}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">Final Page</div>
+</div>
+{{end}}
+
+</body>
+</html>

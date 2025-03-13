@@ -11,6 +11,7 @@ import (
 
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
 

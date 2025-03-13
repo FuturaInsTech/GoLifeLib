@@ -3,9 +3,16 @@ package utilities
 import (
 	"fmt"
 	"html/template"
+	"io"
+	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/FuturaInsTech/GoLifeLib/models"
+	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+	"gopkg.in/gomail.v2"
+	"gorm.io/gorm"
 )
 
 func FormatIndianNumber(amount float64) string {
@@ -145,4 +152,189 @@ func formatNumber(value interface{}, fds string) string {
 		famount = integralpart
 	}
 	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+// This Function has to be used when an email is trigger through communication (Online)
+func EmailTrigger(icommuncationId, itempName string, pdfData []byte, txn *gorm.DB) error {
+	var communication models.Communication
+	result := txn.First(&communication, "id = ? and template_name = ?", icommuncationId, itempName)
+	if result.Error != nil {
+		return fmt.Errorf("failed to read communication")
+	}
+
+	var client models.Client
+	result = txn.First(&client, "id = ?", communication.ClientID)
+	if result.Error != nil {
+		return fmt.Errorf("failed to read Client")
+	}
+
+	if communication.EmailAllowed == "Y" {
+		sender := communication.CompanyEmail
+		var p0033data paramTypes.P0033Data
+		var extradatap0033 paramTypes.Extradata = &p0033data
+		err := GetItemD(int(communication.CompanyID), "P0033", itempName, communication.EffectiveDate, &extradatap0033)
+		if err != nil {
+			return err
+		}
+		receiver := client.ClientEmail
+		password := p0033data.SenderPassword
+		smtpServer := p0033data.SMTPServer
+		smtpPort := p0033data.SMTPPort
+		emailBody := p0033data.Body
+		m := gomail.NewMessage()
+		m.SetHeader("From", sender)
+		m.SetHeader("To", receiver)
+		m.SetHeader("Subject", p0033data.Subject)
+		m.SetBody("text/plain", emailBody)
+		iDateTime := time.Now().Format("20060102150405")
+
+		m.Attach(communication.TemplateName+iDateTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
+			_, err := w.Write(pdfData)
+			return err
+		}))
+
+		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+		d.SSL = true
+
+		if err := d.DialAndSend(m); err != nil {
+			log.Printf("Failed to send email: %v", err)
+			return err
+		}
+
+		log.Println("Email sent successfully with attachment via office SMTP")
+		return nil
+	}
+	return nil
+}
+
+// This Function has to be used when  an email is triggered through communication.  Especially fpr Batch
+func EmailTriggerN(icommunication models.Communication, pdfData []byte, txn *gorm.DB) error {
+
+	var client models.Client
+	result := txn.First(&client, "id = ?", icommunication.ClientID)
+	if result.Error != nil {
+		return fmt.Errorf("failed to read Client")
+	}
+	if client.ClientEmail == "" {
+		return fmt.Errorf("Email is not Found")
+	}
+	iTemplate := icommunication.TemplateName
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	err := GetItemD(int(icommunication.CompanyID), "P0033", iTemplate, icommunication.EffectiveDate, &extradatap0033)
+	if err != nil {
+		return err
+	}
+	sender := icommunication.CompanyEmail
+	receiver := client.ClientEmail
+	password := p0033data.SenderPassword
+	smtpServer := p0033data.SMTPServer
+	smtpPort := p0033data.SMTPPort
+	emailBody := p0033data.Body
+	m := gomail.NewMessage()
+	m.SetHeader("From", sender)
+	m.SetHeader("To", receiver)
+	m.SetHeader("Subject", p0033data.Subject)
+	m.SetBody("text/plain", emailBody)
+	iDateTime := time.Now().Format("20060102150405")
+
+	m.Attach(icommunication.TemplateName+iDateTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
+		_, err := w.Write(pdfData)
+		return err
+	}))
+
+	d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+	d.SSL = true
+
+	if err := d.DialAndSend(m); err != nil {
+		log.Printf("Failed to send email: %v", err)
+		return err
+	}
+	// Send Mail to Agent if it is configured in Communication (P0033)
+	if icommunication.AgentEmailAllowed == "Y" {
+		var agntenq models.Agency
+		result := txn.First(&agntenq, "id = ?", icommunication.AgencyID)
+		if result.Error != nil {
+			return fmt.Errorf("failed to read Agency")
+		}
+		var agclient models.Client
+		result = txn.First(&agclient, "id = ?", agntenq.ClientID)
+		if result.Error != nil {
+			return fmt.Errorf("failed to read Client")
+		}
+
+		if agclient.ClientEmail != "" {
+			sender := icommunication.CompanyEmail
+
+			receiver := agclient.ClientEmail
+			iName := GetName(client.CompanyID, client.ID)
+			emailBody := fmt.Sprintf(
+				"Hi Sir/Madam,\n\n"+
+					"Following Email was sent to your Customer %d %s\n\n"+
+					"I am from Futura Instech..\n\n"+
+					"Thank you!",
+				client.ID, iName,
+			)
+
+			m := gomail.NewMessage()
+			m.SetHeader("From", sender)
+			m.SetHeader("To", receiver)
+			m.SetHeader("Subject", "Mail Sent to Your Customer")
+			m.SetBody("text/plain", emailBody)
+			d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+			d.SSL = true
+
+			if err := d.DialAndSend(m); err != nil {
+				log.Printf("Failed to send email: %v", err)
+				return err
+			}
+
+			log.Println("Email sent successfully with attachment via office SMTP")
+			return nil
+		}
+
+	}
+	return nil
+}
+
+// This function has to be used when an email is triggered with out Communication. Especially for Batch Reports
+func EmailTriggerforReport(iCompany uint, iReference uint, iClient uint, iEmail string, iEffDate string, itempName string, pdfData []byte, txn *gorm.DB) error {
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	err := GetItemD(int(iCompany), "P0033", itempName, iEffDate, &extradatap0033)
+	if err != nil {
+		return err
+	}
+
+	sender := p0033data.CompanyEmail
+	receiver := iEmail
+	password := p0033data.SenderPassword
+	smtpServer := p0033data.SMTPServer
+	smtpPort := p0033data.SMTPPort
+
+	emailBody := p0033data.Body
+	m := gomail.NewMessage()
+	m.SetHeader("From", sender)
+	m.SetHeader("To", receiver)
+	m.SetHeader("Subject", p0033data.Subject)
+	m.SetBody("text/plain", emailBody)
+	iTime := time.Now().Format("20060102150405")
+	iClientnumstr := strconv.Itoa(int(iClient))
+
+	m.Attach(itempName+iClientnumstr+iTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
+		_, err := w.Write(pdfData)
+		return err
+	}))
+
+	d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+	d.SSL = true
+
+	if err := d.DialAndSend(m); err != nil {
+		log.Printf("Failed to send email: %v", err)
+		return err
+	}
+
+	log.Println("Email sent successfully with attachment via office SMTP")
+	return nil
 }

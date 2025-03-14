@@ -4,9 +4,9 @@
 "Title": "Agent Commission Report",
 "date": "22/02/2025",
 
-"Aggregation": {"Count": ["Policy Number"], "Total": ["Commission Amount"], "Average": ["Commission Amount"]},
+"Aggregation": {"Count": ["Policy Number", "Effective Date"], "Total": ["Policy Number", "Commission Amount"], "Average": ["Policy Number", "Commission Amount"]},
 "Formats": {"Commission Amount": "c2", "Policy Number": "d0", "Total": "a2","AgentNumber": "d0","BankAccountNo":"d0", "PaymentNo":"d0", "TotalAmount": "a2"},
-"Layout": {"Lines": "16", "Orientation": "L", "PageTotal": "Y"},
+"Layout": {"Lines": "24", "Orientation": "P", "PageTotal": "Y"},
 "Order": ["Policy Number", "Coverage", "Effective Date", "Transaction",  "Commission Amount"],
 
 "AlignFields": {

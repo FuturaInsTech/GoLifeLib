@@ -689,11 +689,11 @@ func main() {
 				pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
 			}
 		}
-		for field := range inputData.Aggregation.Average {
-			if format, exists := inputData.Formats[field]; exists {
-				pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
-			}
-		}
+		// for field := range inputData.Aggregation.Average {
+		// 	if format, exists := inputData.Formats[field]; exists {
+		// 		pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
+		// 	}
+		// }
 	}
 
 	// Apply formatNumber formatting for Final Totals

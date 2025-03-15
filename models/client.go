@@ -28,9 +28,12 @@ type Client struct {
 	ClientAltMobCode string `gorm:"type:varchar(05)"`
 	ClientAltMobile  string `gorm:"type:varchar(20)"`
 	ClientWorkID     uint
-	Addresses        []Address
-	Nominees         []Nominee
-	LeadDetails      []LeadDetail
+	CustomerPortal   string `gorm:"type:varchar(01)"` // Yes or No
+	CusomterDnd      string `gorm:"type:varchar(01)"` // Yes or No
+
+	Addresses   []Address
+	Nominees    []Nominee
+	LeadDetails []LeadDetail
 	//QHeaders          []quotation.QHeader
 	Agencies       []Agency
 	Banks          []Bank

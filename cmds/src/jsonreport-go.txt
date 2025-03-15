@@ -269,12 +269,14 @@ func extractAggregationFields(jsonData map[string]interface{}) AggregationFields
 func computeAggregates(pages [][]map[string]interface{}, aggFields AggregationFields) ([]map[string]interface{}, map[string]interface{}, map[string]interface{}, map[string]interface{}) {
 	subTotals := make([]map[string]interface{}, len(pages))
 	finalTotals := make(map[string]float64)
-	finalCount := make(map[string]int)   // To track count for count fields
+	finalCount := make(map[string]int) // To track count for count fields
+	finalAverage := make(map[string]float64)
 	countTracker := make(map[string]int) // For average calculation tracking
 
 	for i, page := range pages {
 		pageTotal := make(map[string]float64)
 		pageCount := make(map[string]int) // To track count for count fields
+		pageAverage := make(map[string]float64)
 
 		for _, record := range page {
 			// Process "Total" Fields
@@ -299,12 +301,12 @@ func computeAggregates(pages [][]map[string]interface{}, aggFields AggregationFi
 			// Process "Average" Fields
 			for field := range aggFields.Average {
 				if value, ok := record[field].(float64); ok {
-					pageTotal[field] += value
-					finalTotals[field] += value
+					pageAverage[field] += value
+					finalAverage[field] += value
 					countTracker[field]++
 				} else if value, ok := record[field].(int); ok {
-					pageTotal[field] += float64(value)
-					finalTotals[field] += float64(value)
+					pageAverage[field] += float64(value)
+					finalAverage[field] += float64(value)
 					countTracker[field]++
 				}
 			}
@@ -318,13 +320,13 @@ func computeAggregates(pages [][]map[string]interface{}, aggFields AggregationFi
 		for field := range aggFields.Count {
 			subTotals[i][field] = pageCount[field] // Store the count for that page
 		}
-		for field := range aggFields.Average {
-			if countTracker[field] > 0 {
-				subTotals[i][field] = pageTotal[field] / float64(countTracker[field])
-			} else {
-				subTotals[i][field] = 0 // Avoid division by zero
-			}
-		}
+		// for field := range aggFields.Average {
+		// 	if countTracker[field] > 0 {
+		// 		subTotals[i][field] = pageAverage[field] / float64(countTracker[field])
+		// 	} else {
+		// 		subTotals[i][field] = 0 // Avoid division by zero
+		// 	}
+		// }
 	}
 
 	// Compute final totals (only for required fields)
@@ -339,7 +341,7 @@ func computeAggregates(pages [][]map[string]interface{}, aggFields AggregationFi
 	}
 	for field := range aggFields.Average {
 		if countTracker[field] > 0 {
-			finalAverageMap[field] = finalTotals[field] / float64(finalCount[field])
+			finalAverageMap[field] = finalAverage[field] / float64(countTracker[field])
 		} else {
 			finalAverageMap[field] = 0
 		}
@@ -687,11 +689,11 @@ func main() {
 				pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
 			}
 		}
-		for field := range inputData.Aggregation.Average {
-			if format, exists := inputData.Formats[field]; exists {
-				pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
-			}
-		}
+		// for field := range inputData.Aggregation.Average {
+		// 	if format, exists := inputData.Formats[field]; exists {
+		// 		pagesubTotals[pageIndex][field] = formatNumber(subtotalMap[field], format.(string))
+		// 	}
+		// }
 	}
 
 	// Apply formatNumber formatting for Final Totals

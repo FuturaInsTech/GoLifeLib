@@ -20,6 +20,7 @@ type Agency struct {
 	ClientID          uint
 	Aadhar            string `gorm:"type:varchar(020)"`
 	Pan               string `gorm:"type:varchar(20)"`
+	AgentPortal       string `gorm:"type:varchar(01)"`
 	// AddressID         uint
 	LeadAllocations []LeadAllocation
 	BankID          uint

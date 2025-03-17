@@ -1575,6 +1575,7 @@ type P0055Data struct {
 	BankAccount     string // Bank Account No of Insurance Company
 	GlAccount       string // GL Code for Posting for the Billing Type
 	PayingAuthority string // Y or N through P0050
+	Vpa             string // Virtual Payment Authority Code say 8825761193@upi etc.,
 }
 
 func (m *P0055Data) ParseData(datamap map[string]interface{}) {

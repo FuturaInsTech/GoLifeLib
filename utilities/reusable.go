@@ -338,3 +338,100 @@ func EmailTriggerforReport(iCompany uint, iReference uint, iClient uint, iEmail 
 	log.Println("Email sent successfully with attachment via office SMTP")
 	return nil
 }
+
+func createFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"formatNumber": formatNumber,
+	}
+}
+
+func formatNumber(value interface{}, fds string) string {
+	integralpart := ""
+	decimalpart := ""
+	famt := ""
+	famount := ""
+	decimallen, _ := strconv.Atoi(string(fds[1]))
+	if _, ok := value.(float64); ok {
+		famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(int); ok {
+		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(string); ok {
+		famt = value.(string)
+	}
+	parts := strings.Split(famt, ".")
+	if fds[0] == 'a' || fds[0] == 'A' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'c' || fds[0] == 'C' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'd' || fds[0] == 'D' {
+		integralpart = parts[0]
+	} else {
+		integralpart = parts[0]
+	}
+
+	if len(parts) > 1 {
+		decimalpart = formatDecimal(parts[1], fds[1])
+		famount = integralpart + decimalpart
+	} else {
+		famount = integralpart
+	}
+	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+func formatInteger(famt string, ctype byte) string {
+	// Handle the Indian and Western numbering formats
+	n := len(famt)
+	if n <= 3 {
+		// No formatting needed for numbers with 3 or fewer digits
+		return famt
+	}
+
+	// Format the first three digits (thousands)
+	result := famt[n-3:]
+
+	if ctype == 'a' || ctype == 'A' {
+		// Format the remaining digits in groups of two (lakhs, crores, etc.)
+		for i := n - 3; i > 0; i -= 2 {
+			start := i - 2
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+	if ctype == 'c' || ctype == 'C' {
+		// Format the remaining digits in groups of three (millions, billions, etc.)
+		for i := n - 3; i > 0; i -= 3 {
+			start := i - 3
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+
+	// Return the formatted integer
+	return result
+}
+
+func formatDecimal(famt string, ctype byte) string {
+	decimalpart := ""
+	decimallen, _ := strconv.Atoi(string(ctype))
+	//damt, _ := strconv.Atoi(string(famt))
+	var decimalFloat float64 = 0
+	if decimallen == 0 {
+		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
+	} else {
+		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
+	}
+	if decimallen == 0 {
+		return decimalpart
+	} else {
+		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
+		decimalpart = fmt.Sprintf(formatString, decimalFloat)
+		decimalpart = decimalpart[1:] // Remove the leading "0"
+		return decimalpart
+	}
+}

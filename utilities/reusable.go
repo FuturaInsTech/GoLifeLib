@@ -339,13 +339,13 @@ func EmailTriggerforReport(iCompany uint, iReference uint, iClient uint, iEmail 
 	return nil
 }
 
-func createFuncMap() template.FuncMap {
+func CeateFuncMap() template.FuncMap {
 	return template.FuncMap{
 		"formatNumber": formatNumber,
 	}
 }
 
-func formatNumber(value interface{}, fds string) string {
+func FormatNumber(value interface{}, fds string) string {
 	integralpart := ""
 	decimalpart := ""
 	famt := ""
@@ -380,7 +380,7 @@ func formatNumber(value interface{}, fds string) string {
 	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
 }
 
-func formatInteger(famt string, ctype byte) string {
+func FormatInteger(famt string, ctype byte) string {
 	// Handle the Indian and Western numbering formats
 	n := len(famt)
 	if n <= 3 {
@@ -416,7 +416,7 @@ func formatInteger(famt string, ctype byte) string {
 	return result
 }
 
-func formatDecimal(famt string, ctype byte) string {
+func FormatDecimal(famt string, ctype byte) string {
 	decimalpart := ""
 	decimallen, _ := strconv.Atoi(string(ctype))
 	//damt, _ := strconv.Atoi(string(famt))

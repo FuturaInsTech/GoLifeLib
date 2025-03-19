@@ -214,6 +214,7 @@ type ActionView struct {
 	SlaViolation       bool      `gorm:"column:sla_violation"`
 	Comments           string    `gorm:"column:comments"`
 	Attachments        string    `gorm:"column:attachments"`
+	RequestId          uint      `gorm:"column:request_id"`
 	ReqRefData         string    `gorm:"column:req_ref_data"`
 	ReqRefType         string    `gorm:"column:req_ref_type"`
 	AssignedUser       string    `gorm:"column:assigned_user"`

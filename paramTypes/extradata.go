@@ -2597,31 +2597,86 @@ func (m *W0013Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
-// type W0014Data struct {
-// 	FieldArray []W0014
-// }
-// type W0014 struct {
-// 	Percentage         float64
-// 	ColourCode         string
+// Request Status
+type W0014Data struct {
+	FieldArray []W0014
+}
+type W0014 struct {
+	RequestStatus string // p0050
+}
 
-// }
+func (m *W0014Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
 
-// func (m *W0014Data) ParseData(datamap map[string]interface{}) {
-// 	jsonStr, err := json.Marshal(datamap)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
 
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	// Convert json string to struct
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
 
-// 	if err := json.Unmarshal(jsonStr, &m); err != nil {
-// 		fmt.Println(err)
-// 	}
+}
 
-// }
+func (m *W0014Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
 
-// func (m *W0014Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
 
-// 	return nil
+}
 
-// }
+// Task Completed Status
+type W0015Data struct {
+	FieldArray []W0015
+}
+type W0015 struct {
+	TaskCompletedStatus string // p0050
+}
+
+func (m *W0015Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0015Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// Request Completed Status
+type W0016Data struct {
+	FieldArray []W0016
+}
+type W0016 struct {
+	RequestCompletedStatus string // p0050
+}
+
+func (m *W0016Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *W0016Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

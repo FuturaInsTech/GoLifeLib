@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -434,4 +435,30 @@ func FormatDecimal(famt string, ctype byte) string {
 		decimalpart = decimalpart[1:] // Remove the leading "0"
 		return decimalpart
 	}
+}
+
+func MoveFile(sourcePath, destPath string) error {
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("error opening source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return fmt.Errorf("error creating destination file: %w", err)
+	}
+	defer destFile.Close()
+
+	// Copy file content
+	if _, err := io.Copy(destFile, sourceFile); err != nil {
+		return fmt.Errorf("error copying file: %w", err)
+	}
+
+	// Remove the original file after copying
+	if err := os.Remove(sourcePath); err != nil {
+		return fmt.Errorf("error deleting source file: %w", err)
+	}
+
+	return nil
 }

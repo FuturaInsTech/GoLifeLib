@@ -156,24 +156,19 @@ func formatNumber(value interface{}, fds string) string {
 }
 
 // This Function has to be used when an email is trigger through communication (Online)
-func EmailTrigger(icommuncationId, itempName string, pdfData []byte, txn *gorm.DB) error {
-	var communication models.Communication
-	result := txn.First(&communication, "id = ? and template_name = ?", icommuncationId, itempName)
-	if result.Error != nil {
-		return fmt.Errorf("failed to read communication")
-	}
+func EmailTrigger(icommuncation models.Communication, itempName string, pdfData []byte, txn *gorm.DB) error {
 
 	var client models.Client
-	result = txn.First(&client, "id = ?", communication.ClientID)
+	result := txn.First(&client, "id = ?", icommuncation.ClientID)
 	if result.Error != nil {
 		return fmt.Errorf("failed to read Client")
 	}
 
-	if communication.EmailAllowed == "Y" {
-		sender := communication.CompanyEmail
+	if icommuncation.EmailAllowed == "Y" {
+		sender := icommuncation.CompanyEmail
 		var p0033data paramTypes.P0033Data
 		var extradatap0033 paramTypes.Extradata = &p0033data
-		err := GetItemD(int(communication.CompanyID), "P0033", itempName, communication.EffectiveDate, &extradatap0033)
+		err := GetItemD(int(icommuncation.CompanyID), "P0033", itempName, icommuncation.EffectiveDate, &extradatap0033)
 		if err != nil {
 			return err
 		}
@@ -189,7 +184,7 @@ func EmailTrigger(icommuncationId, itempName string, pdfData []byte, txn *gorm.D
 		m.SetBody("text/plain", emailBody)
 		iDateTime := time.Now().Format("20060102150405")
 
-		m.Attach(communication.TemplateName+iDateTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
+		m.Attach(icommuncation.TemplateName+"_"+fmt.Sprint(icommuncation.ClientID)+"_"+fmt.Sprint(icommuncation.PolicyID)+"_"+iDateTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := w.Write(pdfData)
 			return err
 		}))

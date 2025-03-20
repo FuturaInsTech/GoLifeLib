@@ -1171,6 +1171,7 @@ type P0033Data struct {
 	SMTPPort             int
 	Body                 string
 	Subject              string
+	Online               string // (Y/N)
 }
 
 func (m *P0033Data) ParseData(datamap map[string]interface{}) {

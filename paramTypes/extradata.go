@@ -1172,6 +1172,8 @@ type P0033Data struct {
 	Body                 string
 	Subject              string
 	Online               string // (Y/N)
+	CarbonCopy           string // (Y/N)
+	BlindCarbonCopy      string // (Y/N)
 }
 
 func (m *P0033Data) ParseData(datamap map[string]interface{}) {

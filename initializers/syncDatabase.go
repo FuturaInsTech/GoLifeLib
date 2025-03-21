@@ -52,7 +52,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.TDFPolicy{})
 	//DB.AutoMigrate(&sudmodels.UIMaster{})
 	// DB.AutoMigrate(&models.TDFParam{})
-	// DB.AutoMigrate(&models.SurvB{})
+	DB.AutoMigrate(&models.SurvB{})
 	DB.AutoMigrate(&models.Communication{})
 	// DB.AutoMigrate(&models.Uwreason{})
 	// DB.AutoMigrate(&models.MedProvider{})

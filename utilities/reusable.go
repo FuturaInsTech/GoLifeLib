@@ -1,11 +1,14 @@
 package utilities
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -455,5 +458,190 @@ func MoveFile(sourcePath, destPath string) error {
 		return fmt.Errorf("error deleting source file: %w", err)
 	}
 
+	return nil
+}
+
+func GetReportforOnline(icommuncation models.Communication, itempName string, txn *gorm.DB) error {
+	defaultpath := os.Getenv("REPORTPDF_SAVE_PATH")
+	parts := strings.Split(icommuncation.TemplatePath, "/")
+	templateFile := parts[len(parts)-1] // Extract gohtml file name
+
+	imgFolder := strings.TrimSuffix(templateFile, "."+strings.Split(templateFile, ".")[1])
+
+	remainingPath := strings.Join(parts[:len(parts)-1], "/")
+	absolutePath, err := filepath.Abs(remainingPath)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path: %w", err)
+	}
+
+	iPath := filepath.Join(absolutePath, "static")
+	imPath := filepath.Join(iPath, imgFolder)
+
+	imagePath := strings.ReplaceAll(imPath, "\\", "/")
+
+	// Ensure ExtractedData is initialized
+	if icommuncation.ExtractedData == nil {
+		icommuncation.ExtractedData = make(map[string]interface{})
+	}
+	icommuncation.ExtractedData["Img"] = imagePath
+
+	// Parse and execute template
+	funcMap := CreateFuncMap()
+	tmpl, err := template.New(templateFile).Funcs(funcMap).ParseFiles(icommuncation.TemplatePath)
+	if err != nil {
+		return fmt.Errorf("error loading template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, icommuncation.ExtractedData)
+	if err != nil {
+		return fmt.Errorf("error executing template: %w", err)
+	}
+
+	// Create PDF from the template execution output
+	r := NewRequestPdf(buf.String())
+	pdffileName := fmt.Sprintf("%s_%d_%d_%s.pdf", icommuncation.TemplateName, icommuncation.ClientID, icommuncation.PolicyID, time.Now().Format("20060102150405"))
+
+	var pdfBuf bytes.Buffer
+	success, err := r.GeneratePDFP(&pdfBuf, icommuncation.CompanyID, icommuncation.ClientID, txn)
+	if err != nil || !success {
+		return fmt.Errorf("error generating PDF: %w", err)
+	}
+
+	// Save the PDF to the file system if needed
+	comFileName := filepath.Join(defaultpath, pdffileName)
+	if icommuncation.PDFPath != "" {
+		comFileName = filepath.Join(icommuncation.PDFPath, pdffileName)
+	}
+	comFileName = filepath.ToSlash(filepath.Clean(comFileName))
+
+	err = os.WriteFile(comFileName, pdfBuf.Bytes(), 0644)
+	if err != nil {
+		return fmt.Errorf("error saving PDF: %w", err)
+	}
+
+	// Send email if allowed
+	if icommuncation.EmailAllowed == "Y" {
+		err = EmailTrigger(icommuncation, itempName, pdfBuf.Bytes(), txn)
+		if err != nil {
+			return fmt.Errorf("error sending email: %w", err)
+		}
+	}
+
+	// Return the generated PDF buffer
+	return nil
+}
+
+func NewRequestPdf(body string) *RequestPdf {
+	return &RequestPdf{
+		body: body,
+	}
+}
+
+type RequestPdf struct {
+	body string
+}
+
+// parsing template function
+func (r *RequestPdf) ParseTemplate(templateFileName string, data interface{}) error {
+
+	t, err := template.ParseFiles(templateFileName)
+	if err != nil {
+		return err
+	}
+	buf := new(bytes.Buffer)
+	if err = t.Execute(buf, data); err != nil {
+		return err
+	}
+	r.body = buf.String()
+
+	return nil
+}
+
+func (r *RequestPdf) GeneratePDFP(inputFile io.Writer, iUserco uint, iClientid uint, txn *gorm.DB) (bool, error) {
+
+	opassword := "FuturaInsTech"
+	var clntenq models.Client
+	ipassword := ""
+
+	result := txn.First(&clntenq, "company_id = ? and id = ?", iUserco, iClientid)
+	// In case no record found, use owner password as user password
+	if result.RowsAffected == 0 {
+		ipassword = opassword
+	} else {
+		ipassword = strconv.Itoa(int(iClientid)) + clntenq.ClientMobile
+	}
+	// Step 1: Generate the PDF
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		return false, fmt.Errorf("failed to create PDF generator: %w", err)
+	}
+
+	page := wkhtmltopdf.NewPageReader(strings.NewReader(r.body))
+	page.EnableLocalFileAccess.Set(true)
+	pdfg.AddPage(page)
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+	pdfg.Dpi.Set(300)
+
+	// Save to temporary file
+	tempFile := "temp.pdf"
+	outFile, err := os.Create(tempFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to create temp PDF file: %w", err)
+	}
+	defer outFile.Close()
+
+	pdfg.SetOutput(outFile)
+	err = pdfg.Create()
+	if err != nil {
+		return false, fmt.Errorf("PDF generation failed: %w", err)
+	}
+
+	// Step 2: Protect the PDF using Python script
+	protectedFile := "protected.pdf"
+	err = EncryptPDF(tempFile, protectedFile, ipassword, opassword)
+	if err != nil {
+		return false, fmt.Errorf("failed to protect PDF: %w", err)
+	}
+
+	// Step 3: Write the password-protected PDF to the writer
+	protectedData, err := os.ReadFile(protectedFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to read protected PDF: %w", err)
+	}
+	_, err = inputFile.Write(protectedData)
+	if err != nil {
+		return false, fmt.Errorf("failed to write protected PDF to output: %w", err)
+	}
+
+	// Cleanup temporary files
+	os.Remove(tempFile)
+	os.Remove(protectedFile)
+
+	return true, nil
+}
+
+func EncryptPDF(inputFile, outputFile, userPassword, ownerPassword string) error {
+	cmd := exec.Command("pdfcpu", "encrypt",
+		"-upw", userPassword, // User password
+		"-opw", ownerPassword, // Owner password
+		"-mode", "rc4", // Encryption mode (RC4)
+		"-key", "128", // Key length (128-bit)
+		"-perm", "all", // Full permissions
+		inputFile, outputFile, // Input and Output files
+	)
+	//pdfcpu encrypt -upw -opw -mode -key -perm
+
+	// Capture errors if any
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	// Run the command
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("pdfcpu encrypt error: %s", stderr.String())
+	}
+
+	fmt.Println("PDF encrypted successfully:", outputFile)
 	return nil
 }

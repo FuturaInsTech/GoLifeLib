@@ -5452,7 +5452,17 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 			communication.ExtractedData = resultMap
 			communication.PDFPath = p0034data.Letters[i].PdfLocation
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
-
+			// New Changes for Online Print and Email Trigger
+			if p0033data.Online == "Y" {
+				err := GetReportforOnline(communication, p0033data.TemplateName, txn)
+				if err != nil {
+					log.Fatalf("Failed to generate report: %v", err)
+				}
+			}
+			communication.Print = "Y"
+			communication.PrintDate = iDate
+			communication.UpdatedID = 1
+			// New Changes Ended
 			results := txn.Create(&communication)
 
 			if results.Error != nil {

@@ -842,17 +842,21 @@ func ValidatePolicy(dbdata map[string]interface{}) (error, DbValError) {
 		policy.AgencyID == 0 || policy.ClientID == 0 || policy.PBillCurr == "" ||
 		policy.PContractCurr == "" || policy.POffice == "" || policy.PReceivedDate == "" ||
 		policy.PUWDate == "" {
-		err := CheckParam(iCompany, "P0018", policy.PRCD)
-		if err != nil {
-			fieldvalerrors = append(fieldvalerrors, err)
+		errorDescription := GetError(iCompany, 1, "E0018")
+		fielderror := map[string]interface{}{
+			"Mandatory Fields": errorDescription,
 		}
+		fieldvalerrors = append(fieldvalerrors, fielderror)
+
 	}
 
 	if policy.PProduct != "" {
-		err := CheckParam(iCompany, "E0018", policy.PProduct)
+		err := CheckParam(iCompany, "Q0005", policy.PProduct)
 		if err != nil {
+			fmt.Println("Found Error")
 			fieldvalerrors = append(fieldvalerrors, err)
 		}
+		fmt.Println(err)
 	}
 
 	if len(fieldvalerrors) > 0 {

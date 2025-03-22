@@ -5438,7 +5438,14 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					for key, value := range oData {
 						resultMap[key] = value
 					}
-
+				case oLetType == "38":
+					oData := PolicyAgentChange(iCompany, iPolicy, iAgency, iClient)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "39":
+					oData := GetBankData(iCompany, iClientWork)
+					resultMap["BankData"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
@@ -645,4 +646,57 @@ func EncryptPDF(inputFile, outputFile, userPassword, ownerPassword string) error
 
 	fmt.Println("PDF encrypted successfully:", outputFile)
 	return nil
+}
+
+func GetBankData(iCompany uint, iBank uint) []interface{} {
+	bankarray := make([]interface{}, 0)
+	var bank models.Bank
+	initializers.DB.Find(&bank, "id = ?", iBank)
+	_, oBanktype, _ := GetParamDesc(iCompany, "P0021", bank.BankType, 1)
+
+	resultOut := map[string]interface{}{
+		"ID":            IDtoPrint(bank.ID),
+		"BankCode":      bank.BankCode,
+		"BankAccountNo": bank.BankAccountNo,
+		"StartDate":     DateConvert(bank.StartDate),
+		"EndDate":       DateConvert(bank.EndDate),
+		"BankType":      oBanktype,
+	}
+	bankarray = append(bankarray, resultOut)
+	return bankarray
+}
+
+func PolicyAgentChange(iCompany uint, iPolicy uint, iAgent uint, iClient uint) map[string]interface{} {
+	var polenq models.Policy
+	result := initializers.DB.Where("company_id = ? AND id = ?", iCompany, iPolicy).Find(&polenq)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+	var agntaddress models.Address
+	result = initializers.DB.Where("company_id = ? AND client_id = ?", iCompany, iClient).Find(&agntaddress)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var poladdress models.Address
+	result = initializers.DB.Where("company_id = ? AND id = ?", iCompany, polenq.AddressID).Find(&poladdress)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	// Create a result map for each loan bill
+	resultOut := map[string]interface{}{
+		"addressline1": poladdress.AddressLine1,
+		"postcode":     poladdress.AddressPostCode,
+		"country":      poladdress.AddressCountry,
+		"state":        poladdress.AddressState,
+		"agntaddress":  agntaddress.AddressLine1,
+		"agntpostcode": agntaddress.AddressPostCode,
+		"agntstate":    agntaddress.AddressState,
+		"agntcountry":  agntaddress.AddressCountry,
+		"policyid":     polenq.ID,
+		"agentid":      iAgent,
+	}
+
+	return resultOut
 }

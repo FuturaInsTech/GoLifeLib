@@ -15,6 +15,7 @@ import (
 
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )

@@ -194,13 +194,30 @@ func EmailTrigger(icommuncation models.Communication, itempName string, pdfData 
 			return err
 		}))
 
-		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
-		d.SSL = true
+		// Following Lines are commented.  We have made it as as async
+		// d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+		// d.SSL = true
 
-		if err := d.DialAndSend(m); err != nil {
-			log.Printf("Failed to send email: %v", err)
-			return err
-		}
+		// if err := d.DialAndSend(m); err != nil {
+		// 	log.Printf("Failed to send email: %v", err)
+		// 	return err
+		// }
+
+		// Configure SMTP dialer
+		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+		d.SSL = true      // Enables SSL
+		d.TLSConfig = nil // Use default TLS settings
+
+		// Send email asynchronously with proper logging
+		go func() {
+			sendStart := time.Now()
+			if err := d.DialAndSend(m); err != nil {
+				log.Printf("Failed to send email: %v", err)
+			} else {
+				log.Printf("Email sent successfully to %s (CC: %s, BCC: %s) in %v",
+					receiver, "", "", time.Since(sendStart))
+			}
+		}()
 
 		log.Println("Email sent successfully with attachment via office SMTP")
 		return nil

@@ -277,6 +277,7 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 			communication.Print = "Y"
 			communication.PrintDate = iDate
 			communication.UpdatedID = 1
+			communication.ID = 0
 			// New Changes Ended
 			results := txn.Create(&communication)
 
@@ -809,7 +810,7 @@ func CreateCommunicationsL(iCompany uint, iHistoryCode string, iTranno uint, iDa
 			communication.ExtractedData = resultMap
 			communication.PDFPath = p0034data.Letters[i].PdfLocation
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
-
+			communication.ID = 0
 			results := txn.Create(&communication)
 
 			if results.Error != nil {

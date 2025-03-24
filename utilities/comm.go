@@ -785,16 +785,16 @@ func CreateCommunicationsL(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					oData := GetLoanData(iCompany, iPolicy, iDate, iAmount1, txn)
 					resultMap["LoanData"] = oData
 				case oLetType == "32":
-					oData := GetAllLoanInterest(iCompany, iPolicy, iDate, txn)
+					oData := GetAllLoanInterestData(iCompany, iPolicy, iDate, txn)
 					resultMap["LoanInterestData"] = oData
 				case oLetType == "33":
-					oData := LoanCap(iCompany, iPolicy, iDate, iFromDate, iToDate, iAmount1, iAmount2, iNo1, txn)
+					oData := LoanCapData(iCompany, iPolicy, iDate, iFromDate, iToDate, iAmount1, iAmount2, iNo1, txn)
 					resultMap["LoanCap"] = oData
 				case oLetType == "34":
 					oData := LoanBillData(iCompany, iPolicy, iDate, txn)
 					resultMap["LoanBillData"] = oData
 				case oLetType == "35":
-					oData := LoanBillsInterest(iCompany, iPolicy, iNo1, iAmount1, txn)
+					oData := LoanBillsInterestData(iCompany, iPolicy, iNo1, iAmount1, txn)
 					resultMap["LoanBillsInterest"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
@@ -2569,7 +2569,7 @@ func GetLoanData(iCompany uint, iPolicy uint, iEffectiveDate string, iOsLoanInte
 // # Outputs  Outstanding Loan and Loan Interest
 //
 // ©  FuturaInsTech
-func GetAllLoanInterest(iCompany uint, iPolicy uint, iEffectiveDate string, txn *gorm.DB) []interface{} {
+func GetAllLoanInterestData(iCompany uint, iPolicy uint, iEffectiveDate string, txn *gorm.DB) []interface{} {
 	var benefitenq []models.Benefit
 	allLoanOs := make([]interface{}, 0)
 	result := txn.Find(&benefitenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
@@ -2625,7 +2625,7 @@ func GetAllLoanInterest(iCompany uint, iPolicy uint, iEffectiveDate string, txn 
 // # Outputs: Loan Capitalized Amount, OpenLoanBal Date, CloseLoanBal Date
 //
 // ©  FuturaInsTech
-func LoanCap(iCompany uint, iPolicy uint, iEffectiveDate string, minLoanBillDueDate string, maxLoanBillDueDate string, itotalcapamount float64, itotalInterest float64, itotalOsDue uint, txn *gorm.DB) []interface{} {
+func LoanCapData(iCompany uint, iPolicy uint, iEffectiveDate string, minLoanBillDueDate string, maxLoanBillDueDate string, itotalcapamount float64, itotalInterest float64, itotalOsDue uint, txn *gorm.DB) []interface{} {
 	allLoanCap := make([]interface{}, 0)
 
 	var loanenq []models.Loan
@@ -2752,7 +2752,7 @@ func LoanBillData(iCompany uint, iPolicy uint, iEffectiveDate string, txn *gorm.
 //
 // ©  FuturaInsTech
 
-func LoanBillsInterest(iCompany uint, iPolicy uint, iSeqNo uint, iCurrentIntDue float64, txn *gorm.DB) map[string]interface{} {
+func LoanBillsInterestData(iCompany uint, iPolicy uint, iSeqNo uint, iCurrentIntDue float64, txn *gorm.DB) map[string]interface{} {
 	var loanbillupd1 []models.LoanBill
 
 	txn.Order("CASE WHEN loan_seq_number = 1 THEN 0 WHEN loan_seq_number = 2 THEN 1 ELSE 2 END").

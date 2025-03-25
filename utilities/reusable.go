@@ -226,7 +226,6 @@ func EmailTrigger(icommuncation models.Communication, itempName string, pdfData 
 
 // This Function has to be used when  an email is triggered through communication.  Especially fpr Batch
 func EmailTriggerN(icommunication models.Communication, pdfData []byte, txn *gorm.DB) error {
-
 	var client models.Client
 	result := txn.First(&client, "id = ?", icommunication.ClientID)
 	if result.Error != nil {
@@ -235,6 +234,7 @@ func EmailTriggerN(icommunication models.Communication, pdfData []byte, txn *gor
 	if client.ClientEmail == "" {
 		return fmt.Errorf("Email is not Found")
 	}
+
 	iTemplate := icommunication.TemplateName
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
@@ -242,32 +242,42 @@ func EmailTriggerN(icommunication models.Communication, pdfData []byte, txn *gor
 	if err != nil {
 		return err
 	}
+
 	sender := icommunication.CompanyEmail
 	receiver := client.ClientEmail
 	password := p0033data.SenderPassword
 	smtpServer := p0033data.SMTPServer
 	smtpPort := p0033data.SMTPPort
 	emailBody := p0033data.Body
-	m := gomail.NewMessage()
-	m.SetHeader("From", sender)
-	m.SetHeader("To", receiver)
-	m.SetHeader("Subject", p0033data.Subject)
-	m.SetBody("text/plain", emailBody)
 	iDateTime := time.Now().Format("20060102150405")
+	fileName := fmt.Sprintf("%s_%s.pdf", icommunication.TemplateName, iDateTime)
 
-	m.Attach(icommunication.TemplateName+iDateTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
-		_, err := w.Write(pdfData)
-		return err
-	}))
+	// Send email asynchronously
+	go func() {
+		m := gomail.NewMessage()
+		m.SetHeader("From", sender)
+		m.SetHeader("To", receiver)
+		m.SetHeader("Subject", p0033data.Subject)
+		m.SetBody("text/plain", emailBody)
 
-	d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
-	d.SSL = true
+		// Attach PDF file
+		m.Attach(fileName, gomail.SetCopyFunc(func(w io.Writer) error {
+			_, err := w.Write(pdfData)
+			return err
+		}))
 
-	if err := d.DialAndSend(m); err != nil {
-		log.Printf("Failed to send email: %v", err)
-		return err
-	}
-	// Send Mail to Agent if it is configured in Communication (P0033)
+		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+		d.SSL = true
+
+		sendStart := time.Now()
+		if err := d.DialAndSend(m); err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			log.Printf("Email sent successfully to %s in %v", receiver, time.Since(sendStart))
+		}
+	}()
+
+	// Send Agent Email asynchronously if allowed
 	if icommunication.AgentEmailAllowed == "Y" {
 		var agntenq models.Agency
 		result := txn.First(&agntenq, "id = ?", icommunication.AgencyID)
@@ -281,36 +291,35 @@ func EmailTriggerN(icommunication models.Communication, pdfData []byte, txn *gor
 		}
 
 		if agclient.ClientEmail != "" {
-			sender := icommunication.CompanyEmail
+			go func() {
+				agentReceiver := agclient.ClientEmail
+				iName := GetName(client.CompanyID, client.ID)
+				agentEmailBody := fmt.Sprintf(
+					"Hi Sir/Madam,\n\nFollowing Email was sent to your Customer %d %s\n\n"+
+						"I am from Futura Instech..\n\nThank you!",
+					client.ID, iName,
+				)
 
-			receiver := agclient.ClientEmail
-			iName := GetName(client.CompanyID, client.ID)
-			emailBody := fmt.Sprintf(
-				"Hi Sir/Madam,\n\n"+
-					"Following Email was sent to your Customer %d %s\n\n"+
-					"I am from Futura Instech..\n\n"+
-					"Thank you!",
-				client.ID, iName,
-			)
+				m := gomail.NewMessage()
+				m.SetHeader("From", sender)
+				m.SetHeader("To", agentReceiver)
+				m.SetHeader("Subject", "Mail Sent to Your Customer")
+				m.SetBody("text/plain", agentEmailBody)
 
-			m := gomail.NewMessage()
-			m.SetHeader("From", sender)
-			m.SetHeader("To", receiver)
-			m.SetHeader("Subject", "Mail Sent to Your Customer")
-			m.SetBody("text/plain", emailBody)
-			d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
-			d.SSL = true
+				d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+				d.SSL = true
 
-			if err := d.DialAndSend(m); err != nil {
-				log.Printf("Failed to send email: %v", err)
-				return err
-			}
-
-			log.Println("Email sent successfully with attachment via office SMTP")
-			return nil
+				sendStart := time.Now()
+				if err := d.DialAndSend(m); err != nil {
+					log.Printf("Failed to send email to Agent: %v", err)
+				} else {
+					log.Printf("Email sent successfully to agent %s in %v", agentReceiver, time.Since(sendStart))
+				}
+			}()
 		}
-
 	}
+
+	log.Println("Email sent successfully with attachment via office SMTP")
 	return nil
 }
 

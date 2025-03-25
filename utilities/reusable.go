@@ -353,15 +353,22 @@ func EmailTriggerforReport(iCompany uint, iReference uint, iClient uint, iEmail 
 		return err
 	}))
 
+	// Configure SMTP dialer
 	d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
-	d.SSL = true
+	d.SSL = true      // Enables SSL
+	d.TLSConfig = nil // Use default TLS settings
 
-	if err := d.DialAndSend(m); err != nil {
-		log.Printf("Failed to send email: %v", err)
-		return err
-	}
-
-	log.Println("Email sent successfully with attachment via office SMTP")
+	// Send email asynchronously with proper logging
+	sendStart := time.Now()
+	go func() {
+		if err := d.DialAndSend(m); err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			log.Printf("Email sent successfully to %s (CC: %s, BCC: %s) in %v",
+				receiver, "", "", time.Since(sendStart))
+		}
+	}()
+	log.Printf("EmailTrigger function executed in %v", time.Since(sendStart))
 	return nil
 }
 

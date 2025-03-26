@@ -11018,7 +11018,13 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	if result.Error != nil {
 		return oPayno, result.Error
 	}
+	iDrSign := "+"
+	iCrSign := "-"
 
+	if iHistoryCode == "H0211" {
+		iDrSign = "-"
+		iCrSign = "+"
+	}
 	// Get Payment Type Accounting Code for Creation
 	var p0055data paramTypes.P0055Data
 	var extradatap0055 paramTypes.Extradata = &p0055data
@@ -11052,7 +11058,7 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	//iGlRldgAcct := strconv.Itoa(int(iClient))
 	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
 	iGlRldgAcct = strconv.Itoa(int(iPolicy))
-	iGlSign := "+"
+	iGlSign := iDrSign
 
 	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
 		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
@@ -11111,7 +11117,7 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	//iGlRldgAcct := strconv.Itoa(int(iClient))
 	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
 	iGlRldgAcct = strconv.Itoa(int(iPolicy))
-	iGlSign = "-"
+	iGlSign = iCrSign
 
 	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
 		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)

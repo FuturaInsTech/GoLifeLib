@@ -11021,10 +11021,12 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	iDrSign := "+"
 	iCrSign := "-"
 
-	if iHistoryCode == "H0211" {
-		iDrSign = "-"
-		iCrSign = "+"
-	}
+	// Following change has been commented. It is not required.  This entry is handled through
+	// P0027 parameter set up
+	// if iHistoryCode == "H0211" {
+	// 	iDrSign = "-"
+	// 	iCrSign = "+"
+	// }
 	// Get Payment Type Accounting Code for Creation
 	var p0055data paramTypes.P0055Data
 	var extradatap0055 paramTypes.Extradata = &p0055data
@@ -11036,38 +11038,10 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	iCrBank := p0055data.GlAccount
 	iFSC := p0055data.BankCode
 	iCrAccount := iCrAcc + "-" + iCrBank // BankAccount-KVB
-
-	// Debit
-	glcode := iDrAcc
-	var acccode models.AccountCode
-	result = txn.First(&acccode, "company_id = ? and account_code = ? ", iCompany, glcode)
-	if result.RowsAffected == 0 {
-		return oPayno, result.Error
-	}
-	var iSequenceno uint64
-	iSequenceno++
-	iAccountCodeID := acccode.ID
-	iAccAmount := iAmount
-	iAccCurry := iAccCurr
-	iAccountCode := glcode
 	iEffectiveDate := iDate
-	iGlAmount := iAmount
-
-	iGlRdocno := int(iPolicy)
-	var iGlRldgAcct string
-	//iGlRldgAcct := strconv.Itoa(int(iClient))
-	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
-	iGlRldgAcct = strconv.Itoa(int(iPolicy))
-	iGlSign := iDrSign
-
-	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
-		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
-
-	if err != nil {
-		return oPayno, err
-	}
-	// Credit
+	// Create Payment First.  Then when it is Auto Approved Payment write accounting entries
 	// Write Payment
+
 	var paycrt models.Payment
 	paycrt.AccAmount = iAmount
 	paycrt.AccCurry = iAccCurr
@@ -11096,34 +11070,67 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	}
 	oPayno = paycrt.ID
 
-	glcode = iCrAcc
-	var acccode1 models.AccountCode
-	result = txn.First(&acccode1, "company_id = ? and account_code = ? ", iCompany, glcode)
-	if result.RowsAffected == 0 {
-		return oPayno, result.Error
-	}
+	if iPayStatus == "AP" {
+		// Debit
+		glcode := iDrAcc
+		var acccode models.AccountCode
+		result = txn.First(&acccode, "company_id = ? and account_code = ? ", iCompany, glcode)
+		if result.RowsAffected == 0 {
+			return oPayno, result.Error
+		}
+		var iSequenceno uint64
+		iSequenceno++
+		iAccountCodeID := acccode.ID
+		iAccAmount := iAmount
+		iAccCurry := iAccCurr
+		iAccountCode := glcode
 
-	iSequenceno++
-	iAccountCodeID = acccode1.ID
-	iAccAmount = iAmount
-	iAccCurry = iAccCurr
-	iAccountCode = iCrAccount
-	iEffectiveDate = iDate
-	iGlAmount = iAmount
+		iGlAmount := iAmount
 
-	//iGlRdocno = int(iPolicy)
-	iGlRdocno = int(oPayno)
+		iGlRdocno := int(iPolicy)
+		var iGlRldgAcct string
+		//iGlRldgAcct := strconv.Itoa(int(iClient))
+		// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+		iGlRldgAcct = strconv.Itoa(int(iPolicy))
+		iGlSign := iDrSign
 
-	//iGlRldgAcct := strconv.Itoa(int(iClient))
-	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
-	iGlRldgAcct = strconv.Itoa(int(iPolicy))
-	iGlSign = iCrSign
+		err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+			iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
 
-	err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
-		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
+		if err != nil {
+			return oPayno, err
+		}
+		// Credit
 
-	if err != nil {
-		return oPayno, err
+		glcode = iCrAcc
+		var acccode1 models.AccountCode
+		result = txn.First(&acccode1, "company_id = ? and account_code = ? ", iCompany, glcode)
+		if result.RowsAffected == 0 {
+			return oPayno, result.Error
+		}
+
+		iSequenceno++
+		iAccountCodeID = acccode1.ID
+		iAccAmount = iAmount
+		iAccCurry = iAccCurr
+		iAccountCode = iCrAccount
+		iEffectiveDate = iDate
+		iGlAmount = iAmount
+
+		//iGlRdocno = int(iPolicy)
+		iGlRdocno = int(oPayno)
+
+		//iGlRldgAcct := strconv.Itoa(int(iClient))
+		// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+		iGlRldgAcct = strconv.Itoa(int(iPolicy))
+		iGlSign = iCrSign
+
+		err = PostGlMoveN(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+			iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
+
+		if err != nil {
+			return oPayno, err
+		}
 	}
 
 	return oPayno, nil

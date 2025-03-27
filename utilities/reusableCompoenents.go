@@ -11012,6 +11012,15 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 // This Method to create payments for the payable entry.  It can be used wherever we need
 // Automatic Approval and Payment Creation
 func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, iPayStatus string, txn *gorm.DB) (oPayno uint, oErr error) {
+	if iPayStatus == "PN" {
+		var payosbal models.PayOsBal
+		result := txn.Find(&payosbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct =? and contract_curry = ?", iCompany, iDrAcc, iPolicy, iAccCurr)
+		iErr := "Payment Already Processed"
+		if result.RowsAffected > 0 {
+			return 0, errors.New(iErr)
+		}
+	}
+
 	oPayno = 0
 	var bankenq models.Bank
 	result := txn.Find(&bankenq, "id = ?", iBank)
@@ -11068,8 +11077,21 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	if result.Error != nil {
 		return oPayno, result.Error
 	}
-	oPayno = paycrt.ID
 
+	oPayno = paycrt.ID
+	if iPayStatus == "PN" {
+		var payosbalcrt models.PayOsBal
+		payosbalcrt.CompanyID = iCompany
+		payosbalcrt.GlRldgAcct = iPolicy
+		payosbalcrt.GlAccountno = iDrAcc
+		payosbalcrt.ContractCurry = iAccCurr
+		payosbalcrt.PaymentNo = oPayno
+		payosbalcrt.ContractAmount = iAmount
+		result = txn.Create(payosbalcrt)
+		if result.Error != nil {
+			return 0, result.Error
+		}
+	}
 	if iPayStatus == "AP" {
 		// Debit
 		glcode := iDrAcc

@@ -121,5 +121,6 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.Annuity{})
 	// DB.AutoMigrate(&models.AgtExt{})
 	DB.AutoMigrate(&models.UserExt{})
+	DB.AutoMigrate(&models.PayOsBal{})
 
 }

@@ -11079,18 +11079,21 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	}
 
 	oPayno = paycrt.ID
+	oPolicy := strconv.Itoa(int(iPolicy))
 	if iPayStatus == "PN" {
 		var payosbalcrt models.PayOsBal
 		payosbalcrt.CompanyID = iCompany
-		payosbalcrt.GlRldgAcct = iPolicy
+		payosbalcrt.GlRldgAcct = oPolicy
+		payosbalcrt.GlRdocno = oPolicy
 		payosbalcrt.GlAccountno = iDrAcc
 		payosbalcrt.ContractCurry = iAccCurr
 		payosbalcrt.PaymentNo = oPayno
 		payosbalcrt.ContractAmount = iAmount
-		result = txn.Create(payosbalcrt)
+		result = txn.Create(&payosbalcrt)
 		if result.Error != nil {
 			return 0, result.Error
 		}
+
 	}
 	if iPayStatus == "AP" {
 		// Debit

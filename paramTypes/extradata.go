@@ -2254,6 +2254,7 @@ type P0074Data struct {
 	PlanLARelations   string // P0050 self, spouse/live-in partner, Parents, Kids & Others [multi select]
 	BenefitPlanSA     string // P0050 3L,5L,10L  [multi select]
 	RestorePlanSA     string //P0050(YESNO) Yes/No
+	PlanPremAge       string
 	PlanDiscountTypes string //P0050 Preferred Lives, Loyalty, Digital, Floater [multi select]
 	CoPayRate         float64
 	CoPayMinAmount    float64

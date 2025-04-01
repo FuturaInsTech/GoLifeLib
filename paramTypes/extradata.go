@@ -2243,6 +2243,262 @@ func (m *P0073Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
+// Plan Params 
+
+
+type P0074Data struct {
+    BenefitPlanType string // P0050 STD, SPL, PRM [single select]
+    PlanMaxLives 	int64 //2/5/10/15/…  [single select]
+    PlanLARelations     string // P0050 self, spouse/live-in partner, Parents, Kids & Others [multi select]
+    BenefitPlanSA  string // P0050 3L,5L,10L  [multi select]
+    RestorePlanSA    string //P0050(YESNO) Yes/No  
+    PlanDiscountTypes		string //P0050 Preferred Lives, Loyalty, Digital, Floater [multi select]
+    CoPayRate				float64 
+    CoPayMinAmount			float64
+    WPinMonths		int64 // Waiting Period
+    AbroadWPinMonths	int64
+
+
+}
+
+func (m *P0074Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0074Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
+
+
+type P0075Data struct {
+	PlanBenefits []P0075
+}
+type P0075 struct {
+    BenefitCode string //P0050  
+    BenefitUnit	float64
+    BenefitBasis  string //P0050 % of SAPD, % of SA, FlatAmount,
+    BenefitPlanCover string //P0050
+    PlanBenefitGroup string //P0050 PlanBenefitGroup
+}
+
+func (m *P0075Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0075Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+
+type P0076Data struct {
+	ClaimsAllowedLimits []P0076
+}
+type P0076 struct {
+    LimitCode 	string //P0050  
+    NoOfTimes  uint
+}
+
+func (m *P0076Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0076Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+
+type P0077Data struct {
+	PlanMaxBenefits []P0077
+}
+type P0077 struct {
+    BenefitCode 	string //P0050  
+    MaxBenefitAmount float64
+    MaxBenefitUnit float64
+    MaxBenefitBasis string
+
+}
+
+func (m *P0077Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0077Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+
+type P0078Data struct {
+	PlanLARelationRules []P0078
+}
+type P0078 struct {
+    PlanLARelations     string // P0050 self, spouse/live-in partner, Parents, Kids & Others [single select]
+    NoOfLivesAllowed  uint
+    Underwriting string // P0050 Yes/No 
+	PremLACode string  //P0050 
+ 
+}
+
+func (m *P0078Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0078Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+
+type P0079Data struct {
+	PlanBenefitDiscounts []P0079
+}
+type P0079 struct {
+   DiscountType string // P0050(PlanDiscountTypes) Preferred Health, Loyalty, Digital, Floater 
+   DiscountRate float64 
+   DiscountBasis string //P0050 % of BasePremium, FlatAmount, % of SA
+ 
+}
+
+func (m *P0079Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0079Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+
+type P0080Data struct {
+	PremRateCodes []P0080
+}
+type P0080 struct {
+   SumAssured float64
+   LACode1 string // P0050 PremLACode
+   LACount1 uint
+   LACode2 string // P0050 PremLACode
+   LACount2 uint
+   LACode3 string // P0050 PremLACode
+   LACount3 uint
+   PremRateCode string // 
+
+ 
+}
+
+func (m *P0080Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0080Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+
+type P0081Data struct {
+    AgeFrom uint
+    AgeTo   uint	
+}
+
+func (m *P0081Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0081Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
+}
+
 // Workflow Param
 type W0001Data struct {
 	RequestType     string  // P0050

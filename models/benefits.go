@@ -34,6 +34,10 @@ type Benefit struct {
 	IlpFee           float64
 	IlpFeeDate       string `gorm:"type:varchar(08)"`
 	CovrFamily       string `gorm:"type:varchar(01)"`
+	BenefitType      string `gorm:"type:varchar(10)"`
+	BenefitPlan      string `gorm:"type:varchar(10)"`
+	LivesCovered     uint
+	Smoker           string `gorm:"type:varchar(1)"`
 	Extras           []Extra
 	SurvBs           []SurvB
 	MedReqs          []MedReq
@@ -48,4 +52,5 @@ type Benefit struct {
 	IlpSwitchHeaders []IlpSwitchHeader
 	IlpSwitchFunds   []IlpSwitchFund
 	Annuities        []Annuity
+	PlanLifes        []PlanLife
 }

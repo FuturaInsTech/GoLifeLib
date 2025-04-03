@@ -21,6 +21,7 @@ type PlanLife struct {
 	PAge           uint
 	PSmoker        string `gorm:"type:varchar(1)"`
 	PStartDate     string `gorm:"type:varchar(08)"`
+	PEndDate       string `gorm:"type:varchar(08)"`
 	PSumAssured    uint64
 	PBasAnnualPrem float64 // Annualized Premium Before Applying Discount and Factor
 	PLoadPrem      float64 // Loaded Premium

@@ -1177,6 +1177,10 @@ type P0033Data struct {
 	Online               string // (Y/N)
 	CarbonCopy           string // (Y/N)
 	BlindCarbonCopy      string // (Y/N)
+	SMSSID               string // SMS ID
+	SMSAuthToken         string // SMS Authorized Token
+	SMSAuthPhoneNo       string // SMS No which has been registered with the service provider
+	SMSBody              string
 }
 
 func (m *P0033Data) ParseData(datamap map[string]interface{}) {

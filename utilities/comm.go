@@ -274,6 +274,12 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					log.Fatalf("Failed to generate report: %v", err)
 				}
 			}
+			if p0033data.SMSAllowed == "Y" {
+				err := SendSMSTwilio(communication.ClientID, p0033data.Body, txn)
+				if err != nil {
+					log.Fatalf("Failed to send SMS: %v", err)
+				}
+			}
 			communication.Print = "Y"
 			communication.PrintDate = iDate
 			communication.UpdatedID = 1

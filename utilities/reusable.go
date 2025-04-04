@@ -2,10 +2,12 @@ package utilities
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +18,7 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+	"github.com/fasthttp"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
@@ -677,5 +680,67 @@ func EncryptPDF(inputFile, outputFile, userPassword, ownerPassword string) error
 	}
 
 	fmt.Println("PDF encrypted successfully:", outputFile)
+	return nil
+}
+
+func basicAuth(username, password string) string {
+	auth := username + ":" + password
+	return encodeBase64(auth)
+}
+
+func encodeBase64(data string) string {
+	return base64.StdEncoding.EncodeToString([]byte(data))
+}
+func SendSMSTwilio(iclientID uint, message string, txn *gorm.DB) error {
+	// Fetch client details
+	var client models.Client
+	result := txn.First(&client, "id = ?", iclientID)
+	if result.Error != nil {
+		return fmt.Errorf("failed to read Client: %v", result.Error)
+	}
+
+	toNumber := client.ClientMobCode + client.ClientMobile
+	accountSID := os.Getenv("TWILIO_ACCOUNT_SID")
+	authToken := os.Getenv("TWILIO_AUTH_TOKEN")
+	fromNumber := os.Getenv("TWILIO_PHONE_NUMBER")
+	urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + accountSID + "/Messages.json"
+
+	// Prepare message payload
+	msgData := url.Values{}
+	msgData.Set("To", toNumber)
+	msgData.Set("From", fromNumber)
+	msgData.Set("Body", message)
+	msgDataReader := strings.NewReader(msgData.Encode())
+
+	// Send SMS asynchronously
+	go func() {
+		startTime := time.Now()
+		req := fasthttp.AcquireRequest()
+		defer fasthttp.ReleaseRequest(req)
+
+		req.SetRequestURI(urlStr)
+		req.Header.SetMethod("POST")
+		req.Header.SetContentType("application/x-www-form-urlencoded")
+		req.Header.Set("Authorization", "Basic "+basicAuth(accountSID, authToken))
+		req.SetBodyStream(msgDataReader, msgDataReader.Len())
+
+		resp := fasthttp.AcquireResponse()
+		defer fasthttp.ReleaseResponse(resp)
+
+		client := fasthttp.Client{}
+		err := client.Do(req, resp)
+		if err != nil {
+			log.Printf("Failed to send SMS to %s: %v", toNumber, err)
+			return
+		}
+
+		if resp.StatusCode() == 201 {
+			log.Printf("SMS sent successfully to %s in %v", toNumber, time.Since(startTime))
+		} else {
+			log.Printf("Failed to send SMS to %s, response: %v", toNumber, resp.StatusCode())
+		}
+	}()
+
+	log.Println("SMS sending initiated asynchronously")
 	return nil
 }

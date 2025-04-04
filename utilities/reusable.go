@@ -18,7 +18,7 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
-	"github.com/fasthttp"
+	"github.com/valyala/fasthttp"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )

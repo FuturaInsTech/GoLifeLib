@@ -275,7 +275,7 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				}
 			}
 			if p0033data.SMSAllowed == "Y" {
-				err := SendSMSTwilio(communication.ClientID, p0033data.Body, txn)
+				err := SendSMSTwilio(communication.CompanyID, communication.ClientID, p0033data.TemplateName, communication.EffectiveDate, p0033data.SMSBody, txn)
 				if err != nil {
 					log.Fatalf("Failed to send SMS: %v", err)
 				}
@@ -812,6 +812,22 @@ func CreateCommunicationsL(iCompany uint, iHistoryCode string, iTranno uint, iDa
 
 				}
 			}
+
+			if p0033data.Online == "Y" {
+				err := GetReportforOnline(communication, p0033data.TemplateName, txn)
+				if err != nil {
+					log.Fatalf("Failed to generate report: %v", err)
+				}
+			}
+			if p0033data.SMSAllowed == "Y" {
+				err := SendSMSTwilio(communication.CompanyID, communication.ClientID, p0033data.TemplateName, communication.EffectiveDate, p0033data.SMSBody, txn)
+				if err != nil {
+					log.Fatalf("Failed to send SMS: %v", err)
+				}
+			}
+			communication.Print = "Y"
+			communication.PrintDate = iDate
+			communication.UpdatedID = 1
 
 			communication.ExtractedData = resultMap
 			communication.PDFPath = p0034data.Letters[i].PdfLocation

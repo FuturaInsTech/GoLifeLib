@@ -691,7 +691,7 @@ func basicAuth(username, password string) string {
 func encodeBase64(data string) string {
 	return base64.StdEncoding.EncodeToString([]byte(data))
 }
-func SendSMSTwilio(iclientID uint, message string, txn *gorm.DB) error {
+func SendSMSTwilio(iCompany, iclientID uint, itempName, iEffDate string, message string, txn *gorm.DB) error {
 	// Fetch client details
 	var client models.Client
 	result := txn.First(&client, "id = ?", iclientID)
@@ -699,10 +699,17 @@ func SendSMSTwilio(iclientID uint, message string, txn *gorm.DB) error {
 		return fmt.Errorf("failed to read Client: %v", result.Error)
 	}
 
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	err := GetItemD(int(iCompany), "P0033", itempName, iEffDate, &extradatap0033)
+	if err != nil {
+		return err
+	}
+
 	toNumber := client.ClientMobCode + client.ClientMobile
-	accountSID := os.Getenv("TWILIO_ACCOUNT_SID")
-	authToken := os.Getenv("TWILIO_AUTH_TOKEN")
-	fromNumber := os.Getenv("TWILIO_PHONE_NUMBER")
+	accountSID := p0033data.SMSSID
+	authToken := p0033data.SMSAuthToken
+	fromNumber := p0033data.SMSAuthPhoneNo
 	urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + accountSID + "/Messages.json"
 
 	// Prepare message payload

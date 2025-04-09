@@ -254,6 +254,13 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				case oLetType == "39":
 					oData := GetBankData(iCompany, iClientWork, txn)
 					resultMap["BankData"] = oData
+				case oLetType == "40":
+					iKey := iReceipt
+					oData := GetPaymentData(iCompany, iPolicy, iKey, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -2819,4 +2826,38 @@ func LoanBillsInterestData(iCompany uint, iPolicy uint, iSeqNo uint, iCurrentInt
 
 	// Return combinedData map
 	return combinedData
+}
+
+func GetPaymentData(iCompany uint, iPolicyID uint, iPayment uint, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var clt models.Client
+	txn.Find(&clt, "company_id = ? and id = ?", iCompany, polenq.ClientID)
+	var add models.Address
+	txn.Find(&add, "company_id = ? and id = ?", iCompany, polenq.AddressID)
+	var paymentenq models.Payment
+	txn.Find(&paymentenq, "company_id = ? and id = ?", iCompany, iPayment)
+	amtinwords, csymbol := AmountinWords(paymentenq.CompanyID, paymentenq.AccAmount, paymentenq.AccCurry)
+	resultOut := map[string]interface{}{
+		"ID":               IDtoPrint(paymentenq.ID),
+		"ClientSalutation": clt.Salutation,
+		"ClientFullName":   clt.ClientLongName,
+		"AddressLine1":     add.AddressLine1,
+		"AddressLine2":     add.AddressLine2,
+		"AddressLine3":     add.AddressLine3,
+		"AddressLine4":     add.AddressLine4,
+		"AddressState":     add.AddressState,
+		"AddressCountry":   add.AddressCountry,
+		"AccCurry":         paymentenq.AccCurry,
+		"AccAmount":        paymentenq.AccAmount,
+		"Reason":           paymentenq.Reason,
+		"PolicyId":         IDtoPrint(paymentenq.PolicyID),
+		"DateOfPayment":    DateConvert(paymentenq.DateOfPayment),
+		"BankReferenceNo":  paymentenq.BankReferenceNo,
+		"TypeOfPayment":    paymentenq.TypeOfPayment,
+		"AmountInWords":    amtinwords,
+		"CurrSymbol":       csymbol,
+	}
+	return resultOut
+
 }

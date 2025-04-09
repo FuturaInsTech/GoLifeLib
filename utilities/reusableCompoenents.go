@@ -10769,12 +10769,15 @@ func CheckDateOpt(iDate string, opt string) bool {
 	return false
 }
 
+// #208
 func GetDepDes(iDepCoad string, iCompany uint, iLanguage uint) (oDepCoad string) {
 
 	shortdes, _, _ := GetParamDesc(iCompany, "W0006", iDepCoad, iLanguage)
 
 	return shortdes
 }
+
+// #209
 func GetTeamDes(iTeamCoad string, iCompany uint, iLanguage uint) (oDepCoad string) {
 
 	shortdes, _, _ := GetParamDesc(iCompany, "W0008", iTeamCoad, iLanguage)
@@ -10783,6 +10786,7 @@ func GetTeamDes(iTeamCoad string, iCompany uint, iLanguage uint) (oDepCoad strin
 
 }
 
+// #210
 func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddress string, oPin string, oState string, oPhone string, oEmail string, oBank string, oErr string) {
 	var medprov models.MedProvider
 	result := txn.Find(&medprov, "company_id = ? and id = ?", iCompany, iMedProv)
@@ -10820,6 +10824,8 @@ func GetMedInfo(iCompany uint, iMedProv uint, txn *gorm.DB) (oName string, oAddr
 
 	return
 }
+
+// #211
 func TDFAnnPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
 	var annuity models.Annuity
 	var tdfpolicy models.TDFPolicy
@@ -10878,8 +10884,8 @@ func TDFAnnPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *
 	}
 }
 
+// #212
 // This function to get User Name by providing Company No and User id
-
 func GetUserName(iCompany uint, iUserId uint) (oName string, oErr error) {
 	var usrenq models.User
 	result := initializers.DB.Find(&usrenq, "company_id = ? and id = ?", iCompany, iUserId)
@@ -10889,6 +10895,7 @@ func GetUserName(iCompany uint, iUserId uint) (oName string, oErr error) {
 	return usrenq.Name, nil
 }
 
+// #213
 // TDF Function For Annuities
 func TDFAnniPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, error) {
 	var annuity models.Annuity
@@ -10948,6 +10955,7 @@ func TDFAnniPN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 	}
 }
 
+// #214
 func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[string]interface{}, error) {
 	var reqcall []models.ReqCall
 	var client models.Client
@@ -11009,6 +11017,7 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 	return resultMap, nil
 }
 
+// #215
 // This Method to create payments for the payable entry.  It can be used wherever we need
 // Automatic Approval and Payment Creation
 func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, iPayStatus string, txn *gorm.DB) (oPayno uint, oErr error) {
@@ -11160,6 +11169,8 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 
 	return oPayno, nil
 }
+
+// #216
 func PolicyDep(iCompany uint, iPolicy uint) map[string]interface{} {
 	var polenq models.Policy
 	result := initializers.DB.Where("company_id = ? AND id = ?", iCompany, iPolicy).Find(&polenq)
@@ -11209,4 +11220,210 @@ func PolicyDep(iCompany uint, iPolicy uint) map[string]interface{} {
 	}
 
 	return resultOut
+}
+
+// # 217
+// GetHealthRate - Get Annual Rate of the Coverage - No Model Discount/Staff Discount/SA/Prem Discount
+//
+// Inputs: Company, Coverage, Age (Attained Age), Gender(F/N/U), Term (2 Characters), Premium Method as
+// PM001 - Term Based , PM002 Age Based, Mortality Clause "S" Smoker, "N" Non Smoker
+//
+// Outputs Annualized Premium as float (124.22)
+//
+// ©  FuturaInsTech
+func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string) (float64, error) {
+
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
+	GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
+
+	ikey := iCoverage + iPlan
+
+	var p0074data paramTypes.P0074Data
+	var extradatap0074 paramTypes.Extradata = &p0074data
+	err := GetItemD(int(iCompany), "P0074", ikey, iDate, &extradatap0074)
+	if err != nil {
+		return 0, err
+
+	}
+
+	var p0080data paramTypes.P0080Data
+	var extradatap0080 paramTypes.Extradata = &p0080data
+	err = GetItemD(int(iCompany), "P0080", ikey, iDate, &extradatap0080)
+	if err != nil {
+		return 0, err
+
+	}
+
+	iAgeCalcMethod := q0006data.AgeCalcMethod
+	iPlanPremAge := p0074data.PlanPremAge
+
+	// iPremMethod := q0006data.PremiumMethod
+	// iDisType := q0006data.DiscType
+	// iDisMethod := q0006data.DiscMethod
+	// iFrqMethod := q0006data.FrqMethod
+	// iWaiverMethod := q0006data.WaivMethod
+	// iMRTA := q0006data.MrtaMethod
+	// iPremCalcType := q0006data.PremCalcType
+	// iHealthBenefitType := q0006data.HealthBenefitType
+	// iPlanMaxLives := p0074data.PlanMaxLives
+
+	var premAge int
+	var PremRateCode string
+
+	var planlife models.PlanLife
+
+	if iPlanPremAge == "PL" {
+
+		result := initializers.DB.First(&planlife, "company_id=? and policy_id= ? and client_rel_code=?", iCompany, iPolicy, "I")
+
+		if result.Error != nil || result.RowsAffected == 0 {
+			return 0, errors.New("No Primary Life Assured In Plan Life")
+		}
+
+	} else if iPlanPremAge == "YL" {
+
+		result := initializers.DB.Order("p_age ASC").First(&planlife, "company_id = ? AND policy_id = ?", iCompany, iPolicy)
+
+		if result.Error != nil || result.RowsAffected == 0 {
+			return 0, errors.New("No Youngest Life Assured In Plan Life")
+		}
+
+	} else if iPlanPremAge == "EL" {
+		result := initializers.DB.Order("p_age DESC").First(&planlife, "company_id = ? AND policy_id = ?", iCompany, iPolicy)
+
+		if result.Error != nil || result.RowsAffected == 0 {
+			return 0, errors.New("No Eldest Life Assured In Plan Life")
+		}
+	}
+
+	premAge, _, _, _, _, _ = CalculateAge(iDate, planlife.PDOB, iAgeCalcMethod)
+	PremRateCode, err = GetPlanPremRateCode(iCompany, iPolicy, planlife.PSumAssured, ikey, planlife.PStartDate)
+
+	if err != nil {
+		return 0, err
+	}
+
+	var q0010key string
+	var prem float64
+
+	// term := strconv.FormatUint(uint64(iTerm), 10)
+	// premTerm := strconv.FormatUint(uint64(iPremTerm), 10)
+
+	// if q0006data.PremCalcType == "A" || q0006data.PremCalcType == "U" {
+	//  if q0006data.PremiumMethod == "PM002" {
+	//      // END1 + Male
+	//      q0010key = iCoverage + iGender
+	//  }
+	// } else if q0006data.PremCalcType == "P" {
+	//  // END1 + Male + Term + Premium Term
+	//  if q0006data.PremiumMethod == "PM001" || q0006data.PremiumMethod == "PM003" {
+	//      q0010key = iCoverage + iGender + term + premTerm
+	//  }
+
+	// }
+
+	if q0006data.PremCalcType == "H" {
+		if q0006data.PremiumMethod == "PM005" {
+			q0010key = iCoverage + iPlan + PremRateCode
+		}
+	}
+
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
+	err = GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)
+	if err != nil {
+		return 0, err
+
+	}
+
+	for i := 0; i < len(q0010data.Rates); i++ {
+		if q0010data.Rates[i].Age == uint(premAge) {
+			prem = q0010data.Rates[i].Rate
+			break
+		}
+	}
+	return prem, nil
+}
+
+// # 218
+// GetPremRateCode - Get Prem Rate Code From P0080 Fro give parameter
+//
+// Input :- SumAssured , PlanLaCode list and PlanLACodeCount list
+//
+// Output :- PremRateCode from P0080
+//
+// ©  FuturaInsTech
+func GetPlanPremRateCode(iCompany, iPolicy uint, iSumAssured uint64, iKey, iDate string) (string, error) {
+
+	var p0080data paramTypes.P0080Data
+	var extradatap0080 paramTypes.Extradata = &p0080data
+	err := GetItemD(int(iCompany), "P0080", iKey, iDate, &extradatap0080)
+	if err != nil {
+		return "", err
+
+	}
+
+	var filteredP0080Records []paramTypes.P0080
+	if p0080data.PremRateCodes != nil {
+		for _, record := range p0080data.PremRateCodes {
+			if record.SumAssured == float64(iSumAssured) {
+				filteredP0080Records = append(filteredP0080Records, record) // Append entire record
+			}
+		}
+	}
+
+	var planlifes []models.PlanLife
+
+	result := initializers.DB.Find(&planlifes, "company_id = ? AND policy_id = ?", iCompany, iPolicy)
+
+	if result.Error != nil || result.RowsAffected == 0 {
+		return "", errors.New("No Life Assured In Plan Life")
+	}
+
+	premiumLACodeCount := make(map[string]int)
+
+	for _, planLife := range planlifes {
+		premiumLACodeCount[planLife.PremuimLACode]++
+	}
+
+	// Separate keys and values into arrays
+	var LACodes []string
+	var LACounts []int
+
+	for code, count := range premiumLACodeCount {
+		LACodes = append(LACodes, code)
+		LACounts = append(LACounts, count)
+	}
+
+	// Filter records
+	var filteredRecords []paramTypes.P0080
+	for _, record := range filteredP0080Records {
+
+		val := reflect.ValueOf(record)
+
+		// Check all lACode fields
+		for i, expectedCode := range LACodes {
+			codeField := fmt.Sprintf("LACode%d", i+1)
+			countField := fmt.Sprintf("LACount%d", i+1)
+
+			// Get field values dynamically
+			codeValue := val.FieldByName(codeField).String()
+			countValue := int(val.FieldByName(countField).Int())
+
+			// If the code matches, ensure the count also matches
+			if expectedCode != "" && codeValue == expectedCode {
+				if countValue == LACounts[i] {
+					filteredRecords = append(filteredRecords, record)
+				}
+			}
+		}
+
+	}
+
+	if len(filteredRecords) > 1 {
+		return "", errors.New("Multiple Premium Life Assured Code")
+	}
+
+	return filteredRecords[0].PremRateCode, nil
 }

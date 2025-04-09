@@ -8,20 +8,21 @@ import (
 type PlanLife struct {
 	gorm.Model
 	types.CModel
-	PolicyID       uint
-	BenefitID      uint
-	BenefitPlan    string `gorm:"type:varchar(10)"`
-	ClientID       uint
-	ClientRelcode  string `gorm:"type:varchar(05)"`
-	ClientReldesc  string `gorm:"type:varchar(20)"`
-	PGender        string `gorm:"type:varchar(01)"`
-	PDOB           string `gorm:"type:varchar(08)"`
-	PMortality     string `gorm:"type:varchar(01)"`
-	PStatus        string `gorm:"type:varchar(02)"`
-	PAge           uint
-	PSmoker        string `gorm:"type:varchar(1)"`
-	PStartDate     string `gorm:"type:varchar(08)"`
-	PEndDate       string `gorm:"type:varchar(08)"`
+	PolicyID      uint
+	BenefitID     uint
+	BenefitPlan   string `gorm:"type:varchar(10)"`
+	ClientID      uint
+	ClientRelcode string `gorm:"type:varchar(05)"`
+	ClientReldesc string `gorm:"type:varchar(20)"`
+	PGender       string `gorm:"type:varchar(01)"`
+	PDOB          string `gorm:"type:varchar(08)"`
+	PMortality    string `gorm:"type:varchar(01)"`
+	PStatus       string `gorm:"type:varchar(02)"`
+	PAge          uint
+	PSmoker       string `gorm:"type:varchar(1)"`
+	PStartDate    string `gorm:"type:varchar(08)"`
+	PEndDate      string `gorm:"type:varchar(08)"`
+	// for Non-Floater Plans and Group plans below fields are applicable
 	PSumAssured    uint64
 	PBasAnnualPrem float64 // Annualized Premium Before Applying Discount and Factor
 	PLoadPrem      float64 // Loaded Premium
@@ -38,4 +39,20 @@ type PlanLife struct {
 	PDisType05     string  `gorm:"type:varchar(01)"` // Discount Type
 	PDisPrem05     float64 // Premium DiscountPDiscountType  [5]string  `gorm:"type:varchar(01)"` // Discount Type
 
+}
+
+type PlanLifeBenefit struct {
+	gorm.Model
+	types.CModel
+	PolicyID         uint
+	BenefitID        uint
+	BenefitCode      string //P0050
+	BenefitUnit      float64
+	BenefitBasis     string //P0050 % of SAPD, % of SA, FlatAmount,
+	BenefitPlanCover string //P0050
+	PlanBenefitGroup string //P0050 PlanBenefitGroup
+	MaxBenefitAmount float64
+	MaxBenefitUnit   float64
+	MaxBenefitBasis  string
+	PlanLifeID       uint // Non-Floater and Group Plans Only. Default is NULL
 }

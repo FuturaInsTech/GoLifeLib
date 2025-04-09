@@ -14,6 +14,7 @@ type PlanLife struct {
 	ClientID      uint
 	ClientRelcode string `gorm:"type:varchar(05)"`
 	ClientReldesc string `gorm:"type:varchar(20)"`
+	PremuimLACode string `gorm:"type:varchar(01)"`
 	PGender       string `gorm:"type:varchar(01)"`
 	PDOB          string `gorm:"type:varchar(08)"`
 	PMortality    string `gorm:"type:varchar(01)"`

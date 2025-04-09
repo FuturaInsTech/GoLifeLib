@@ -69,6 +69,7 @@ func ConvertYYYYMMDD(inputDate string) (string, error) {
 func CreateFuncMap() template.FuncMap {
 	return template.FuncMap{
 		"formatNumber": formatNumber,
+		"contains":     strings.Contains,
 	}
 }
 func formatInteger(famt string, ctype byte) string {

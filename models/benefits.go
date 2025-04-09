@@ -36,6 +36,7 @@ type Benefit struct {
 	CovrFamily       string `gorm:"type:varchar(01)"`
 	BenefitType      string `gorm:"type:varchar(10)"`
 	BenefitPlan      string `gorm:"type:varchar(10)"`
+	PremRateCode     string `gorm:"type:varchar(10)"`
 	LivesCovered     uint
 	Smoker           string `gorm:"type:varchar(1)"`
 	Extras           []Extra

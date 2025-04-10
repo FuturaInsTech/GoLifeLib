@@ -1,0 +1,259 @@
+// Use GOHTML template with JSON Data to create a PDF file
+
+
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"io"
+	"log"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+)
+
+func formatInteger(famt string, ctype byte) string {
+	// Handle the Indian and Western numbering formats
+	n := len(famt)
+	if n <= 3 {
+		// No formatting needed for numbers with 3 or fewer digits
+		return famt
+	}
+
+	// Format the first three digits (thousands)
+	result := famt[n-3:]
+
+	if ctype == 'a' || ctype == 'A' {
+		// Format the remaining digits in groups of two (lakhs, crores, etc.)
+		for i := n - 3; i > 0; i -= 2 {
+			start := i - 2
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+	if ctype == 'c' || ctype == 'C' {
+		// Format the remaining digits in groups of three (millions, billions, etc.)
+		for i := n - 3; i > 0; i -= 3 {
+			start := i - 3
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+
+	// Return the formatted integer
+	return result
+}
+
+func formatDecimal(famt string, ctype byte) string {
+	decimalpart := ""
+	decimallen, _ := strconv.Atoi(string(ctype))
+	//damt, _ := strconv.Atoi(string(famt))
+	var decimalFloat float64 = 0
+	if decimallen == 0 {
+		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
+	} else {
+		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
+	}
+	if decimallen == 0 {
+		return decimalpart
+	} else {
+		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
+		decimalpart = fmt.Sprintf(formatString, decimalFloat)
+		decimalpart = decimalpart[1:] // Remove the leading "0"
+		return decimalpart
+	}
+}
+
+func formatNumber(value interface{}, fds string) string {
+	integralpart := ""
+	decimalpart := ""
+	famt := ""
+	famount := ""
+	decimallen, _ := strconv.Atoi(string(fds[1]))
+	if _, ok := value.(float64); ok {
+		famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(int); ok {
+		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(string); ok {
+		famt = value.(string)
+	}
+	parts := strings.Split(famt, ".")
+	if fds[0] == 'a' || fds[0] == 'A' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'c' || fds[0] == 'C' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'd' || fds[0] == 'D' {
+		integralpart = parts[0]
+	} else {
+		integralpart = parts[0]
+	}
+
+	if len(parts) > 1 {
+		decimalpart = formatDecimal(parts[1], fds[1])
+		famount = integralpart + decimalpart
+	} else {
+		famount = integralpart
+	}
+	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+// Custom template functions
+func createFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"formatNumber": formatNumber,
+	}
+}
+
+// Function to check if required files exist
+func checkInputFilesExist(arg string) {
+
+	jFile := arg + ".json"
+	hFile := ""
+	// Check for JSON file
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+	// File names to check depending upon runopt value
+	hFile = arg + ".gohtml"
+
+	// Check for HTML File it shall be htm or html or gohtml depending on runopt
+	if _, err := os.Stat(hFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("Both files '%s' and '%s' exist. Start Processing...\n", jFile, hFile)
+}
+
+func main() {
+	var gohtmlFile string
+	var jsonFile string
+	var pdfFile string
+
+	var iFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> ...")
+		fmt.Println("Usage: cmd <basefilename> ...")
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	gohtmlFile = iFile + ".gohtml"
+	jsonFile = iFile + ".json"
+	pdfFile = iFile + ".pdf"
+
+	// Check if the required files exist
+	checkInputFilesExist(iFile)
+	fmt.Println("  In Progress...")
+
+	// Open the JSON file
+	jFile, err := os.Open(jsonFile)
+	if err != nil {
+		log.Fatalf("Failed to open JSON file: %v", err)
+	}
+	defer jFile.Close()
+
+	// Read the JSON file content
+	var data map[string]interface{}
+	jsonBytes, err := io.ReadAll(jFile)
+	if err != nil {
+		log.Fatalf("Failed to read JSON file: %v", err)
+	}
+
+	// Parse the JSON data
+	err = json.Unmarshal(jsonBytes, &data)
+	if err != nil {
+		log.Fatalf("Failed to parse JSON: %v", err)
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, iFile)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
+	// Parse the .gohtml template
+	templateFile := gohtmlFile
+	funcMap := createFuncMap()
+	tmpl, err := template.New(templateFile).Funcs(funcMap).Parse(modifiedContent)
+	if err != nil {
+		log.Fatalf("Failed to parse template: %v", err)
+	}
+
+	// Render the template with data
+	//var buf strings.Builder
+	var buf bytes.Buffer
+
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		log.Fatalf("Failed to execute template: %v", err)
+	}
+
+	// Generate a PDF from the rendered HTML
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		log.Fatalf("Failed to create PDF generator: %v", err)
+	}
+
+	// Add the rendered HTML as a page
+	var page *wkhtmltopdf.PageReader
+	//pdfg.AddPage(wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes())))
+
+	page = wkhtmltopdf.NewPageReader(bytes.NewReader(buf.Bytes()))
+	//page = wkhtmltopdf.NewPageReader(strings.NewReader(buf.String()))
+
+	page.EnableLocalFileAccess.Set(true)
+	pdfg.AddPage(page)
+
+	// Set PDF printing Orientation
+	pdfg.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+
+	// Set PDF printing page size
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+
+	// Create the PDF
+	err = pdfg.Create()
+	if err != nil {
+		log.Fatalf("Failed to generate PDF: %v", err)
+	}
+
+	// Save the PDF to a file
+	err = pdfg.WriteFile(pdfFile)
+	if err != nil {
+		log.Fatalf("Failed to save PDF: %v", err)
+	}
+
+	fmt.Println("PDF generated successfully: ", pdfFile)
+}

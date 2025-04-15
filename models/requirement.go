@@ -23,6 +23,14 @@ type ReqCall struct { //RequirementCall
 	Remarks      string `gorm:"type:varchar(160)"`
 	InvoieNo     uint   // Update Invoice No from ReqBill
 	InvoiceDate  string `gorm:"type:varchar(08)"` // Update Invoice Date from ReqBill
+	VideoId      uint
+}
+
+type VideoProof struct {
+	gorm.Model
+	types.CModel
+	ReqCallID  uint
+	ProofVideo []byte `gorm:"type:longblob"` // Use BLOB to store binary data efficiently
 }
 
 type ReqProof struct {

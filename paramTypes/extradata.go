@@ -1158,29 +1158,32 @@ func (m *P0032Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Templates
 
 type P0033Data struct {
-	TemplateName         string
-	SMSAllowed           string
-	EmailAllowed         string
-	WhatsAppAllowed      string
-	AgentSMSAllowed      string
-	AgentEmailAllowed    string
-	AgentWhatsAppAllowed string
-	CompanyEmail         string
-	CompanyPhone         string
-	DepartmentName       string
-	DepartmentHead       string
-	SenderPassword       string
-	SMTPServer           string
-	SMTPPort             int
-	Body                 string
-	Subject              string
-	Online               string // (Y/N)
-	CarbonCopy           string // (Y/N)
-	BlindCarbonCopy      string // (Y/N)
-	SMSSID               string // SMS ID
-	SMSAuthToken         string // SMS Authorized Token
-	SMSAuthPhoneNo       string // SMS No which has been registered with the service provider
-	SMSBody              string
+	TemplateName          string
+	SMSAllowed            string
+	EmailAllowed          string
+	WhatsAppAllowed       string
+	AgentSMSAllowed       string
+	AgentEmailAllowed     string
+	AgentWhatsAppAllowed  string
+	CompanyEmail          string
+	CompanyPhone          string
+	DepartmentName        string
+	DepartmentHead        string
+	SenderPassword        string
+	SMTPServer            string
+	SMTPPort              int
+	Body                  string
+	Subject               string
+	Online                string // (Y/N)
+	CarbonCopy            string // (Y/N)
+	BlindCarbonCopy       string // (Y/N)
+	SMSSID                string // SMS ID
+	SMSAuthToken          string // SMS Authorized Token
+	SMSAuthPhoneNo        string // SMS No which has been registered with the service provider
+	SMSBody               string
+	WhatsappPhoneNumberID string
+	WhatsappAuthToken     string
+	WhatsappBody          string
 }
 
 func (m *P0033Data) ParseData(datamap map[string]interface{}) {

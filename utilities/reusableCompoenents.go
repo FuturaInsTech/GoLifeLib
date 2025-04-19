@@ -11020,7 +11020,7 @@ func GetReqComm(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[st
 // #215
 // This Method to create payments for the payable entry.  It can be used wherever we need
 // Automatic Approval and Payment Creation
-func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, iPayStatus string, txn *gorm.DB) (oPayno uint, oErr error) {
+func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, iPayStatus string, iCoverage string, txn *gorm.DB) (oPayno uint, oErr error) {
 	if iPayStatus == "PN" {
 		var payosbal models.PayOsBal
 		result := txn.Find(&payosbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct =? and contract_curry = ?", iCompany, iDrAcc, iPolicy, iAccCurr)
@@ -11074,7 +11074,7 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 	paycrt.DateOfPayment = iEffectiveDate
 	paycrt.InsurerBankAccNo = iCrAccount
 	paycrt.InsurerBankIFSC = iFSC
-	paycrt.PaymentAccount = iDrAcc
+	paycrt.PaymentAccount = iDrAcc + iCoverage
 	paycrt.PolicyID = iPolicy
 	paycrt.TypeOfPayment = iTypeofPayment
 	paycrt.UpdatedID = 1
@@ -11117,7 +11117,7 @@ func AutoPayCreate(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBa
 		iAccountCodeID := acccode.ID
 		iAccAmount := iAmount
 		iAccCurry := iAccCurr
-		iAccountCode := glcode
+		iAccountCode := glcode + iCoverage
 
 		iGlAmount := iAmount
 

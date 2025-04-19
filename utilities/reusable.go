@@ -69,7 +69,31 @@ func ConvertYYYYMMDD(inputDate string) (string, error) {
 func CreateFuncMap() template.FuncMap {
 	return template.FuncMap{
 		"formatNumber": formatNumber,
-		"contains":     strings.Contains,
+		"contains":     strings.Contains, // <C>.<Field> STR.text.</C> Tag
+		"eq": func(a, b interface{}) bool { // <E>.<Field> STR.text..</E> Tag
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+		},
+		"ne": func(a, b interface{}) bool { // <N>.<Field> STR.text..</N> Tag
+			return fmt.Sprintf("%v", a) != fmt.Sprintf("%v", b)
+		},
+		"in": func(val interface{}, options ...interface{}) bool { // <I>.<Field> [S T R].text..</I> Tag
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return true
+				}
+			}
+			return false
+		},
+		"out": func(val string, options ...interface{}) bool { // <O>.<Field> [S T R].text...</O> Tag
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return false
+				}
+			}
+			return true
+		},
 	}
 }
 func formatInteger(famt string, ctype byte) string {

@@ -61,4 +61,14 @@ type Policy struct {
 	IlpSummaries     []IlpSummary
 	IlpSwitchHeaders []IlpSwitchHeader
 	IlpSwitchFunds   []IlpSwitchFund
+	TranReversals    []TranReversal
+}
+
+type TranReversal struct {
+	gorm.Model
+	types.CModel
+	PolicyID      uint
+	HistoryCode   string `gorm:"type:varchar(05)"`
+	EffectiveDate string `gorm:"type:varchar(08)"`
+	DeletedUserID uint
 }

@@ -66,7 +66,7 @@ func ConvertYYYYMMDD(inputDate string) (string, error) {
 	return outputDateStr, nil
 }
 
-func createFuncMap() template.FuncMap {
+func CreateFuncMap() template.FuncMap {
 	return template.FuncMap{
 		"formatNumber": formatNumber,
 		"contains":     strings.Contains, // <C>.<Field> STR.text.</C> Tag

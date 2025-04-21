@@ -776,3 +776,62 @@ func SendSMSTwilio(iCompany, iclientID uint, itempName, iEffDate string, message
 	log.Println("SMS sending initiated asynchronously")
 	return nil
 }
+
+func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffectiveDate string, txn *gorm.DB) (oCapAmount float64, oBilledAmt float64, oUnBilledAmt float64, oError error) {
+	var polenq models.Policy
+	result := txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return 0, 0, 0, result.Error
+	}
+
+	var benenq models.Benefit
+	result = txn.Find(&benenq, "company_id = ? and id = ?", iCompany, iBenID)
+	if result.Error != nil {
+		return 0, 0, 0, result.Error
+	}
+
+	var loanenq []models.Loan
+	result = txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_seq_number = ? and loan_status = ?", iCompany, iPolicy, iLoanSeq, "AC")
+	if result.Error != nil {
+		return 0, 0, 0, result.Error
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
+	GetItemD(int(iCompany), "Q0006", benenq.BCoverage, benenq.BStartDate, &extradata)
+
+	var p0072data paramTypes.P0072Data
+	var extradata1 paramTypes.Extradata = &p0072data
+	GetItemD(int(iCompany), "P0072", q0006data.LoanMethod, iEffectiveDate, &extradata1)
+
+	for i := 0; i < len(loanenq); i++ {
+		iIntBilled := 0.0
+		iIntUnBilled := 0.0
+		var loanbill []models.LoanBill
+		result = txn.Find(&loanbill, "company_id = ? and policy_id = ? and loan_id = ? and billing_status = ?", iCompany, iPolicy, loanenq[i].ID, "OP")
+		if result.Error != nil {
+			return 0, 0, 0, result.Error
+		}
+		for j := 0; j < len(loanbill); j++ {
+			iIntBilled += loanbill[j].LoanIntAmount
+		}
+
+		oLoanOS := loanenq[i].LastCapAmount
+		oLoanInt := loanenq[i].LoanIntRate
+		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastIntBillDate)
+
+		if p0072data.LoanInterestType == "C" {
+			iIntUnBilled = CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+		} else if p0072data.LoanInterestType == "S" {
+			iIntUnBilled = SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+		}
+
+		oCapAmount += iIntBilled + iIntUnBilled + oLoanOS
+		oBilledAmt += iIntBilled
+		oUnBilledAmt += iIntUnBilled
+
+	}
+
+	return RoundFloat(oCapAmount, 2), RoundFloat(oBilledAmt, 2), RoundFloat(oUnBilledAmt, 2), nil
+
+}

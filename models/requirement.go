@@ -38,7 +38,7 @@ type ReqProof struct {
 	gorm.Model
 	types.CModel
 	ReqcallID    uint
-	ProofImg     string `gorm:"type:longtext"`
+	ProofImg     []byte `gorm:"type:longblob"`
 	ProofImgPath string `gorm:"type:varchar(255)"`
 }
 

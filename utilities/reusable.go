@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -20,7 +19,6 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/valyala/fasthttp"
-	"github.com/xuri/excelize/v2"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
@@ -836,89 +834,6 @@ func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffecti
 	return RoundFloat(oCapAmount, 2), RoundFloat(oBilledAmt, 2), RoundFloat(oUnBilledAmt, 2), nil
 
 }
-
-func ExcelDownload(c *gin.Context) {
-	user, _ := c.Get("user")
-	method := "UWPolicy" //H0192
-	userdatamap, err := utilities.GetUserAccess(user, method)
-	userco := uint(userdatamap["CompanyId"].(float64))
-	userlan := uint(userdatamap["LanguageId"].(float64))
-	if err != nil {
-		shortCode := "GL001"
-		longDesc, _ := utilities.GetErrorDesc(userco, userlan, shortCode)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": shortCode + " : " + longDesc + "-" + method,
-		})
-		return
-	}
-
-	var requestData struct {
-		GLHistoryData []map[string]interface{} `json:"GLHistoryData"`
-	}
-	if err := c.ShouldBindJSON(&requestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	data := requestData.GLHistoryData
-
-	f := excelize.NewFile()
-	sheet := "Sheet1"
-
-	if len(data) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No data to export"})
-		return
-	}
-
-	// Get headers in consistent order
-	var headers []string
-	for key := range data[0] {
-		headers = append(headers, key)
-	}
-
-	// Write headers
-	for i, header := range headers {
-		col := utilities.ColumnIndexToName(i)
-		f.SetCellValue(sheet, col+"1", header)
-	}
-
-	// Write rows
-	for rowIndex, row := range data {
-		for colIndex, header := range headers {
-			val := row[header]
-			col := utilities.ColumnIndexToName(colIndex)
-			cell := col + strconv.Itoa(rowIndex+2)
-			f.SetCellValue(sheet, cell, val)
-		}
-	}
-
-	// Save to specified location
-	timestamp := time.Now().Format("20060102_150405")
-	filename := fmt.Sprintf("GL_History_%s.xlsx", timestamp)
-	saveDir := os.Getenv("GLEXCEL_SAVE_PATH")
-	savePath := filepath.Join(saveDir, filename)
-
-	if _, err := os.Stat(saveDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(saveDir, os.ModePerm); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create directory"})
-			return
-		}
-	}
-
-	if err := f.SaveAs(savePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save Excel file"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":  "✅ Excel file generated successfully",
-		"filePath": savePath,
-	})
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//////////////////////////resueable.go
 
 // Converts 0 → A, 1 → B, ..., 25 → Z, 26 → AA, 27 → AB, ...
 func ColumnIndexToName(index int) string {

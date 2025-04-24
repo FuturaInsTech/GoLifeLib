@@ -776,7 +776,6 @@ func SendSMSTwilio(iCompany, iclientID uint, itempName, iEffDate string, message
 	log.Println("SMS sending initiated asynchronously")
 	return nil
 }
-
 func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffectiveDate string, txn *gorm.DB) (oCapAmount float64, oBilledAmt float64, oUnBilledAmt float64, oError error) {
 	var polenq models.Policy
 	result := txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicy)
@@ -818,7 +817,7 @@ func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffecti
 
 		oLoanOS := loanenq[i].LastCapAmount
 		oLoanInt := loanenq[i].LoanIntRate
-		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastIntBillDate)
+		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastCapDate)
 
 		if p0072data.LoanInterestType == "C" {
 			iIntUnBilled = CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))

@@ -11,7 +11,7 @@ type CbUser struct {
 
 	ClientMobCode string `gorm:"type:varchar(05)"`
 	ClientMobile  string `gorm:"type:varchar(20)"`
-	ClientDob     string `gorm:"type:varchar(10)"`
+	ClientDob     string `gorm:"type:varchar(08)"`
 	CbEmail       string `gorm:"type:varchar(100)"`
 	CbEnabled     string `gorm:"type:varchar(01)"`
 	Latitude      string `gorm:"type:varchar(100)"`

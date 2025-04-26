@@ -8,10 +8,11 @@ import (
 type CbUser struct {
 	gorm.Model
 	types.CModel
-
 	ClientMobCode string `gorm:"type:varchar(05)"`
 	ClientMobile  string `gorm:"type:varchar(20)"`
+	ClientID      uint
 	ClientDob     string `gorm:"type:varchar(08)"`
+	ClientName    string `gorm:"type:varchar(200)"`
 	CbEmail       string `gorm:"type:varchar(100)"`
 	CbEnabled     string `gorm:"type:varchar(01)"`
 	Latitude      string `gorm:"type:varchar(100)"`

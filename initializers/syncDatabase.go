@@ -117,7 +117,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.WfUserReminder{})
 	DB.AutoMigrate(&models.ReqCall{})
 	DB.AutoMigrate(&models.VideoProof{})
-	// DB.AutoMigrate(&models.ReqProof{})
+	DB.AutoMigrate(&models.ReqProof{})
 	// DB.AutoMigrate(&models.WfComment{})
 	// DB.AutoMigrate(&models.UserLimit{})
 	// DB.AutoMigrate(&models.Annuity{})
@@ -127,5 +127,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.PlanLife{})
 	// DB.AutoMigrate(&models.PlanLifeBenefit{})
 	DB.AutoMigrate(&models.TranReversal{})
+	DB.AutoMigrate(&models.CbUser{})
+	DB.AutoMigrate(&models.CbLog{})
 
 }

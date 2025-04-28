@@ -29,15 +29,17 @@ type ReqCall struct { //RequirementCall
 type VideoProof struct {
 	gorm.Model
 	types.CModel
-	ReqCallID  uint
-	ProofVideo []byte `gorm:"type:longblob"` // Use BLOB to store binary data efficiently
+	ReqCallID      uint
+	ProofVideo     []byte `gorm:"type:longblob"` // Use BLOB to store binary data efficiently
+	ProofVideoPath string `gorm:"type:varchar(255)"`
 }
 
 type ReqProof struct {
 	gorm.Model
 	types.CModel
-	ReqcallID uint
-	ProofImg  string `gorm:"type:longtext"`
+	ReqcallID    uint
+	ProofImg     []byte `gorm:"type:longblob"`
+	ProofImgPath string `gorm:"type:varchar(255)"`
 }
 
 type ReqBill struct {

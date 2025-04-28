@@ -11231,7 +11231,7 @@ func PolicyDep(iCompany uint, iPolicy uint) map[string]interface{} {
 // Outputs Annualized Premium as float (124.22)
 //
 // ©  FuturaInsTech
-func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string) (float64, error) {
+func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string, iPremRateCode string, iPremAge uint) (float64, error) {
 
 	var q0006data paramTypes.Q0006Data
 	var extradata paramTypes.Extradata = &q0006data
@@ -11255,8 +11255,8 @@ func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string)
 
 	}
 
-	iAgeCalcMethod := q0006data.AgeCalcMethod
-	iPlanPremAge := p0074data.PlanPremAge
+	//iAgeCalcMethod := q0006data.AgeCalcMethod
+	//iPlanPremAge := p0074data.PlanPremAge
 
 	// iPremMethod := q0006data.PremiumMethod
 	// iDisType := q0006data.DiscType
@@ -11268,41 +11268,41 @@ func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string)
 	// iHealthBenefitType := q0006data.HealthBenefitType
 	// iPlanMaxLives := p0074data.PlanMaxLives
 
-	var premAge int
-	var PremRateCode string
+	// var premAge int
+	// var PremRateCode string
 
-	var planlife models.PlanLife
+	// var planlife models.PlanLife
 
-	if iPlanPremAge == "PL" {
+	// if iPlanPremAge == "PL" {
 
-		result := initializers.DB.First(&planlife, "company_id=? and policy_id= ? and client_rel_code=?", iCompany, iPolicy, "I")
+	// 	result := initializers.DB.First(&planlife, "company_id=? and policy_id= ? and client_rel_code=?", iCompany, iPolicy, "I")
 
-		if result.Error != nil || result.RowsAffected == 0 {
-			return 0, errors.New("No Primary Life Assured In Plan Life")
-		}
+	// 	if result.Error != nil || result.RowsAffected == 0 {
+	// 		return 0, errors.New("No Primary Life Assured In Plan Life")
+	// 	}
 
-	} else if iPlanPremAge == "YL" {
+	// } else if iPlanPremAge == "YL" {
 
-		result := initializers.DB.Order("p_age ASC").First(&planlife, "company_id = ? AND policy_id = ?", iCompany, iPolicy)
+	// 	result := initializers.DB.Order("p_age ASC").First(&planlife, "company_id = ? AND policy_id = ?", iCompany, iPolicy)
 
-		if result.Error != nil || result.RowsAffected == 0 {
-			return 0, errors.New("No Youngest Life Assured In Plan Life")
-		}
+	// 	if result.Error != nil || result.RowsAffected == 0 {
+	// 		return 0, errors.New("No Youngest Life Assured In Plan Life")
+	// 	}
 
-	} else if iPlanPremAge == "EL" {
-		result := initializers.DB.Order("p_age DESC").First(&planlife, "company_id = ? AND policy_id = ?", iCompany, iPolicy)
+	// } else if iPlanPremAge == "EL" {
+	// 	result := initializers.DB.Order("p_age DESC").First(&planlife, "company_id = ? AND policy_id = ?", iCompany, iPolicy)
 
-		if result.Error != nil || result.RowsAffected == 0 {
-			return 0, errors.New("No Eldest Life Assured In Plan Life")
-		}
-	}
+	// 	if result.Error != nil || result.RowsAffected == 0 {
+	// 		return 0, errors.New("No Eldest Life Assured In Plan Life")
+	// 	}
+	// }
 
-	premAge, _, _, _, _, _ = CalculateAge(iDate, planlife.PDOB, iAgeCalcMethod)
-	PremRateCode, err = GetPlanPremRateCode(iCompany, iPolicy, planlife.PSumAssured, ikey, planlife.PStartDate)
+	// premAge, _, _, _, _, _ = CalculateAge(iDate, planlife.PDOB, iAgeCalcMethod)
+	// PremRateCode, err = GetPlanPremRateCode(iCompany, iPolicy, planlife.PSumAssured, ikey, planlife.PStartDate)
 
-	if err != nil {
-		return 0, err
-	}
+	// if err != nil {
+	// 	return 0, err
+	// }
 
 	var q0010key string
 	var prem float64
@@ -11325,7 +11325,7 @@ func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string)
 
 	if q0006data.PremCalcType == "H" {
 		if q0006data.PremiumMethod == "PM005" {
-			q0010key = iCoverage + iPlan + PremRateCode
+			q0010key = iCoverage + iPlan + iPremRateCode
 		}
 	}
 
@@ -11338,7 +11338,7 @@ func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string)
 	}
 
 	for i := 0; i < len(q0010data.Rates); i++ {
-		if q0010data.Rates[i].Age == uint(premAge) {
+		if q0010data.Rates[i].Age == iPremAge {
 			prem = q0010data.Rates[i].Rate
 			break
 		}
@@ -11354,7 +11354,7 @@ func GetHeathRate(iCompany, iPolicy uint, iCoverage, iPlan string, iDate string)
 // Output :- PremRateCode from P0080
 //
 // ©  FuturaInsTech
-func GetPlanPremRateCode(iCompany, iPolicy uint, iSumAssured uint64, iKey, iDate string) (string, error) {
+func GetPlanPremRateCode(iCompany, iPolicy uint, iSumAssured uint, iKey, iDate string) (string, error) {
 
 	var p0080data paramTypes.P0080Data
 	var extradatap0080 paramTypes.Extradata = &p0080data
@@ -11426,4 +11426,126 @@ func GetPlanPremRateCode(iCompany, iPolicy uint, iSumAssured uint64, iKey, iDate
 	}
 
 	return filteredRecords[0].PremRateCode, nil
+}
+
+// #219
+// GetParamPlanBenefit - Getting Plan BenefitCode ,BenefitUnit ,BenefitBasis
+// BenefitPlanCover, PlanBenefitGroup, MaxBenefitAmount, MaxBenefitUnit, MaxBenefitBasis
+// From Param P0075(Plan Benefits) and P0077(Plan Max Benefits)
+//
+// Input :- iCompany, iPolicy, iBenefit, iBCoverage, iBenefitPlan, current date
+//
+// Output :- PremRateCode from P0080
+//
+// ©  FuturaInsTech
+func GetParamPlanBenefit(iCompany uint, iBCoverage, iBenefitPlan, iDate string) (error, []interface{}) {
+	resp := make([]interface{}, 0)
+
+	iKey := iBCoverage + iBenefitPlan
+
+	var p0075data paramTypes.P0075Data
+	var extradatap0075 paramTypes.Extradata = &p0075data
+	err := GetItemD(int(iCompany), "P0075", iKey, iDate, &extradatap0075)
+	if err != nil {
+		return err, nil
+
+	}
+
+	var p0077data paramTypes.P0077Data
+	var extradatap0077 paramTypes.Extradata = &p0077data
+	err = GetItemD(int(iCompany), "P0077", iKey, iDate, &extradatap0077)
+	if err != nil {
+		return err, nil
+
+	}
+
+	for _, planBenefit := range p0075data.PlanBenefits {
+
+		for _, planMaxBenefit := range p0077data.PlanMaxBenefits {
+
+			if err != nil {
+				return err, nil
+			}
+
+			benefitCodeDesc := GetP0050ItemCodeDesc(iCompany, "BenefitCode", 1, planBenefit.BenefitCode)
+			benefitBasisDesc := GetP0050ItemCodeDesc(iCompany, "BenefitBasis", 1, planBenefit.BenefitBasis)
+			benefitPlanCover := GetP0050ItemCodeDesc(iCompany, "BenefitPlanCover", 1, planBenefit.BenefitPlanCover)
+			planBenefitGroup := GetP0050ItemCodeDesc(iCompany, "PlanBenefitGroup", 1, planBenefit.PlanBenefitGroup)
+			maxBenefitBasis := GetP0050ItemCodeDesc(iCompany, "MaxBenefitBasis", 1, planMaxBenefit.MaxBenefitBasis)
+
+			if planBenefit.BenefitCode == planMaxBenefit.BenefitCode {
+
+				paramOut := map[string]interface{}{
+					"BenefitCode":          planBenefit.BenefitCode,
+					"BenefitCodeDesc":      benefitCodeDesc,
+					"BenefitUnit":          planBenefit.BenefitUnit,
+					"BenefitBasis":         planBenefit.BenefitBasis,
+					"BenefitBasisDesc":     benefitBasisDesc,
+					"BenefitPlanCover":     planBenefit.BenefitPlanCover,
+					"BenefitPlanCoverDesc": benefitPlanCover,
+					"PlanBenefitGroup":     planBenefit.PlanBenefitGroup,
+					"PlanBenefitGroupDesc": planBenefitGroup,
+					"MaxBenefitAmount":     planMaxBenefit.MaxBenefitAmount,
+					"MaxBenefitUnit":       planMaxBenefit.MaxBenefitUnit,
+					"MaxBenefitBasis":      planMaxBenefit.MaxBenefitBasis,
+					"MaxBenefitBasisDesc":  maxBenefitBasis,
+				}
+				resp = append(resp, paramOut)
+			}
+
+		}
+	}
+
+	return nil, resp
+}
+
+// # 220
+// CalcHealthDiscounts - Calculate Discounted Amount based on SA or Annualised Prem
+//
+// Inputs: Company, Discount Type (S/P) , Discount Method (As per Product), Annualised Prem
+// SA Amount
+//
+// # Outputs Discounted Amount as float
+//
+// ©  FuturaInsTech
+func CalcHealthDiscounts(iCompany uint, iDiscType string, iDiscMethod string, iAnnPrem float64, iSA uint, iDate string) float64 {
+	// SA Discount
+
+	if iDiscType == "S" {
+		var q0017data paramTypes.Q0017Data
+		var extradataq0017 paramTypes.Extradata = &q0017data
+		err := GetItemD(int(iCompany), "Q0017", iDiscMethod, iDate, &extradataq0017)
+
+		if err != nil {
+			return 0
+
+		}
+
+		for i := 0; i < len(q0017data.SaBand); i++ {
+			if int(iSA) <= int(q0017data.SaBand[i].Sa) {
+				oDiscount := uint(q0017data.SaBand[i].Discount) * uint(iAnnPrem) / 100
+				return float64(oDiscount)
+			}
+		}
+	}
+	// Premium Discount
+	if iDiscType == "P" {
+		var q0018data paramTypes.Q0018Data
+		var extradataq0018 paramTypes.Extradata = &q0018data
+
+		err := GetItemD(int(iCompany), "Q0018", iDiscMethod, iDate, &extradataq0018)
+
+		if err != nil {
+			return 0
+
+		}
+
+		for i := 0; i < len(q0018data.PremBand); i++ {
+			if int(iAnnPrem) <= int(q0018data.PremBand[i].AnnPrem) {
+				oDiscount := uint(q0018data.PremBand[i].Discount) * uint(iAnnPrem) / 100
+				return float64(oDiscount)
+			}
+		}
+	}
+	return 0
 }

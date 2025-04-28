@@ -29,17 +29,6 @@ type PlanLife struct {
 	PLoadPrem      float64 // Loaded Premium
 	PDiscPrem      float64 // Total Premium Discount
 	PPrem          float64 // Total Premium
-	PDisType01     string  `gorm:"type:varchar(01)"` // Discount Type
-	PDisPrem01     float64 // Premium Discount
-	PDisType02     string  `gorm:"type:varchar(01)"` // Discount Type
-	PDisPrem02     float64 // Premium Discount
-	PDisType03     string  `gorm:"type:varchar(01)"` // Discount Type
-	PDisPrem03     float64 // Premium Discount
-	PDisType04     string  `gorm:"type:varchar(01)"` // Discount Type
-	PDisPrem04     float64 // Premium DiscountPDiscountType  [5]string  `gorm:"type:varchar(01)"` // Discount Type
-	PDisType05     string  `gorm:"type:varchar(01)"` // Discount Type
-	PDisPrem05     float64 // Premium DiscountPDiscountType  [5]string  `gorm:"type:varchar(01)"` // Discount Type
-
 }
 
 type PlanLifeBenefit struct {
@@ -56,4 +45,24 @@ type PlanLifeBenefit struct {
 	MaxBenefitUnit   float64
 	MaxBenefitBasis  string
 	PlanLifeID       uint // Non-Floater and Group Plans Only. Default is NULL
+}
+
+type PlanLifeDiscount struct {
+	gorm.Model
+	types.CModel
+	PolicyID  uint
+	BenefitID uint
+	// BenefitPlan   string `gorm:"type:varchar(10)"`
+
+	PDisType01 string  `gorm:"type:varchar(01)"` // Discount Type
+	PDisPrem01 float64 // Premium Discount
+	PDisType02 string  `gorm:"type:varchar(01)"` // Discount Type
+	PDisPrem02 float64 // Premium Discount
+	PDisType03 string  `gorm:"type:varchar(01)"` // Discount Type
+	PDisPrem03 float64 // Premium Discount
+	PDisType04 string  `gorm:"type:varchar(01)"` // Discount Type
+	PDisPrem04 float64 // Premium DiscountPDiscountType  [5]string  `gorm:"type:varchar(01)"` // Discount Type
+	PDisType05 string  `gorm:"type:varchar(01)"` // Discount Type
+	PDisPrem05 float64 // Premium DiscountPDiscountType  [5]string  `gorm:"type:varchar(01)"` // Discount Type
+	PlanLifeID uint
 }

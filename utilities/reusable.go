@@ -817,7 +817,7 @@ func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffecti
 
 		oLoanOS := loanenq[i].LastCapAmount
 		oLoanInt := loanenq[i].LoanIntRate
-		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastCapDate)
+		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastIntBillDate)
 
 		if p0072data.LoanInterestType == "C" {
 			iIntUnBilled = CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))

@@ -123,6 +123,7 @@ type WfRequest struct {
 	ReqName        string `gorm:"type:varchar(20)"`
 	ReqDescription string `gorm:"type:longtext"`
 	CreatedBy      uint
+	ReqTokenNo     string `gorm:"type:varchar(20)"`
 	ReqRefData     string `gorm:"type:varchar(20)"`
 	ReqRefType     string `gorm:"type:varchar(20)"`
 	ReqStatus      string `gorm:"type:varchar(20)"`
@@ -217,6 +218,7 @@ type ActionView struct {
 	RequestId          uint      `gorm:"column:request_id"`
 	ReqRefData         string    `gorm:"column:req_ref_data"`
 	ReqRefType         string    `gorm:"column:req_ref_type"`
+	ReqTokenNo         string    `gorm:"column:req_token_no"`
 	AssignedUser       string    `gorm:"column:assigned_user"`
 }
 

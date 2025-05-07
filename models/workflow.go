@@ -179,6 +179,9 @@ type TaskView struct {
 	SlaViolation    bool      `gorm:"column:sla_violation"`
 	Comments        string    `gorm:"column:comments"`
 	Attachments     string    `gorm:"column:attachments"`
+	ReqTokenNo      string    `gorm:"column:req_token_no"`
+	ReqRefType      string    `gorm:"column:req_ref_type"`
+	ReqRefData      string    `gorm:"column:req_ref_data"`
 	AssignedUser    string    `gorm:"column:assigned_user"`
 }
 

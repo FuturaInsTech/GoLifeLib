@@ -1,0 +1,52 @@
+{
+"ClientSalutation": "MR",  
+"ClientFullName": "Lakshmi Muppidathi",
+"AddressLine1": "25 Nellaiappar Koil Street",
+"AddressLine2": "Near Eruttu Kadai Alwa Store",
+"AddressLine3": "Nagarkoil Road",
+"AddressLine4": "Thiruvanandhapuram",
+"AddressState": "Kerala",
+"AddressCountry": "India",
+"PolicyId": "50002345", 
+"AccCurry": "INR",
+"AccAmount": 2345.70, 
+"AmountInWords": "Indian Rupees Two Thousands Three Hundreds Forty Five and Seventy Paise",
+"Reason": "Refund of Policy Deposit", 
+"DateOfPayment": "28/03/2025",
+"TypeOfPayment": "NEFT",  
+"BankReferenceNo": "89862972929",
+ "agent": "4",
+  "baccno": "987664246776",
+  "comamount": [
+    1079.6,
+    1079.6,
+    1079.6
+  ],
+  "compadd": "#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047",
+  "compname": "FuturaInsTech Insurance Company",
+  "coverage": [
+    "Smart Secure Protect",
+    "Smart Secure Protect",
+    "Smart Secure Protect"
+  ],
+  "date": "08/03/2025",
+  "effdate": [
+    "28/02/2025",
+    "04/03/2025",
+    "06/03/2025"
+  ],
+  "historycode": [
+    "Policy Issuance",
+    "Policy Issuance",
+    "Policy Issuance"
+  ],
+  "ifsccode": "KVB",
+  "name": "Kumar Kishore ",
+  "policyid": [
+    "100000386",
+    "100000387",
+    "100000388"
+  ],
+  "status": "Active",
+  "total": 3238.7999999999997 
+}

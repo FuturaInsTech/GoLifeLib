@@ -5854,8 +5854,20 @@ func TDFFundMN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		return "", result.Error
 	}
 	for i := 0; i < len(benefitenq); i++ {
-		if benefitenq[i].IlpMortalityDate > odate {
-			odate = benefitenq[i].IlpMortalityDate
+
+		iCoverage := benefitenq[i].BCoverage
+		var q0006data paramTypes.Q0006Data
+		var extradataq0006 paramTypes.Extradata = &q0006data
+		err := GetItemD(int(iCompany), "Q0006", iCoverage, benefitenq[i].BStartDate, &extradataq0006)
+		if err != nil {
+			err := errors.New("Q0006 Not Found")
+			return "", err
+		}
+		if q0006data.PremCalcType == "U" {
+
+			if benefitenq[i].IlpMortalityDate > odate {
+				odate = benefitenq[i].IlpMortalityDate
+			}
 		}
 	}
 
@@ -5995,8 +6007,19 @@ func TDFFundFN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn 
 		return "", result.Error
 	}
 	for i := 0; i < len(benefitenq); i++ {
-		if benefitenq[i].IlpFeeDate > odate {
-			odate = benefitenq[i].IlpFeeDate
+
+		iCoverage := benefitenq[i].BCoverage
+		var q0006data paramTypes.Q0006Data
+		var extradataq0006 paramTypes.Extradata = &q0006data
+		err := GetItemD(int(iCompany), "Q0006", iCoverage, benefitenq[i].BStartDate, &extradataq0006)
+		if err != nil {
+			err := errors.New("Q0006 Not Found")
+			return "", err
+		}
+		if q0006data.PremCalcType == "U" {
+			if benefitenq[i].IlpFeeDate > odate {
+				odate = benefitenq[i].IlpFeeDate
+			}
 		}
 	}
 

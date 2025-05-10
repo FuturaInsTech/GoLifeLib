@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"math"
 	"net/url"
 	"os"
 	"os/exec"
@@ -776,6 +777,7 @@ func SendSMSTwilio(iCompany, iclientID uint, itempName, iEffDate string, message
 	log.Println("SMS sending initiated asynchronously")
 	return nil
 }
+
 func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffectiveDate string, txn *gorm.DB) (oCapAmount float64, oBilledAmt float64, oUnBilledAmt float64, oError error) {
 	var polenq models.Policy
 	result := txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicy)
@@ -820,7 +822,7 @@ func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffecti
 		_, _, _, iNoOfDays, _, _, _, _ := NoOfDays(iEffectiveDate, loanenq[i].LastIntBillDate)
 
 		if p0072data.LoanInterestType == "C" {
-			iIntUnBilled = CompoundInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
+			iIntUnBilled = CompoundInterestForLoan(oLoanOS, oLoanInt, loanenq[i].NextIntBillDate, loanenq[i].LastIntBillDate, loanenq[i].LastCapDate)
 		} else if p0072data.LoanInterestType == "S" {
 			iIntUnBilled = SimpleInterest(oLoanOS, oLoanInt, float64(iNoOfDays))
 		}
@@ -843,4 +845,25 @@ func ColumnIndexToName(index int) string {
 		index = index/26 - 1
 	}
 	return name
+}
+
+func CompoundInterestForLoan(iPrincipal float64, iInterest float64, iDate1 string, iDate2 string, iDate3 string) (ointrest float64) {
+	_, _, _, iNoOfDays1, _, _, _, _ := NoOfDays(iDate1, iDate3)
+	_, _, _, iNoOfDays2, _, _, _, _ := NoOfDays(iDate2, iDate3)
+
+	// Convert days to years
+	oDays1 := float64(iNoOfDays1) / 365
+	oDays2 := float64(iNoOfDays2) / 365
+
+	annualRate := 1 + (iInterest / 100)
+
+	// Compound amounts for both periods
+	amount1 := iPrincipal * math.Pow(annualRate, oDays1)
+	amount2 := iPrincipal * math.Pow(annualRate, oDays2)
+
+	interest1 := amount1 - iPrincipal
+	interest2 := amount2 - iPrincipal
+
+	ointrest = interest1 - interest2
+	return RoundFloat(ointrest, 2)
 }

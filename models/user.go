@@ -35,4 +35,5 @@ type UserExt struct {
 	types.CModel
 	UserID     uint
 	UserClient uint
+	UserAgent  uint
 }

@@ -127,6 +127,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.PlanLife{})
 	// DB.AutoMigrate(&models.PlanLifeBenefit{})
 	DB.AutoMigrate(&models.PlanLifeDiscount{})
+	DB.AutoMigrate(&models.PriorPolicy{})
 	DB.AutoMigrate(&models.TranReversal{})
 	DB.AutoMigrate(&models.CbUser{})
 	DB.AutoMigrate(&models.CbLog{})

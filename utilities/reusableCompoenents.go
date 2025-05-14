@@ -4747,12 +4747,12 @@ func TDFIBDN(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *g
 
 	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	if result.Error != nil {
-		txn.Rollback()
+		// txn.Rollback()
 		return "", result.Error
 	}
 	result = txn.First(&incomeb, "company_id = ? and policy_id = ? and paid_date = ?", iCompany, iPolicy, "")
 	if result.Error != nil {
-		txn.Rollback()
+		// txn.Rollback()
 		return "", result.Error
 	}
 

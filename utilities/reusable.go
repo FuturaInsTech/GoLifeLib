@@ -876,3 +876,161 @@ func CompoundInterestForLoan(iPrincipal float64, iInterest float64, iDate1 strin
 	ointrest = interest1 - interest2
 	return RoundFloat(ointrest, 2)
 }
+
+func CalculateCommision(iCompany uint, ipolicy uint, txn *gorm.DB) float64 {
+	var polenq models.Policy
+	txn.Find(&polenq, "id=?", ipolicy)
+
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "policy_id = ? and b_status =  ?", ipolicy, "IF")
+
+	var commissionamt float64
+
+	//Noofinstalment := GetNoIstalments(polenq.PaidToDate, polenq.BTDate, polenq.PFreq)
+
+	Totalinstfromrcd := GetNoIstalments(polenq.PRCD, polenq.PaidToDate, polenq.PFreq)
+
+	nomonths, _ := ConvertInstallmentsToMonths(Totalinstfromrcd, polenq.PFreq)
+
+	for i := 0; i < len(benefitenq); i++ {
+
+		commrate := GetCommissionRates(iCompany, benefitenq[i].BCoverage, uint(nomonths), polenq.PaidToDate)
+		commission := benefitenq[i].BPrem * commrate
+
+		commissionamt += commission
+	}
+
+	return commissionamt
+}
+
+func ConvertInstallmentsToMonths(installments int, frequency string) (int, int) {
+	var monthsPerInstallment int
+
+	switch frequency {
+	case "M":
+		monthsPerInstallment = 1
+
+	case "Q":
+		monthsPerInstallment = 3
+	case "H":
+		monthsPerInstallment = 6
+	case "Y":
+		monthsPerInstallment = 12
+
+	}
+
+	return installments * monthsPerInstallment, monthsPerInstallment
+}
+
+// calculate commission for lapse policy
+
+func CalculateCommisionLA(iCompany uint, ipolicy uint, txn *gorm.DB) float64 {
+	var polenq models.Policy
+	txn.Find(&polenq, "id = ?", ipolicy)
+
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "policy_id = ? AND b_status = ?", ipolicy, "LA")
+
+	// Get number of months between PRCD and PaidToDate
+	currentDate := Date2String(time.Now())
+	totalInstFromRCD := GetNoIstalmentsLA(polenq.PaidToDate, currentDate, polenq.PFreq)
+	var commissionamt float64
+
+	for j := 0; j < totalInstFromRCD; j++ {
+
+		nomonths1, freqinno := ConvertInstallmentsToMonths(totalInstFromRCD, polenq.PFreq)
+		noofmonths := nomonths1 + freqinno*j
+		for i := 0; i < len(benefitenq); i++ {
+
+			if polenq.PaidToDate <= benefitenq[i].BPremCessDate {
+				commrate := GetCommissionRates(iCompany, benefitenq[i].BCoverage, uint(noofmonths), polenq.PaidToDate)
+				commission := benefitenq[i].BPrem * commrate
+				commissionamt += commission
+			} else {
+
+				return 0
+			}
+		}
+	}
+	return commissionamt
+}
+
+func GetNoIstalmentsLA(iFromDate, iToDate, iFrequency string) (oInstalments int) {
+
+	fromDate := String2Date(iFromDate)
+	toDate := String2Date(iToDate)
+	method := "M"
+	var noinstalments float64
+
+	year1, month1, _, _, _, _ := DateDiff(fromDate, toDate, method)
+	fmt.Println("Shubham", iFromDate, iToDate, iFrequency, year1, month1)
+	var dd1 string
+	var dd2 string
+	dd1 = iFromDate[6:8] // DD paid to date
+	dd2 = iToDate[6:8]   //DD current date
+	switch {
+
+	case iFrequency == "Y":
+		// 10 and 0  10
+		noinstalments = (float64(year1) / 1)
+		noinst1 := float32((year1 * 1) + (month1))
+		noinst2 := int(noinst1)
+		if noinst1 == float32(noinst2) {
+
+			if dd2 <= dd1 {
+				noinstalments = noinstalments - 1
+			}
+		}
+		noinstalments = noinstalments + 1
+		oInstalments = int(noinstalments)
+		return oInstalments
+	case iFrequency == "H":
+		// 10 and 6  10*2 + 6/6 =  21
+		noinstalments := float32((year1 * 2) + (month1 / 6))
+		noinst1 := float32((year1 * 2) + (month1))
+		noinst2 := int(noinst1)
+		if noinst1 == float32(noinst2) {
+
+			if dd2 <= dd1 {
+				noinstalments = noinstalments - 1
+			}
+		}
+		noinstalments = noinstalments + 1
+		oInstalments = int(noinstalments)
+		return oInstalments
+
+	case iFrequency == "Q":
+		// 5 9   = 5 * 4  + 9/3    20 + 3
+		noinstalments := float32((year1 * 4) + (month1 / 3))
+		noinst1 := float32((year1 * 4) + (month1))
+
+		noinst2 := int(noinst1)
+		if noinst1 == float32(noinst2) {
+
+			if dd2 <= dd1 {
+				noinstalments = noinstalments - 1
+			}
+		}
+		noinstalments = noinstalments + 1
+		oInstalments = int(noinstalments)
+		return oInstalments
+	case iFrequency == "M":
+		noinstalments := float32((year1 * 12) + (month1))
+		noinst1 := float32((year1 * 12) + (month1))
+		noinst2 := int(noinst1)
+		if noinst1 == float32(noinst2) {
+
+			if dd2 <= dd1 {
+				noinstalments = noinstalments - 1
+			}
+		}
+		noinstalments = noinstalments + 1
+		oInstalments = int(noinstalments)
+		return oInstalments
+	case iFrequency == "S":
+		oInstalments := 1
+		return oInstalments
+
+	}
+	return
+}

@@ -848,8 +848,17 @@ func ColumnIndexToName(index int) string {
 }
 
 func CompoundInterestForLoan(iPrincipal float64, iInterest float64, iDate1 string, iDate2 string, iDate3 string) (ointrest float64) {
-	_, _, _, iNoOfDays1, _, _, _, _ := NoOfDays(iDate1, iDate3)
-	_, _, _, iNoOfDays2, _, _, _, _ := NoOfDays(iDate2, iDate3)
+
+	iDate := GetBusinessDate(1, 0, 0)
+	var iNoOfDays1 int64
+	var iNoOfDays2 int64
+	if iDate < iDate1 {
+		_, _, _, iNoOfDays1, _, _, _, _ = NoOfDays(iDate, iDate3)
+		_, _, _, iNoOfDays2, _, _, _, _ = NoOfDays(iDate2, iDate3)
+	} else {
+		_, _, _, iNoOfDays1, _, _, _, _ = NoOfDays(iDate1, iDate3)
+		_, _, _, iNoOfDays2, _, _, _, _ = NoOfDays(iDate2, iDate3)
+	}
 
 	// Convert days to years
 	oDays1 := float64(iNoOfDays1) / 365

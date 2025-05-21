@@ -666,6 +666,11 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 			q0010key = iCoverage + iGender + term + premTerm
 		}
 
+	} else if q0006data.PremCalcType == "H" {
+		// HIP1 + Male
+		if q0006data.PremiumMethod == "PM005" {
+			q0010key = iCoverage + iGender
+		}
 	}
 	fmt.Println("Premium Key ******", iCoverage, iGender, term, premTerm, q0006data.PremCalcType, q0010key)
 	err := GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)

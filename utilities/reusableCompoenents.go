@@ -9744,8 +9744,23 @@ func TDFLoanInt(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 	var tdfrule models.TDFRule
 	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
-	if result.Error != nil {
-		return "", result.Error
+	loandelete := "N"
+	if result.Error != nil || result.RowsAffected == 0 {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error != nil {
+			return "", result.Error
+		} else {
+			loandelete = "Y"
+		}
+	}
+
+	if loandelete == "Y" {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error == nil {
+			txn.Delete(&tdfpolicy)
+			return "", nil
+		}
+
 	}
 	oDate := ""
 	for i := 0; i < len(loanenq); i++ {
@@ -9800,8 +9815,23 @@ func TDFLoanCap(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 	var tdfrule models.TDFRule
 	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
-	if result.Error != nil {
-		return "", result.Error
+	loandelete := "N"
+	if result.Error != nil || result.RowsAffected == 0 {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error != nil {
+			return "", result.Error
+		} else {
+			loandelete = "Y"
+		}
+	}
+
+	if loandelete == "Y" {
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		if results.Error == nil {
+			txn.Delete(&tdfpolicy)
+			return "", nil
+		}
+
 	}
 	oDate := ""
 	for i := 0; i < len(loanenq); i++ {

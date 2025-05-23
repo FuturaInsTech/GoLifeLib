@@ -2498,13 +2498,33 @@ func (m *P0081Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 }
 
-// Workflow Param
-type W0001Data struct {
-	RequestType     string  // P0050
-	Department      string  // W0006
-	Team            string  // W0008
-	SLADuration     float64 // W0009
-	SLADurationType string  // W0009
+// Policy Addl Data  [same like P0071 Benefit Addl Data]
+
+type P0082Data struct {
+	P0082Array []P0082
+}
+type P0082 struct {
+	PolDataType string // P0050
+	ManOrOpt    string // P0050
+}
+
+func (m *P0082Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0082Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+
 }
 
 // Cola Parameter
@@ -2562,6 +2582,15 @@ func (m *P0084Data) GetFormattedData(datamap map[string]string) map[string]inter
 
 	return nil
 
+}
+
+// Workflow Param
+type W0001Data struct {
+	RequestType     string  // P0050
+	Department      string  // W0006
+	Team            string  // W0008
+	SLADuration     float64 // W0009
+	SLADurationType string  // W0009
 }
 
 func (m *W0001Data) ParseData(datamap map[string]interface{}) {

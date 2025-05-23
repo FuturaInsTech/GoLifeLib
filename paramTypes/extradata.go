@@ -267,6 +267,7 @@ type Q0006Data struct {
 	//Health Ins Components
 	isHealthBenefitPlan string //P0050 Yes/No
 	HealthBenefitType   string //P0050 Individual/Non-Floater/Family-Floater
+	ColaMethod          string //P0050
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {
@@ -2504,6 +2505,63 @@ type W0001Data struct {
 	Team            string  // W0008
 	SLADuration     float64 // W0009
 	SLADurationType string  // W0009
+}
+
+// Cola Parameter
+
+type P0083Data struct {
+	NewOrExistId     string //P0050 (Existing/New)
+	SimpleOrCompound string // P0050
+}
+
+func (m *P0083Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0083Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// Cola Rates
+
+type P0084Data struct {
+	Rates []P0028
+}
+type P0084 struct {
+	Yrs             uint
+	PercentIncrease float64
+}
+
+func (m *P0084Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *P0084Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
 }
 
 func (m *W0001Data) ParseData(datamap map[string]interface{}) {

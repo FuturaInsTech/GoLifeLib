@@ -131,5 +131,6 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.TranReversal{})
 	DB.AutoMigrate(&models.CbUser{})
 	DB.AutoMigrate(&models.CbLog{})
+	DB.AutoMigrate(&models.Cola{})
 
 }

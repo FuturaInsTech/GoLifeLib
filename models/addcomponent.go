@@ -26,3 +26,24 @@ type Addcomponent struct {
 	BRiskCessDate string `gorm:"type:varchar(08)"` // When rider date > basic, then it will be basic date
 	BPremCessDate string `gorm:"type:varchar(08)"` // when rider date > basic, then it will be basic date
 }
+
+type Cola struct {
+	gorm.Model
+	types.CModel
+	PolicyID       uint
+	BenefitID      uint
+	BCoverage      string `gorm:"type:varchar(05)"`
+	ColaMethod     string `gorm:"type:varchar(06)"`
+	BStartDate     string `gorm:"type:varchar(08)"` //20250525
+	BEndDate       string `gorm:"type:varchar(08)"` //20450525
+	BOriginalSA    uint64
+	BOrginalPrem   float64
+	BNewStartDate  string `gorm:"type:varchar(08)"`
+	BNewSA         uint64
+	BNewAnnualPrem float64
+	BNewModelPrem  float64
+	BNewAge        uint
+	Active         string `gorm:"type:varchar(01)"`
+	Processed      string `gorm:"type:varchar(01)"`
+	NewOrExist     string `gorm:"type:varchar(01)"`
+}

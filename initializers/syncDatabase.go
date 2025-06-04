@@ -82,7 +82,7 @@ func SyncDatabase() {
 	// DB.AutoMigrate(&models.CriticalIllness{})
 	// DB.AutoMigrate(&models.TransactionLock{})
 	// DB.AutoMigrate(&models.IBenefit{})
-	// DB.AutoMigrate(&models.Benefit{})
+	DB.AutoMigrate(&models.Benefit{})
 	// DB.AutoMigrate(&models.Payment{})
 	// DB.AutoMigrate(&models.IlpFund{})
 	// DB.AutoMigrate(&models.IlpPrice{})

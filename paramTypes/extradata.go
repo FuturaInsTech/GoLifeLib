@@ -268,6 +268,7 @@ type Q0006Data struct {
 	isHealthBenefitPlan string //P0050 Yes/No
 	HealthBenefitType   string //P0050 Individual/Non-Floater/Family-Floater
 	ColaMethod          string //P0050
+	UinNo string
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {

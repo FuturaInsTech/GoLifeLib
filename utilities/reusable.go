@@ -1034,3 +1034,99 @@ func GetNoIstalmentsLA(iFromDate, iToDate, iFrequency string) (oInstalments int)
 	}
 	return
 }
+
+func TDFCOLAD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevFlag string, txn *gorm.DB) (string, error) {
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	var benefitenq []models.Benefit
+	odate := "00000000"
+	result := txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	for i := 0; i < len(benefitenq); i++ {
+		if benefitenq[i].BPremCessDate > odate {
+			odate = benefitenq[i].BPremCessDate
+		}
+	}
+
+	result = txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	if iRevFlag == "R" {
+		var q0005data paramTypes.Q0005Data
+		var extradataq0005 paramTypes.Extradata = &q0005data
+		err := GetItemD(int(iCompany), "Q0005", policy.PProduct, policy.PRCD, &extradataq0005)
+		if err != nil {
+			txn.Rollback()
+			return "", err
+		}
+
+		nxtBtdate := AddLeadDays(policy.PaidToDate, (-1 * q0005data.BillingLeadDays))
+		policy.NxtBTDate = nxtBtdate
+	}
+
+	if result.Error != nil {
+		txn.Rollback()
+		return "", result.Error
+	}
+
+	if policy.PaidToDate >= odate {
+		// return "Date Exceeded", errors.New("Premium Cessation Date is Exceeded")
+		var tdfpolicyupd models.TDFPolicy
+		result = txn.Find(&tdfpolicyupd, "company_id = ? AND policy_id = ? and tdf_type= ?", iCompany, iPolicy, "COLAD")
+		if result.Error != nil {
+			txn.Rollback()
+			return "", nil
+		}
+		result = txn.Delete(&tdfpolicyupd)
+		return "", nil
+	}
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = policy.NxtBTDate
+		tdfpolicy.Tranno = iTranno
+		tdfpolicy.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = GetNextYr(policy.NxtBTDate)
+		tdfpolicy.Tranno = iTranno
+
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			txn.Rollback()
+			return "", result.Error
+		}
+		return "", nil
+	}
+}

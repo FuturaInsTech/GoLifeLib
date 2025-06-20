@@ -2558,7 +2558,7 @@ func (m *P0083Data) GetFormattedData(datamap map[string]string) map[string]inter
 // Cola Rates
 
 type P0084Data struct {
-	Rates []P0028
+	Rates []P0084
 }
 type P0084 struct {
 	Yrs             uint

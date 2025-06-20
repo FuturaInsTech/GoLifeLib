@@ -46,4 +46,6 @@ type Cola struct {
 	Active         string `gorm:"type:varchar(01)"`
 	Processed      string `gorm:"type:varchar(01)"`
 	NewOrExist     string `gorm:"type:varchar(01)"`
+	BNewTerm       uint
+    BNewPTerm      uint
 }

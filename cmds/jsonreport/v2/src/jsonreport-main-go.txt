@@ -1,0 +1,616 @@
+// Report Generation Utility Program v2
+// To create PDF Output files using JSON formatted report generation data
+// alongwith report control data and standard gohtml file.
+// Sree 27 June 2025
+// Requisites: GoHTML File is to be existing in same name as Command Name with .gohtml extension
+// Usage: cmd jsonfilename
+
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type Aggregates struct {
+	Count       map[string]int
+	Total       map[string]float64
+	Average     map[string]float64
+	Rows        []map[string]interface{}
+	AvgCount    map[string]float64
+	AvgTotal    map[string]float64
+	CountKeys   []string
+	TotalKeys   []string
+	AverageKeys []string
+}
+
+type ReportData struct {
+	Title       string `json:"Title"`
+	CoName      string `json:"CoName"`
+	CoAddress   string `json:"CoAddress"`
+	Date        string `json:"date"`
+	CurrentDate string
+	Context     []map[string]interface{} `json:"Context"`
+	Records     []map[string]interface{} `json:"Records"`
+	Order       []string                 `json:"Order"`
+	Aggregation map[string][][]string    `json:"Aggregation"`
+	PageBreak   []string                 `json:"PageBreak"`
+	GroupedAggs map[string]Aggregates
+	SortFields  []string
+	Layout      map[string]interface{} `json:"Layout"`
+	Formats     map[string]interface{} `json:"Formats"`
+	AlignFields map[string][]string
+}
+
+var iFile string
+var gFile string
+var jsonFileName string
+var gohtmlFileName string
+var gohtmlFilePath string
+var htmlFileName string
+var pdfFileName string
+
+func loadJSON(filename string) (ReportData, error) {
+	var data ReportData
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return data, err
+	}
+	err = json.Unmarshal(file, &data)
+	return data, err
+}
+
+func buildGroupKey(record map[string]interface{}, keys []string) string {
+	var parts []string
+	for _, key := range keys {
+		if val, ok := record[key]; ok {
+			switch v := val.(type) {
+			case float64:
+				// No decimal places, no scientific notation
+				parts = append(parts, fmt.Sprintf("%.0f", v))
+			case int:
+				parts = append(parts, fmt.Sprintf("%d", v))
+			case int64:
+				parts = append(parts, fmt.Sprintf("%d", v))
+			case string:
+				parts = append(parts, v)
+			default:
+				// fallback for unknown types
+				parts = append(parts, fmt.Sprintf("%v", v))
+			}
+
+		} else {
+			parts = append(parts, "")
+		}
+	}
+	return strings.Join(parts, " | ")
+}
+
+// FormatContext is helper function that returns an interface{} (e.g. string/float64)
+func FormatContext(data *ReportData) {
+	if data == nil {
+		return
+	}
+
+	// Build a new slice with the same length (optional but convenient)
+	formatted := make([]map[string]interface{}, 0, len(data.Context))
+
+	for _, record := range data.Context { // record is already map[string]interface{}
+		if record == nil || len(record) == 0 {
+			continue
+		}
+
+		// Each record in your original JSON has exactly ONE key/value pair,
+		// so we extract it, apply formatting if needed, and re-wrap it.
+		for k, v := range record {
+			if fmtStr, ok := data.Formats[k]; ok { // see if the key has a number format
+				v = formatNumber(v, fmtStr.(string))
+			}
+
+			formatted = append(formatted, map[string]interface{}{k: v})
+			break // only the first (and only) key for this record
+		}
+	}
+
+	// Overwrite the Context slice with the formatted version
+	data.Context = formatted
+}
+
+// FormatRecords is helper function that returns an interface{} (e.g. string/float64)
+func FormatRecords(data *ReportData) {
+	if data == nil || len(data.Records) == 0 {
+		return
+	}
+
+	// Prepare a new slice the same length as the input
+	formattedRecs := make([]map[string]interface{}, 0, len(data.Records))
+
+	for _, rec := range data.Records {
+		if rec == nil {
+			continue
+		}
+		// Copy one record, applying formatting where needed
+		newRec := make(map[string]interface{}, len(rec))
+		for k, v := range rec {
+			if fmtRaw, ok := data.Formats[k]; ok {
+				// Convert the format spec to string (it was stored as interface{}).
+				if fmtStr, ok := fmtRaw.(string); ok && fmtStr != "" {
+					v = formatNumber(v, fmtStr)
+				}
+			}
+			newRec[k] = v
+		}
+		// for k, v := range rec {
+		// 	if fmtStr, ok := data.Formats[k]; ok { // see if the key has a number format
+		// 		rec[k] = formatNumber(v, fmtStr.(string))
+		// 	}
+		// 	newRec[k] = v
+		// }
+		formattedRecs = append(formattedRecs, newRec)
+	}
+	data.Records = formattedRecs
+}
+
+// FormatRec is helper function that returns a map[string]interface{} (e.g. string/float64)
+func FormatRec(rec map[string]interface{}, Formats map[string]interface{}) map[string]interface{} {
+	if rec == nil {
+		return nil
+	}
+
+	formatted := make(map[string]interface{})
+
+	for k, v := range rec {
+		if fmtStr, ok := Formats[k]; ok {
+			v = formatNumber(v, fmtStr.(string))
+		}
+		formatted[k] = v
+	}
+
+	return formatted
+}
+
+func multiFieldSort(records []map[string]interface{}, orderby []string) {
+	sort.SliceStable(records, func(i, j int) bool {
+		for _, field := range orderby {
+			vi := fmt.Sprintf("%v", records[i][field])
+			vj := fmt.Sprintf("%v", records[j][field])
+			if vi != vj {
+				return vi < vj
+			}
+		}
+		return false
+	})
+}
+
+func groupAndAggregate(data *ReportData) {
+	data.GroupedAggs = make(map[string]Aggregates)
+
+	for _, rec := range data.Records {
+		key := buildGroupKey(rec, data.PageBreak)
+
+		agg := data.GroupedAggs[key]
+		if agg.Count == nil {
+			agg.Count = make(map[string]int)
+		}
+		if agg.Total == nil {
+			agg.Total = make(map[string]float64)
+		}
+		if agg.Average == nil {
+			agg.Average = make(map[string]float64)
+		}
+		if agg.AvgCount == nil {
+			agg.AvgCount = make(map[string]float64)
+		}
+		if agg.AvgTotal == nil {
+			agg.AvgTotal = make(map[string]float64)
+		}
+
+		// Count aggregation
+		for _, cntFields := range data.Aggregation["Count"] {
+			if len(cntFields) == 0 {
+				continue
+			}
+			for _, field := range cntFields {
+				if _, ok := rec[field]; ok {
+					agg.Count[field]++
+				}
+			}
+		}
+
+		// Total aggregation
+		for _, totFields := range data.Aggregation["Total"] {
+			if len(totFields) == 0 {
+				continue
+			}
+			for _, field := range totFields {
+				if num, ok := toFloat64(rec[field]); ok {
+					agg.Total[field] += num
+				}
+			}
+		}
+
+		// Average aggregation
+		for _, avgFields := range data.Aggregation["Average"] {
+			if len(avgFields) == 0 {
+				continue
+			}
+			for _, field := range avgFields {
+				if num, ok := toFloat64(rec[field]); ok {
+					agg.AvgTotal[field] += num
+					agg.AvgCount[field]++
+				}
+			}
+		}
+
+		// Average Calculation
+		for _, avgFields := range data.Aggregation["Average"] {
+			if len(avgFields) == 0 {
+				continue
+			}
+			for _, field := range avgFields {
+				if _, ok := toFloat64(rec[field]); ok {
+					agg.Average[field] = agg.AvgTotal[field] / agg.AvgCount[field]
+
+				}
+			}
+		}
+
+		formattedRec := FormatRec(rec, data.Formats)
+		agg.Rows = append(agg.Rows, formattedRec)
+
+		// Sorting and adding the count of keys value for using in PDF generation
+		agg.CountKeys = sortedKeys(agg.Count)
+		agg.TotalKeys = sortedKeys(agg.Total)
+		agg.AverageKeys = sortedKeys(agg.Average)
+
+		data.GroupedAggs[key] = agg
+	}
+
+}
+
+func toFloat64(v interface{}) (float64, bool) {
+	switch val := v.(type) {
+	case float64:
+		return val, true
+	case float32:
+		return float64(val), true
+	case int:
+		return float64(val), true
+	case int64:
+		return float64(val), true
+	case json.Number:
+		f, err := val.Float64()
+		if err == nil {
+			return f, true
+		}
+	}
+	return 0, false
+}
+
+// Helper functions for Go templates
+func add1(i int) int {
+	return i + 1
+}
+func sub1(i int) int {
+	return i - 1
+}
+
+func mul1(a, b int) int {
+	return a * b
+}
+
+func mod1(a, b int) int {
+	return a % b
+}
+
+// until generates a slice of integers from 0 to n-1
+func until(n int) []int {
+	result := make([]int, n)
+	for i := range result {
+		result[i] = i
+	}
+	return result
+}
+
+func max(a, b, c int) int {
+	m := a
+	if b > m {
+		m = b
+	}
+	if c > m {
+		m = c
+	}
+	return m
+}
+
+func inList(list []string, item string) bool {
+	for _, v := range list {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func cond(condition bool, trueVal, falseVal interface{}) interface{} {
+	if condition {
+		return trueVal
+	}
+	return falseVal
+}
+
+func formatInteger(famt string, ctype byte) string {
+	// Handle the Indian and Western numbering formats
+	n := len(famt)
+	if n <= 3 {
+		// No formatting needed for numbers with 3 or fewer digits
+		return famt
+	}
+
+	// Format the first three digits (thousands)
+	result := famt[n-3:]
+
+	if ctype == 'a' || ctype == 'A' {
+		// Format the remaining digits in groups of two (lakhs, crores, etc.)
+		for i := n - 3; i > 0; i -= 2 {
+			start := i - 2
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+	if ctype == 'c' || ctype == 'C' {
+		// Format the remaining digits in groups of three (millions, billions, etc.)
+		for i := n - 3; i > 0; i -= 3 {
+			start := i - 3
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+
+	// Return the formatted integer
+	return result
+}
+
+func formatDecimal(famt string, ctype byte) string {
+	decimalpart := ""
+	decimallen, _ := strconv.Atoi(string(ctype))
+	//damt, _ := strconv.Atoi(string(famt))
+	var decimalFloat float64 = 0
+	if decimallen == 0 {
+		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
+	} else {
+		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
+	}
+	if decimallen == 0 {
+		return decimalpart
+	} else {
+		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
+		decimalpart = fmt.Sprintf(formatString, decimalFloat)
+		decimalpart = decimalpart[1:] // Remove the leading "0"
+		return decimalpart
+	}
+}
+
+func formatNumber(value interface{}, fds string) string {
+	integralpart := ""
+	decimalpart := ""
+	famt := ""
+	famount := ""
+
+	formattype := fds[0]
+	decimallen, _ := strconv.Atoi(string(fds[1]))
+
+	if _, ok := value.(float64); ok {
+		if decimallen == 0 {
+			famt = fmt.Sprintf("%.0f", value) // Format float64 with zero decimal places as string
+		} else {
+			famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
+		}
+	}
+	if _, ok := value.(int); ok {
+		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(string); ok {
+		famt = value.(string)
+	}
+	parts := strings.Split(famt, ".")
+	if formattype == 'a' || formattype == 'A' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if formattype == 'c' || formattype == 'C' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if formattype == 'd' || formattype == 'D' {
+		integralpart = parts[0]
+	} else {
+		integralpart = parts[0]
+	}
+
+	if len(parts) > 1 {
+		decimalpart = formatDecimal(parts[1], fds[1])
+		famount = integralpart + decimalpart
+	} else {
+		famount = integralpart
+	}
+	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+// Helper program to render Header Template
+func renderHeaderTemplate(headerTplPath string, data *ReportData) (headerFile string, err error) {
+	// Create temp file for header
+	hf, err := os.CreateTemp("", "header-*.html")
+	if err != nil {
+		return "", err
+	}
+	headerFile = hf.Name()
+	defer hf.Close()
+
+	// Parse and execute header template
+	headerTpl, err := template.ParseFiles(headerTplPath)
+	if err != nil {
+		return "", err
+	}
+	if err := headerTpl.Execute(hf, data); err != nil {
+		return "", err
+	}
+
+	return headerFile, nil
+}
+
+// Helper Functions for Sorting Keys
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+func main() {
+
+	var iFile string
+	var gFile string
+	var jsonFileName string
+	var gohtmlFileName string
+	var gohtmlFilePath string
+	var htmlFileName string
+	var pdfFileName string
+	var headergohtmlFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <jsonfilename>")
+		fmt.Println("Usage: cmd <jsonfilename> ...")
+	} else if len(os.Args) == 2 {
+		gFile = os.Args[0]
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	gohtmlFileName = gFile + ".gohtml"
+	jsonFileName = iFile + ".json"
+	htmlFileName = iFile + "-out.html"
+	pdfFileName = iFile + ".pdf"
+	headergohtmlFile = gFile + "-h.gohtml"
+
+	// Get the current working directory to build gohtmlFilePath Variable value
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	gohtmlFilePath = filepath.Join(cwdPath, gohtmlFileName)
+
+	data, err := loadJSON(jsonFileName)
+	if err != nil {
+		panic(err)
+	}
+
+	orientation := "Portrait"
+
+	if data.Layout["Orientation"] == "Portrait" || data.Layout["Orientation"] == "P" {
+		orientation = "Portrait"
+		contextlength := len(data.Context)
+		if (contextlength % 2) != 0 {
+			fmt.Println("Context Length is not in multiples of 2 for Portrait Orientation:", err)
+			return
+		}
+	}
+
+	if data.Layout["Orientation"] == "Landscape" || data.Layout["Orientation"] == "L" {
+		orientation = "Landscape"
+		contextlength := len(data.Context)
+		if (contextlength % 3) != 0 {
+			fmt.Println("Context Length is not in multiples of 3 for Landscape Orientation:", err)
+			return
+		}
+	}
+
+	multiFieldSort(data.Records, data.SortFields)
+	groupAndAggregate(&data)
+
+	FormatContext(&data)
+	//FormatRecords(&data)
+
+	data.CurrentDate = time.Now().Format("02/01/2006 15:04:05")
+
+	// Define template functions (for formatting numbers and math operations)
+	funcMap := template.FuncMap{
+		"add1":         add1,
+		"sub1":         sub1,
+		"mul1":         mul1,
+		"mod1":         mod1,
+		"until":        until,
+		"max":          max,
+		"inList":       inList,
+		"cond":         cond,
+		"formatNumber": formatNumber,
+	}
+	// Load and execute HTML template
+	tmpl, err := template.New(gohtmlFileName).Funcs(funcMap).ParseFiles(gohtmlFilePath)
+	if err != nil {
+		fmt.Println("Error loading template:", err)
+		return
+	}
+
+	f, err := os.Create(htmlFileName)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	// Render header to temp files
+	headerPath, err := renderHeaderTemplate(headergohtmlFile, &data)
+	if err != nil {
+		fmt.Println("Header render error:", err)
+		return
+	}
+
+	defer os.Remove(headerPath)
+
+	err = tmpl.Execute(f, data)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("HTML File generated: ", htmlFileName)
+
+	htmlFile := f.Name()
+	pdfFile := pdfFileName
+
+	cmd := exec.Command("wkhtmltopdf",
+		"--orientation", orientation,
+		"--header-html", headerPath,
+		"--margin-top", "50mm",
+		"--header-spacing", "5",
+		"--footer-center", "Page [page] of [topage]",
+		"--footer-font-size", "9",
+		"--footer-line",
+		"--margin-bottom", "20mm",
+		"--footer-spacing", "5",
+		"--page-size", "A4",
+		htmlFile,
+		pdfFile,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("wkhtmltopdf failed:", err, string(output))
+	}
+
+	fmt.Println("PDF generated at", pdfFile)
+
+}

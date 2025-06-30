@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-size: 10pt;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .header {
+      border-bottom: 1px solid #000;
+      padding-bottom: 4px;
+    }
+	  h1 { color: navy; font-size: 22px; text-align: center; }
+      h2, h3, h5 { color: black; text-align: center; }
+      h2 { font-size: 16px; }
+      h3 { font-size: 11px; }
+      h4 { color: black; font-size: 12px; text-align: right; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div><h2>{{.CoName}}</h2></div>
+    <div><h3>{{.CoAddress}}</h3></div>
+	<div><h1>{{.Title}}</h1></div>
+    <div><h4>Date: {{.CurrentDate}}</h4></div>
+	</div>
+</body>
+</html>

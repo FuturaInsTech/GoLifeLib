@@ -1130,3 +1130,8 @@ func TDFCOLAD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 		return "", nil
 	}
 }
+
+
+func RoundToNearest100(val float64) float64 {
+    return math.Round(val/100.0) * 100.0
+}

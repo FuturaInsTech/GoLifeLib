@@ -1111,3 +1111,7 @@ func TDFCOLAD(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevF
 func RoundUpToNext1000(n float64) float64 {
 	return math.Ceil(n/1000.0) * 1000
 }
+
+func RoundToNearest100(val float64) float64 {
+	return math.Round(val/100.0) * 100.0
+}

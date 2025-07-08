@@ -42,6 +42,7 @@ type Cola struct {
 	BNewSA           uint64
 	BNewAnnualPrem   float64
 	BNewModelPrem    float64
+	PFreq            string `gorm:"type:varchar(01)"` //Q0009
 	BNewAge          uint
 	Active           string `gorm:"type:varchar(01)"`
 	Processed        string `gorm:"type:varchar(01)"`

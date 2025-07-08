@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
+	"time"
 
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
@@ -2828,6 +2830,7 @@ func LoanBillsInterestData(iCompany uint, iPolicy uint, iSeqNo uint, iCurrentInt
 	return combinedData
 }
 
+// #197
 func GetPaymentData(iCompany uint, iPolicyID uint, iPayment uint, txn *gorm.DB) map[string]interface{} {
 	var polenq models.Policy
 	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
@@ -2860,4 +2863,798 @@ func GetPaymentData(iCompany uint, iPolicyID uint, iPayment uint, txn *gorm.DB) 
 	}
 	return resultOut
 
+}
+
+// #198
+// Create Communication multi (New Version with Rollback)
+//
+// # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
+// 10 Input Variables
+// # It returns success or failure.  Successful records written in Communciaiton Table
+//
+// ©  FuturaInsTech
+func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint) error {
+
+	var communication models.Communication
+	var iKey string
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
+	iTransaction := iHistoryCode
+	iReceiptTranCode := "H0034"
+	iReceiptFor := ""
+
+	if iReceipt != 0 {
+		var receipt models.Receipt
+		result := txn.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+		if result.Error != nil {
+			return result.Error
+		}
+		iReceiptFor = receipt.ReceiptFor
+	}
+
+	if iPolicy != 0 {
+		var policy models.Policy
+		result := txn.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+		if result.Error != nil {
+			return result.Error
+		}
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+		if iTransaction == iReceiptTranCode {
+			iKey = iTransaction + iReceiptFor
+		} else {
+			iKey = iTransaction + policy.PProduct
+		}
+	}
+
+	if iPolicy == 0 && iTransaction == iReceiptTranCode && iPa != 0 {
+		var payingauth models.PayingAuthority
+		result := txn.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = payingauth.ClientID
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPa
+		iKey = iTransaction + iReceiptFor
+	}
+
+	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+	if err1 != nil {
+		iKey = iTransaction
+		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		if err1 != nil {
+			return err1
+		}
+	}
+
+	seqno := 0
+	for i := 0; i < len(p0034data.Letters); i++ {
+		if p0034data.Letters[i].Templates != "" {
+			iKey = p0034data.Letters[i].Templates
+			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			if err != nil {
+				return err
+			}
+
+			iPageSize := p0034data.Letters[i].PageSize
+			iOrientation := p0034data.Letters[i].Orientation
+
+			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
+			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
+			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
+			communication.EmailAllowed = p0033data.EmailAllowed
+			communication.SMSAllowed = p0033data.SMSAllowed
+			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
+			communication.DepartmentHead = p0033data.DepartmentHead
+			communication.DepartmentName = p0033data.DepartmentName
+			communication.CompanyPhone = p0033data.CompanyPhone
+			communication.CompanyEmail = p0033data.CompanyEmail
+
+			communication.TemplateName = iKey
+			oLetType := ""
+
+			signData := make([]interface{}, 0)
+			resultOut := map[string]interface{}{
+				"Department":     p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentHead,
+				"CoEmail":        p0033data.CompanyEmail,
+				"CoPhone":        p0033data.CompanyPhone,
+			}
+
+			signData = append(signData, resultOut)
+
+			batchData := make([]interface{}, 0)
+			resultOut = map[string]interface{}{
+				"Date":     DateConvert(iDate),
+				"FromDate": DateConvert(iFromDate),
+				"ToDate":   DateConvert(iToDate),
+			}
+
+			batchData = append(batchData, resultOut)
+
+			resultMap := make(map[string]interface{})
+
+			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
+			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
+				oLetType = p0034data.Letters[i].LetType[n]
+				switch {
+				case oLetType == "1":
+					oData := GetCompanyData(iCompany, iDate, txn)
+					resultMap["CompanyData"] = oData
+				case oLetType == "2":
+					oData := GetClientData(iCompany, iClient, txn)
+					resultMap["ClientData"] = oData
+				case oLetType == "3":
+					oData := GetAddressData(iCompany, iAddress, txn)
+					resultMap["AddressData"] = oData
+				case oLetType == "4":
+					oData := GetPolicyData(iCompany, iPolicy, txn)
+					resultMap["PolicyData"] = oData
+				case oLetType == "5":
+					oData := GetBenefitData(iCompany, iPolicy, txn)
+					resultMap["BenefitData"] = oData
+				case oLetType == "6":
+					oData := GetSurBData(iCompany, iPolicy, txn)
+					resultMap["SurBData"] = oData
+				case oLetType == "7":
+					oData := GetMrtaData(iCompany, iPolicy, txn)
+					resultMap["MRTAData"] = oData
+				case oLetType == "8":
+					oData := GetReceiptData(iCompany, iReceipt, txn)
+					resultMap["ReceiptData"] = oData
+				case oLetType == "9":
+					oData := GetSaChangeData(iCompany, iPolicy, txn)
+					resultMap["SAChangeData"] = oData
+				case oLetType == "10":
+					oData := GetCompAddData(iCompany, iPolicy, txn)
+					resultMap["ComponantAddData"] = oData
+				case oLetType == "11":
+					oData := GetSurrHData(iCompany, iPolicy, txn)
+					resultMap["SurrData"] = oData
+					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["SurrDData"] = oData
+				case oLetType == "12":
+					oData := GetDeathData(iCompany, iPolicy, txn)
+					resultMap["DeathData"] = oData
+				case oLetType == "13":
+					oData := GetMatHData(iCompany, iPolicy, txn)
+					resultMap["MaturityData"] = oData
+					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["MatDData"] = oData
+				case oLetType == "14":
+					oData := GetSurvBPay(iCompany, iPolicy, iTranno, txn)
+					resultMap["SurvbPay"] = oData
+				case oLetType == "15":
+					oData := GetExpi(iCompany, iPolicy, iTranno, txn)
+					resultMap["ExpiryData"] = oData
+				case oLetType == "16":
+					oData := GetBonusVals(iCompany, iPolicy, txn)
+					resultMap["BonusData"] = oData
+				case oLetType == "17":
+					oData := GetAgency(iCompany, iAgency, txn)
+					resultMap["Agency"] = oData
+				case oLetType == "18":
+					oData := GetNomiData(iCompany, iPolicy, txn)
+					resultMap["Nominee"] = oData
+				case oLetType == "19":
+					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					resultMap["GLData"] = oData
+				case oLetType == "20":
+					oData := GetIlpSummaryData(iCompany, iPolicy, txn)
+					resultMap["IlPSummaryData"] = oData
+				case oLetType == "21":
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode, txn)
+					resultMap["ILPANNSummaryData"] = oData
+				case oLetType == "22":
+					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					resultMap["ILPTransactionData"] = oData
+				case oLetType == "23":
+					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate, txn)
+					resultMap["GLData"] = oData
+
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno, txn)
+					resultMap["SwitchData"] = oData
+
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate, txn)
+					resultMap["IlpFundData"] = oData
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					fmt.Println(oData) // Dummy to avoid compilation error
+				case oLetType == "29":
+					oData := GetPayingAuthorityData(iCompany, iPa, txn)
+					resultMap["PrevBenefit"] = oData
+				case oLetType == "30":
+					oData := GetClientWorkData(iCompany, iClientWork, txn)
+					resultMap["ClientWork"] = oData
+				case oLetType == "36":
+					oData := GetReqData(iCompany, iPolicy, iClient, txn)
+					for _, item := range oData {
+						for key, value := range item.(map[string]interface{}) {
+							resultMap[key] = value
+						}
+					}
+				case oLetType == "37":
+					oData := PolicyDepData(iCompany, iPolicy, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "38":
+					oData := PolAgntChData(iCompany, iPolicy, iAgency, iClient, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "39":
+					oData := GetBankData(iCompany, iClientWork, txn)
+					resultMap["BankData"] = oData
+				case oLetType == "40":
+					iKey := iReceipt
+					oData := GetPaymentData(iCompany, iPolicy, iKey, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "41":
+					oData := GetHIPPOLSCDData(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "42":
+					oData := GetPriorPolicyData(iCompany, iPolicy, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "43":
+					oData := GetTermAndConditionData(iCompany, iPolicy, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "44":
+					oData := GetpremiumCertificateData(iCompany, iPolicy, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+
+				case oLetType == "98":
+					resultMap["BatchData"] = batchData
+
+				case oLetType == "99":
+					resultMap["SignData"] = signData
+				default:
+
+				}
+
+				communication.ExtractedData = resultMap
+				communication.PDFPath = p0034data.Letters[i].PdfLocation
+				communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
+				// New Changes for Online Print and Email Trigger
+				if p0033data.Online == "Y" {
+					err := GetReportforOnline(communication, p0033data.TemplateName, txn)
+					if err != nil {
+						log.Fatalf("Failed to generate report: %v", err)
+					}
+				}
+				if p0033data.SMSAllowed == "Y" {
+					err := SendSMSTwilio(communication.CompanyID, communication.ClientID, p0033data.TemplateName, communication.EffectiveDate, p0033data.SMSBody, txn)
+					if err != nil {
+						log.Fatalf("Failed to send SMS: %v", err)
+					}
+				}
+				communication.Print = "Y"
+				communication.PrintDate = iDate
+				communication.UpdatedID = 1
+				communication.ID = 0
+				communication.Seqno = uint16(seqno)
+				// New Changes Ended
+				results := txn.Create(&communication)
+
+				if results.Error != nil {
+					return results.Error
+				}
+
+				seqno++
+			}
+		}
+	}
+	return nil
+}
+
+// #199
+func GetHIPPOLSCDData(iCompany uint, iPolicyID uint, iPageSize, iOrientation string, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var priorpolenq models.PriorPolicy
+	txn.Where("company_id = ? AND policy_id = ?", iCompany, iPolicyID).Order("created_at  DESC").First(&priorpolenq)
+	var receiptenq models.Receipt
+	txn.Where("company_id = ? AND receipt_ref_no = ?", iCompany, iPolicyID).Order("created_at  DESC").First(&receiptenq)
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+
+	var cmp models.Company
+	txn.Find(&cmp, "id = ?", polenq.CompanyID)
+	var clt models.Client
+	txn.Find(&clt, "company_id = ? and id = ?", iCompany, polenq.ClientID)
+	var agency models.Agency
+	txn.Find(&agency, "company_id = ? and id = ?", iCompany, polenq.AgencyID)
+	var agent models.Client
+	txn.Find(&agent, "company_id = ? and id = ?", iCompany, agency.ClientID)
+	var add models.Address
+	txn.Find(&add, "company_id = ? and id = ?", iCompany, polenq.AddressID)
+
+	//amtinwords, csymbol := AmountinWords(paymentenq.CompanyID, paymentenq.AccAmount, paymentenq.AccCurry)
+
+	// compadd := cmp.CompanyAddress1+", "+cmp.CompanyAddress2+", "+cmp.CompanyAddress3+", "+cmp.CompanyAddress4+", "+cmp.CompanyAddress5+", "+cmp.CompanyCountry+", "+cmp.CompanyPostalCode
+
+	compadd := GetCompanyFullAddress(cmp)
+
+	yr, _ := extractYear(polenq.PRCD)
+	prcd, _ := ConvertYYYYMMDDtoDDMMYYYY(polenq.PRCD)
+	riskcessdate := benefitenq[0].BRiskCessDate
+	enddate, _ := ConvertYYYYMMDDtoDDMMYYYY(riskcessdate)
+	clientfulladdress, _ := GetFullAddress(iCompany, polenq.AddressID)
+
+	benpalntypedesc := GetP0050ItemCodeDesc(iCompany, "HealthBenefitType", 1, benefitenq[0].BenefitType)
+
+	slno, laname, ladob, lagender, laoccup, larel, pecdecl, ppolstdate, bprem, lanominee, lanomrel, err := GetPlanLifeData(iCompany, iPolicyID)
+
+	if err != nil {
+		log.Println("Error fetching plan life data:", err)
+	}
+
+	totalpreflifedisamt, totalloyaltydisamt, totalfloaterdisamt, totalonlinedisamt := GetTotalDiscountsByPolicy(iCompany, iPolicyID)
+	premwogstamt, gstamt, stampdutyamt, totalpremiumamt := GetPremiumDetailsFromGL(1, 1001)
+
+	receiptdate, _ := ConvertYYYYMMDDtoDDMMYYYY(receiptenq.DateOfCollection)
+
+	resultOut := map[string]interface{}{
+		"Layout": map[string]string{
+			"PageSize":    iPageSize,
+			"Orientation": iOrientation,
+		},
+		"compname":          cmp.CompanyName,
+		"compadd":           compadd,
+		"uinno":             cmp.CompanyUid,
+		"clientno":          clt.ID,
+		"yr":                yr,
+		"policyno":          polenq.ID,
+		"startdate":         prcd,
+		"enddate":           enddate,
+		"ClientSalutation":  clt.Salutation,
+		"ClientFullName":    clt.ClientLongName,
+		"ClientFullAddress": clientfulladdress,
+		"agentname":         agent.ClientLongName,
+		"agentcode":         agent.ID,
+		"agentphoneno":      agent.ClientMobile,
+		"agentemailaddress": agent.ClientEmail,
+		"datime":            time.Now(),
+		// "prevyr":,
+		"prevpol":             priorpolenq.PolicyID,
+		"clientemailaddress":  clt.ClientEmail,
+		"clientphoneno":       clt.ClientMobile,
+		"benefitplantypedesc": benpalntypedesc,
+		"bsumassured":         benefitenq[0].BSumAssured,
+		"slno":                slno,
+		"laname":              laname,
+		"ladob":               ladob,
+		"lagender":            lagender,
+		"larel":               larel,
+		"laoccup":             laoccup,
+		"pecdecl":             pecdecl,
+		"ppolstdate":          ppolstdate,
+		"lanominee":           lanominee,
+		"lanomrel":            lanomrel,
+		"bprem":               bprem,
+		"totalbasepremium":    benefitenq[0].BBasAnnualPrem,
+		"totalloadingprem":    benefitenq[0].BLoadPrem,
+		"totalpreflifedisamt": totalpreflifedisamt,
+		"totalloyaltydisamt":  totalloyaltydisamt,
+		"totalfloaterdisamt":  totalfloaterdisamt,
+		"totalonlinedisamt":   totalonlinedisamt,
+		"premwogstamt":        premwogstamt,
+		"gstamt":              gstamt,
+		"stampdutyamt":        stampdutyamt,
+		"totalpremiumamt":     totalpremiumamt,
+		"receiptno":           receiptenq.ID,
+		"receiptdate":         receiptdate,
+		"clientgstno":         "",
+		"saccode":             "",
+		"gstofficeno":         "",
+		"gstinvoiceno":        "",
+		"gstdate":             "",
+		"day":                 "",
+		"month":               "",
+		"year":                "",
+	}
+	return resultOut
+
+}
+
+// #199
+func GetPriorPolicyData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var cmp models.Company
+	txn.Find(&cmp, "id = ?", polenq.CompanyID)
+	var clt models.Client
+	txn.Find(&clt, "company_id = ? and id = ?", iCompany, polenq.ClientID)
+	var add models.Address
+	txn.Find(&add, "company_id = ? and id = ?", iCompany, polenq.AddressID)
+
+	var priorpolenq []models.PriorPolicy
+	txn.Find(&priorpolenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+
+	//amtinwords, csymbol := AmountinWords(paymentenq.CompanyID, paymentenq.AccAmount, paymentenq.AccCurry)
+
+	// compadd := cmp.CompanyAddress1+", "+cmp.CompanyAddress2+", "+cmp.CompanyAddress3+", "+cmp.CompanyAddress4+", "+cmp.CompanyAddress5+", "+cmp.CompanyCountry+", "+cmp.CompanyPostalCode
+
+	parts := []string{
+		cmp.CompanyAddress1,
+		cmp.CompanyAddress2,
+		cmp.CompanyAddress3,
+		cmp.CompanyAddress4,
+		cmp.CompanyAddress5,
+		cmp.CompanyCountry,
+		cmp.CompanyPostalCode,
+	}
+
+	nonEmptyParts := []string{}
+	for _, part := range parts {
+		if part != "" {
+			nonEmptyParts = append(nonEmptyParts, part)
+		}
+	}
+
+	compadd := strings.Join(nonEmptyParts, ", ")
+	yr := time.Now().Year()
+
+	slno := []int{}
+	psumAssured := []float64{}
+
+	priorPolicyNo := []string{}
+	priorInsurerName := []string{}
+	pstartDates := []string{}
+	pendDates := []string{}
+
+	for _, prior := range priorpolenq {
+		slno = append(slno, int(prior.SeqNo))                   // int
+		priorPolicyNo = append(priorPolicyNo, prior.PriorPolNo) // string
+		priorInsurerName = append(priorInsurerName, prior.PriorInsurerName)
+
+		pstart, _ := ConvertYYYYMMDDtoDDMMYYYY(prior.PStartDate)
+		pend, _ := ConvertYYYYMMDDtoDDMMYYYY(prior.PEndDate)
+		pstartDates = append(pstartDates, pstart)
+		pendDates = append(pendDates, pend)
+		psumAssured = append(psumAssured, float64(prior.PSumAssured)) // float64
+	}
+
+	resultOut := map[string]interface{}{
+		"compname":        cmp.CompanyName,
+		"compadd":         compadd,
+		"uinno":           cmp.CompanyUid,
+		"clientno":        clt.ID,
+		"yr":              yr,
+		"policyno":        polenq.ID,
+		"slno":            slno,
+		"previnsurername": priorInsurerName,
+		"prevpolicyno":    priorPolicyNo,
+		"prevstartdate":   pstartDates,
+		"prevenddate":     pendDates,
+		"prevsumassured":  psumAssured,
+	}
+	return resultOut
+
+}
+
+// #200
+// term and condition
+func GetTermAndConditionData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var cmp models.Company
+	txn.Find(&cmp, "id = ?", polenq.CompanyID)
+	var clt models.Client
+	txn.Find(&clt, "company_id = ? and id = ?", iCompany, polenq.ClientID)
+	var add models.Address
+	txn.Find(&add, "company_id = ? and id = ?", iCompany, polenq.AddressID)
+
+	var priorpolenq []models.PriorPolicy
+	txn.Find(&priorpolenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+
+	//amtinwords, csymbol := AmountinWords(paymentenq.CompanyID, paymentenq.AccAmount, paymentenq.AccCurry)
+
+	// compadd := cmp.CompanyAddress1+", "+cmp.CompanyAddress2+", "+cmp.CompanyAddress3+", "+cmp.CompanyAddress4+", "+cmp.CompanyAddress5+", "+cmp.CompanyCountry+", "+cmp.CompanyPostalCode
+
+	compadd := GetCompanyFullAddress(cmp)
+	//yr := time.Now().Year()
+
+	resultOut := map[string]interface{}{
+		"compname":         cmp.CompanyName,
+		"compadd":          compadd,
+		"uinno":            cmp.CompanyUid,
+		"policyno":         polenq.ID,
+		"ClientSalutation": clt.Salutation,
+		"ClientFullName":   clt.ClientLongName,
+	}
+	return resultOut
+
+}
+
+// #201
+// premuim certificate
+func GetpremiumCertificateData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var cmp models.Company
+	txn.Find(&cmp, "id = ?", polenq.CompanyID)
+	var clt models.Client
+	txn.Find(&clt, "company_id = ? and id = ?", iCompany, polenq.ClientID)
+	var add models.Address
+	txn.Find(&add, "company_id = ? and id = ?", iCompany, polenq.AddressID)
+
+	var priorpolenq []models.PriorPolicy
+	txn.Find(&priorpolenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+
+	//amtinwords, csymbol := AmountinWords(paymentenq.CompanyID, paymentenq.AccAmount, paymentenq.AccCurry)
+
+	// compadd := cmp.CompanyAddress1+", "+cmp.CompanyAddress2+", "+cmp.CompanyAddress3+", "+cmp.CompanyAddress4+", "+cmp.CompanyAddress5+", "+cmp.CompanyCountry+", "+cmp.CompanyPostalCode
+
+	compadd := GetCompanyFullAddress(cmp)
+	//yr := time.Now().Year()
+
+	resultOut := map[string]interface{}{
+		"compname":         cmp.CompanyName,
+		"compadd":          compadd,
+		"uinno":            cmp.CompanyUid,
+		"policyno":         polenq.ID,
+		"ClientSalutation": clt.Salutation,
+		"ClientFullName":   clt.ClientLongName,
+	}
+	return resultOut
+
+}
+
+// ConvertYYYYMMDDtoDDMMYYYY converts a date from "yyyymmdd" to "dd/mm/yyyy"
+func ConvertYYYYMMDDtoDDMMYYYY(dateStr string) (string, error) {
+	parsedDate, err := time.Parse("20060102", dateStr)
+	if err != nil {
+		return "", err
+	}
+	return parsedDate.Format("02/01/2006"), nil
+}
+
+func extractYear(date string) (string, error) {
+	if len(date) != 8 {
+		return "", fmt.Errorf("invalid date format, expected 8 characters")
+	}
+	year := date[6:] // Get the last 4 characters (year)
+	if len(year) != 4 {
+		return "", fmt.Errorf("year format incorrect")
+	}
+	return year[2:], nil // Return last two digits
+}
+
+func GetCompanyFullAddress(cmp models.Company) string {
+	parts := []string{
+		cmp.CompanyAddress1,
+		cmp.CompanyAddress2,
+		cmp.CompanyAddress3,
+		cmp.CompanyAddress4,
+		cmp.CompanyAddress5,
+		cmp.CompanyCountry,
+		cmp.CompanyPostalCode,
+	}
+
+	nonEmptyParts := []string{}
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			nonEmptyParts = append(nonEmptyParts, part)
+		}
+	}
+
+	return strings.Join(nonEmptyParts, ", ")
+}
+
+func GetFullAddress(iCompany, iAddressId uint) (string, error) {
+	var addr models.Address
+	err := initializers.DB.First(&addr, "id = ? AND company_id = ?", iAddressId, iCompany).Error
+	if err != nil {
+		return "", err
+	}
+
+	parts := []string{
+		addr.AddressLine1,
+		addr.AddressLine2,
+		addr.AddressLine3,
+		addr.AddressLine4,
+		addr.AddressLine5,
+		addr.AddressState,
+		addr.AddressCountry,
+		addr.AddressPostCode,
+	}
+
+	nonEmptyParts := []string{}
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			nonEmptyParts = append(nonEmptyParts, part)
+		}
+	}
+
+	return strings.Join(nonEmptyParts, ", "), nil
+}
+
+func GetPlanLifeData(iCompany, iPolicy uint) ([]int, []string, []string, []string, []string, []string, []string, []string, []float64, []string, []string, error) {
+
+	var planLives []models.PlanLife
+	initializers.DB.Find(&planLives, "company_id = ? and policy_id =?", iCompany, iPolicy)
+
+	slno := make([]int, len(planLives))
+	laname := make([]string, len(planLives))
+	ladob := make([]string, len(planLives))
+	lagender := make([]string, len(planLives))
+	laoccup := make([]string, len(planLives))
+	larel := make([]string, len(planLives))
+	pecdecl := make([]string, len(planLives))
+	ppolstdate := make([]string, len(planLives))
+	bprem := make([]float64, len(planLives))
+
+	lanominee := make([]string, len(planLives))
+	lanomrel := make([]string, len(planLives))
+
+	for i, plan := range planLives {
+		slno[i] = i + 1
+
+		var client models.Client
+		err := initializers.DB.First(&client, "company_id = ? AND id = ?", plan.CompanyID, plan.ClientID).Error
+		if err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("failed to fetch client for plan life %d: %w", i+1, err)
+		}
+
+		laname[i] = strings.TrimSpace(client.ClientLongName)
+
+		formattedDOB, err := ConvertYYYYMMDDtoDDMMYYYY(client.ClientDob)
+		if err != nil {
+			ladob[i] = ""
+		} else {
+			ladob[i] = formattedDOB
+		}
+
+		lagender[i] = strings.TrimSpace(client.Gender)
+		laoccup[i] = strings.TrimSpace(client.Occupation)
+
+		relationDesc := GetP0050ItemCodeDesc(iCompany, "PlanLARelations", 1, plan.ClientRelCode)
+		larel[i] = strings.TrimSpace(relationDesc)
+
+		pecdecl[i] = "None"
+
+		pstart, err := ConvertYYYYMMDDtoDDMMYYYY(plan.PStartDate)
+		if err != nil {
+			ppolstdate[i] = ""
+		} else {
+			ppolstdate[i] = pstart
+		}
+
+		bprem[i] = plan.PBasAnnualPrem
+
+		lanominee[i] = ""
+		lanomrel[i] = ""
+	}
+
+	return slno, laname, ladob, lagender, laoccup, larel, pecdecl, ppolstdate, bprem, lanominee, lanomrel, nil
+}
+
+func GetTotalDiscountsByPolicy(companyID, iPolicyID uint) (float64, float64, float64, float64) {
+	var discounts []models.PlanLifeDiscount
+	initializers.DB.Find(&discounts, "company_id = ? and policy_id = ?", companyID, iPolicyID)
+
+	var totalPrefLifeDisAmt float64
+	var totalLoyaltyDisAmt float64
+	var totalFloaterDisAmt float64
+	var totalOnlineDisAmt float64 = 0 // always zero
+
+	for _, d := range discounts {
+		if d.PDisType01 != "" {
+			switch d.PDisType01 {
+			case "P":
+				totalPrefLifeDisAmt += d.PDisPrem01
+			case "L":
+				totalLoyaltyDisAmt += d.PDisPrem01
+			case "F":
+				totalFloaterDisAmt += d.PDisPrem01
+			}
+		}
+		if d.PDisType02 != "" {
+			switch d.PDisType02 {
+			case "P":
+				totalPrefLifeDisAmt += d.PDisPrem02
+			case "L":
+				totalLoyaltyDisAmt += d.PDisPrem02
+			case "F":
+				totalFloaterDisAmt += d.PDisPrem02
+			}
+		}
+		if d.PDisType03 != "" {
+			switch d.PDisType03 {
+			case "P":
+				totalPrefLifeDisAmt += d.PDisPrem03
+			case "L":
+				totalLoyaltyDisAmt += d.PDisPrem03
+			case "F":
+				totalFloaterDisAmt += d.PDisPrem03
+			}
+		}
+		if d.PDisType04 != "" {
+			switch d.PDisType04 {
+			case "P":
+				totalPrefLifeDisAmt += d.PDisPrem04
+			case "L":
+				totalLoyaltyDisAmt += d.PDisPrem04
+			case "F":
+				totalFloaterDisAmt += d.PDisPrem04
+			}
+		}
+		if d.PDisType05 != "" {
+			switch d.PDisType05 {
+			case "P":
+				totalPrefLifeDisAmt += d.PDisPrem05
+			case "L":
+				totalLoyaltyDisAmt += d.PDisPrem05
+			case "F":
+				totalFloaterDisAmt += d.PDisPrem05
+			}
+		}
+	}
+
+	return totalPrefLifeDisAmt, totalLoyaltyDisAmt, totalFloaterDisAmt, totalOnlineDisAmt
+}
+
+func GetPremiumDetailsFromGL(iCompany, iPolicy uint) (float64, float64, float64, float64) {
+	var glMoves []models.GlMove
+
+	// Fetch GL moves for given company and policy
+	initializers.DB.Find(&glMoves, "company_id = ? AND gl_rdocno = ?", iCompany, iPolicy)
+
+	var premwogstamt float64
+	var gstamt float64
+	var stampdutyamt float64
+
+	for _, move := range glMoves {
+		switch {
+		case strings.HasPrefix(move.AccountCode, "PremiumAccount"):
+			premwogstamt += move.ContractAmount
+		case strings.HasPrefix(move.AccountCode, "GSTPayable"):
+			gstamt += move.ContractAmount
+		case strings.HasPrefix(move.AccountCode, "StampDuty"):
+			stampdutyamt += move.ContractAmount
+		}
+	}
+
+	totalpremiumamt := premwogstamt + gstamt + stampdutyamt
+
+	return premwogstamt, gstamt, stampdutyamt, totalpremiumamt
 }

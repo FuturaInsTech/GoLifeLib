@@ -268,7 +268,7 @@ type Q0006Data struct {
 	isHealthBenefitPlan string //P0050 Yes/No
 	HealthBenefitType   string //P0050 Individual/Non-Floater/Family-Floater
 	ColaMethod          string //P0050
-	UinNo string
+	UinNo               string
 }
 
 func (m *Q0006Data) ParseData(datamap map[string]interface{}) {
@@ -1219,6 +1219,8 @@ type P0034 struct {
 	ReportTemplateLocation string
 	PdfLocation            string
 	LetType                []string //1,2,3,4,5,6,7,...
+	PageSize               string
+	Orientation            string
 }
 
 func (m *P0034Data) ParseData(datamap map[string]interface{}) {

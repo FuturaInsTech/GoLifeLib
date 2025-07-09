@@ -9,53 +9,29 @@ type ApClient struct {
 	gorm.Model
 	types.CModel
 
-	ClientShortName  string `gorm:"type:varchar(50)"`
-	ClientLongName   string `gorm:"type:varchar(50)"`
-	ClientSurName    string `gorm:"type:varchar(50)"`
-	Gender           string `gorm:"type:varchar(05)"`
-	Salutation       string `gorm:"type:varchar(05)"`
-	Language         string `gorm:"type:varchar(05)"`
-	ClientDob        string `gorm:"type:varchar(8)"`
-	ClientDod        string `gorm:"type:varchar(8)"`
-	ClientEmail      string `gorm:"type:varchar(100)"`
-	ClientMobCode    string `gorm:"type:varchar(05)"`
-	ClientMobile     string `gorm:"type:varchar(20)"`
-	ClientStatus     string `gorm:"type:varchar(05)"`
-	ClientType       string `gorm:"type:varchar(01)"` // C CORPORATE I FOR INDIVIDUAL
-	NationalId       string `gorm:"type:varchar(50);unique"`
-	Nationality      string `gorm:"type:varchar(02)"`
-	ClientAltEmail   string `gorm:"type:varchar(100)"`
-	ClientAltMobCode string `gorm:"type:varchar(05)"`
-	ClientAltMobile  string `gorm:"type:varchar(20)"`
-	ClientWorkID     uint
-	CustomerPortal   string `gorm:"type:varchar(01)"` // Yes or No
-	CusomterDnd      string `gorm:"type:varchar(01)"` // Yes or No
-
-	Addresses   []Address
-	Nominees    []Nominee
-	LeadDetails []LeadDetail
-	//QHeaders          []quotation.QHeader
-	Agencies       []Agency
-	Banks          []Bank
-	Owners         []Payer
-	Benefits       []Benefit
-	Receipts       []Receipt
-	Communications []Communication
-	MedProviders   []MedProvider
-	MedReqs        []MedReq
-	//QDetails          []quotation.QDetail
-	LeadAllocations   []LeadAllocation
-	LeadFollowups     []LeadFollowup
-	DeathHs           []DeathH
-	DeathDs           []DeathD
-	Payers            []Payer
-	SaChanges         []SaChange
-	Mrtas             []Mrta
-	SurrHs            []SurrH
-	SurrDs            []SurrD
-	Payments          []Payment
-	PayingAuthorities []PayingAuthority
+	ClientShortName   string `gorm:"type:varchar(50)"`
+	ClientLongName    string `gorm:"type:varchar(50)"`
+	ClientSurName     string `gorm:"type:varchar(50)"`
+	Gender            string `gorm:"type:varchar(05)"`
+	Salutation        string `gorm:"type:varchar(05)"`
+	Language          string `gorm:"type:varchar(05)"`
+	ClientDob         string `gorm:"type:varchar(8)"`
+	ClientDod         string `gorm:"type:varchar(8)"`
+	ClientEmail       string `gorm:"type:varchar(100)"`
+	ClientMobCode     string `gorm:"type:varchar(05)"`
+	ClientMobile      string `gorm:"type:varchar(20)"`
+	ClientStatus      string `gorm:"type:varchar(05)"`
+	ClientType        string `gorm:"type:varchar(01)"` // C CORPORATE I FOR INDIVIDUAL
+	NationalId        string `gorm:"type:varchar(50);unique"`
+	Nationality       string `gorm:"type:varchar(02)"`
+	ClientAltEmail    string `gorm:"type:varchar(100)"`
+	ClientAltMobCode  string `gorm:"type:varchar(05)"`
+	ClientAltMobile   string `gorm:"type:varchar(20)"`
+	ClientWorkID      uint
+	CustomerPortal    string `gorm:"type:varchar(01)"` // Yes or No
+	CusomterDnd       string `gorm:"type:varchar(01)"` // Yes or No
 	ClientReferenceId uint
+	ApAddress         []ApAddress
 }
 
 type ApAddress struct {
@@ -74,9 +50,4 @@ type ApAddress struct {
 	AddressEndDate     string `gorm:"type:varchar(8)"`
 	ClientID           uint
 	AddressReferenceId uint
-	//QHeaders         []quotation.QHeader
-	MedProviders []MedProvider
-	Receipts     []Receipt
-	Payments     []Payment
-	//Agencies         []Agency
 }

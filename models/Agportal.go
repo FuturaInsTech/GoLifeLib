@@ -37,7 +37,6 @@ type ApClient struct {
 	//QHeaders          []quotation.QHeader
 	Agencies       []Agency
 	Banks          []Bank
-	Policies       []Policy
 	Owners         []Payer
 	Benefits       []Benefit
 	Receipts       []Receipt
@@ -76,7 +75,6 @@ type ApAddress struct {
 	ClientID           uint
 	AddressReferenceId uint
 	//QHeaders         []quotation.QHeader
-	Policies     []Policy
 	MedProviders []MedProvider
 	Receipts     []Receipt
 	Payments     []Payment

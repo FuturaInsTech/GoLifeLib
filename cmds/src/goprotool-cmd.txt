@@ -1,6 +1,6 @@
 // GoPro Tool to help developer
 //   - generate param insert script
-//   - Prepare excel layout for Word Doc Template manually
+//   - Prepare excel layout for Word Doc Template manually, if Output sheet is present
 //   - creates a json file to use in gohtmljson utility
 
 package main
@@ -60,19 +60,27 @@ func checkInputFilesExist(iFile string) {
 }
 
 // To extract all Defined Names from an excel file into another
-func CreateParam(r *excelize.File, itemName string, f *excelize.File, sheet string) {
+func CreateParam(r *excelize.File, itemName string, inpchars string, outchars string, sepchar string, f *excelize.File, sheet string) {
 	// Get all defined names
 	allNames := r.GetDefinedName()
 
-	// Filter: only names that start with 'i' or 'o' (case-insensitive)
+	// Build prefix list from inpchars and outchars
+	var prefixes []string
+	for _, ch := range inpchars {
+		prefixes = append(prefixes, string(ch)+sepchar)
+	}
+	for _, ch := range outchars {
+		prefixes = append(prefixes, string(ch)+sepchar)
+	}
+
 	var filteredNames []excelize.DefinedName
 	for _, name := range allNames {
 		lower := strings.ToLower(name.Name)
-		if strings.HasPrefix(lower, "i") || strings.HasPrefix(lower, "o") ||
-			strings.HasPrefix(lower, "z") || strings.HasPrefix(lower, "y") ||
-			strings.HasPrefix(lower, "x") || strings.HasPrefix(lower, "w") ||
-			strings.HasPrefix(lower, "v") {
-			filteredNames = append(filteredNames, name)
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(lower, prefix) {
+				filteredNames = append(filteredNames, name)
+				break // stop checking more prefixes for this name
+			}
 		}
 	}
 
@@ -405,7 +413,7 @@ func parseAmount(s string) int {
 	}
 	return i
 }
-func CreateJsonFile(r *excelize.File, isheet string, jFile string) {
+func CreateJsonFile(r *excelize.File, isheet string, inpchars string, sepchar string, jFile string) {
 	osheet := isheet + "-json"
 	r.NewSheet(osheet)
 	idx, _ := r.GetSheetIndex(isheet)
@@ -432,10 +440,24 @@ func CreateJsonFile(r *excelize.File, isheet string, jFile string) {
 
 	var sheet string
 	var cell string
-	// Extract defined names starting with 'i' from isheet
+	// Extract defined names starting with say 'i_' or 'j_' or 'k_'from isheet
 	result := make(map[string]interface{})
+
+	// Build prefix list: ["i_", "j_", "k_"]
+	var prefixes []string
+	for _, ch := range inpchars {
+		prefixes = append(prefixes, string(ch)+sepchar)
+	}
+
 	for _, name := range r.GetDefinedName() {
-		if !strings.HasPrefix(name.Name, "i") {
+		match := false
+		for _, prefix := range prefixes {
+			if strings.HasPrefix(name.Name, prefix) {
+				match = true
+				break
+			}
+		}
+		if !match {
 			continue
 		}
 		ref := strings.TrimPrefix(name.RefersTo, "=")
@@ -483,71 +505,115 @@ func CreateJsonFile(r *excelize.File, isheet string, jFile string) {
 
 }
 
+// SheetExists checks if the given sheet name exists in the workbook.
+func SheetExists(f *excelize.File, sheetName string) bool {
+	existingSheets := f.GetSheetList()
+
+	// You could use a map, but for one check a simple loop is fine
+	for _, s := range existingSheets {
+		if s == sheetName {
+			return true
+		}
+	}
+	return false
+}
+
 // // Main //////////
 func main() {
-	var iFile string
-	var oFile string
-	var jFile string
 	var itemName string
+	var iFile string
+	var inpchars string
+	var outchars string
+	var sepchar string
 	var isheet string
 	var itsheet string
+	var oFile string
+	var jFile string
 
 	// Check the number of command-line arguments
-	if len(os.Args) > 7 {
+	if len(os.Args) > 8 {
 		fmt.Println("Error: Too many arguments provided. Please provide <itemName> <iFile> <isheet> <itsheet> <oFile> <jFile>...")
-		fmt.Println("Usage: cmd <itemName> <iFile> <isheet> <itsheet> <oFile> <jFile> ...")
+		fmt.Println("Usage: cmd <itemName> <iFile> <inpchars> <outchars>  [<sepchar> <isheet> <itsheet>] ...")
+	} else if len(os.Args) == 8 {
+		itemName = os.Args[1]
+		iFile = os.Args[2] + ".xlsx"
+		inpchars = os.Args[3]
+		outchars = os.Args[4]
+		sepchar = os.Args[5]
+		isheet = os.Args[6]
+		itsheet = os.Args[7]
+		oFile = os.Args[2] + "-out.xlsx"
+		jFile = os.Args[2] + "-input.json"
 	} else if len(os.Args) == 7 {
 		itemName = os.Args[1]
 		iFile = os.Args[2] + ".xlsx"
-		isheet = os.Args[3]
-		itsheet = os.Args[4]
-		oFile = os.Args[5] + "-out.xlsx"
-		jFile = os.Args[6] + "-input.json"
-	} else if len(os.Args) == 6 {
-		itemName = os.Args[1]
-		iFile = os.Args[2] + ".xlsx"
-		isheet = os.Args[3]
-		itsheet = os.Args[4]
-		oFile = os.Args[5] + "-out.xlsx"
-		jFile = os.Args[2] + "-input.json"
-	} else if len(os.Args) == 5 {
-		itemName = os.Args[1]
-		iFile = os.Args[2] + ".xlsx"
-		isheet = os.Args[3]
-		itsheet = os.Args[4]
-		oFile = os.Args[2] + "-out.xlsx"
-		jFile = os.Args[2] + "-input.json"
-	} else if len(os.Args) == 4 {
-		itemName = os.Args[1]
-		iFile = os.Args[2] + ".xlsx"
-		isheet = os.Args[3]
+		inpchars = os.Args[3]
+		outchars = os.Args[4]
+		sepchar = os.Args[5]
+		isheet = os.Args[6]
 		itsheet = "Output"
 		oFile = os.Args[2] + "-out.xlsx"
 		jFile = os.Args[2] + "-input.json"
-	} else if len(os.Args) == 3 {
+	} else if len(os.Args) == 6 {
 		itemName = os.Args[1]
 		iFile = os.Args[2] + ".xlsx"
+		inpchars = os.Args[3]
+		outchars = os.Args[4]
+		sepchar = os.Args[5]
 		isheet = "Input"
 		itsheet = "Output"
 		oFile = os.Args[2] + "-out.xlsx"
 		jFile = os.Args[2] + "-input.json"
+	} else if len(os.Args) == 5 {
+		itemName = os.Args[1]
+		iFile = os.Args[2] + ".xlsx"
+		inpchars = os.Args[3]
+		outchars = os.Args[4]
+		sepchar = ""
+		isheet = "Input"
+		itsheet = "Output"
+		oFile = os.Args[2] + "-out.xlsx"
+		jFile = os.Args[2] + "-input.json"
+		fmt.Printf("Warning: Blank is assumed as Input and Output Field Separating Character ...\n")
+	} else if len(os.Args) == 4 {
+		fmt.Printf("Error: Output Fields Identifiers is not provided.\n")
+		fmt.Println("Usage: cmd <itemName> <iFile> <inpchars> <outchars>  [<sepchar> <isheet> <itsheet>] ...")
+		os.Exit(1)
+	} else if len(os.Args) == 3 {
+		fmt.Printf("Error: Input & Output Fields Identifiers are not provided.\n")
+		fmt.Println("Usage: cmd <itemName> <iFile> <inpchars> <outchars>  [<sepchar> <isheet> <itsheet>] ...")
 	} else if len(os.Args) == 2 {
-		fmt.Printf("Error: No InputFile provided.\n")
+		fmt.Printf("Error: Input File and Input & Output Fields Identifiers are not provided.\n")
+		fmt.Println("Usage: cmd <itemName> <iFile> <inpchars> <outchars>  [<sepchar> <isheet> <itsheet>] ...")
 		os.Exit(1)
 	} else {
 		fmt.Printf("Error: No arguments provided.\n")
+		fmt.Println("Usage: cmd <itemName> <iFile> <inpchars> <outchars>  [<sepchar> <isheet> <itsheet>] ...")
 		os.Exit(1)
 	}
 
 	// Check if the required input file exist
 	checkInputFilesExist(iFile)
+	if len(sepchar) > 1 {
+		fmt.Printf("Error: seperating character is too long....\n")
+		fmt.Println("Usage: cmd <itemName> <iFile> <inpchars> <outchars>  [<sepchar> <isheet> <itsheet>] ...")
+		os.Exit(1)
+	}
+
 	fmt.Println("  In Progress...")
+	fmt.Println("Field Separator is : ", sepchar)
 
 	inputFile := iFile
 	r, err := excelize.OpenFile(inputFile)
 	if err != nil {
 		log.Fatalf("Failed to open file: %v", err)
 	}
+
+	isheetexist := SheetExists(r, isheet)
+	if !isheetexist {
+		log.Fatalf("Input Sheet does not exist: %v", isheet)
+	}
+	itsheetexist := SheetExists(r, itsheet)
 
 	// Create a new Output Excel file with param and template sheets
 	// for inserting param record and create word docx template for gohtml creation
@@ -560,19 +626,21 @@ func main() {
 	}
 	f.SetActiveSheet(s1)
 
-	CreateParam(r, itemName, f, params)
+	CreateParam(r, itemName, inpchars, outchars, sepchar, f, params)
+	CreateJsonFile(r, isheet, inpchars, sepchar, jFile)
 
-	template := "template"
-	s2, err := f.NewSheet(template)
-	if err != nil {
-		log.Fatalf("Failed to create new sheet: %v", err)
+	if itsheetexist {
+		template := "template"
+		s2, err := f.NewSheet(template)
+		if err != nil {
+			log.Fatalf("Failed to create new sheet: %v", err)
+		}
+
+		f.SetActiveSheet(s2)
+
+		CopyTemplate(r, itsheet, f, template)
+		SetDefinedNames(r, itsheet, f, template)
 	}
-
-	f.SetActiveSheet(s2)
-
-	CopyTemplate(r, itsheet, f, template)
-	SetDefinedNames(r, itsheet, f, template)
-	CreateJsonFile(r, isheet, jFile)
 
 	// Save the output file
 	outputFile := oFile

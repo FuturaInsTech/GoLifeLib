@@ -3295,7 +3295,7 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 		return 0
 	}
 	iFrequency := policyenq.PFreq
-	iRCD := policyenq.PRCD
+	//iRCD := policyenq.PRCD
 	var benefitenq1 []models.Benefit
 
 	results := initializers.DB.Find(&benefitenq1, "company_id =? and policy_id = ? ", iCompany, iPolicy)
@@ -3306,6 +3306,7 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 	for a := 0; a < len(benefitenq1); a++ {
 		FromDate := iFromDate
 		ToDate := iToDate
+		iCovRcd := benefitenq1[a].BStartDate
 
 		iKey := benefitenq1[a].BCoverage
 		var q0006data paramTypes.Q0006Data
@@ -3330,7 +3331,7 @@ func GetTotalGSTAmount(iCompany uint, iPolicy uint, iFromDate string, iToDate st
 				date := GetNextDue(FromDate, iFrequency, "")
 				FromDate = Date2String(date)
 				b = FromDate
-				iMonths := NewNoOfInstalments(iRCD, FromDate)
+				iMonths := NewNoOfInstalments(iCovRcd, FromDate)
 				for i := 0; i < len(q0023data.Gst); i++ {
 					if uint(iMonths) <= q0023data.Gst[i].Month {
 						oAmount = float64(iAmount)*q0023data.Gst[i].Rate + oAmount

@@ -132,5 +132,7 @@ func SyncDatabase() {
 	DB.AutoMigrate(&models.CbUser{})
 	DB.AutoMigrate(&models.CbLog{})
 	DB.AutoMigrate(&models.Cola{})
+	DB.AutoMigrate(&models.ApClient{})
+	DB.AutoMigrate(&models.ApAddress{})
 
 }

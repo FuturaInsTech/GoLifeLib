@@ -31,7 +31,6 @@ type ApClient struct {
 	CustomerPortal    string `gorm:"type:varchar(01)"` // Yes or No
 	CusomterDnd       string `gorm:"type:varchar(01)"` // Yes or No
 	ClientReferenceId uint
-	ApAddress         []ApAddress
 }
 
 type ApAddress struct {

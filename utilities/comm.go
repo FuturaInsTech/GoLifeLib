@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"time"
 
@@ -3124,17 +3125,17 @@ func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDa
 						resultMap[key] = value
 					}
 				case oLetType == "42":
-					oData := GetPriorPolicyData(iCompany, iPolicy, txn)
+					oData := GetPriorPolicyData(iCompany, iPolicy, iPageSize, iOrientation, txn)
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "43":
-					oData := GetTermAndConditionData(iCompany, iPolicy, txn)
+					oData := GetTermAndConditionData(iCompany, iPolicy, iPageSize, iOrientation, txn)
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "44":
-					oData := GetpremiumCertificateData(iCompany, iPolicy, txn)
+					oData := GetpremiumCertificateData(iCompany, iPolicy, iPageSize, iOrientation, txn)
 					for key, value := range oData {
 						resultMap[key] = value
 					}
@@ -3226,7 +3227,7 @@ func GetHIPPOLSCDData(iCompany uint, iPolicyID uint, iPageSize, iOrientation str
 	}
 
 	totalpreflifedisamt, totalloyaltydisamt, totalfloaterdisamt, totalonlinedisamt := GetTotalDiscountsByPolicy(iCompany, iPolicyID)
-	premwogstamt, gstamt, stampdutyamt, totalpremiumamt := GetPremiumDetailsFromGL(1, 1001)
+	premwogstamt, gstamt, stampdutyamt, totalpremiumamt := GetPremiumDetailsFromGL(iCompany, iPolicyID)
 
 	receiptdate, _ := ConvertYYYYMMDDtoDDMMYYYY(receiptenq.DateOfCollection)
 
@@ -3294,7 +3295,7 @@ func GetHIPPOLSCDData(iCompany uint, iPolicyID uint, iPageSize, iOrientation str
 }
 
 // #199
-func GetPriorPolicyData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]interface{} {
+func GetPriorPolicyData(iCompany uint, iPolicyID uint, iPageSize, iOrientation string, txn *gorm.DB) map[string]interface{} {
 	var polenq models.Policy
 	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
 	var cmp models.Company
@@ -3352,6 +3353,10 @@ func GetPriorPolicyData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]
 	}
 
 	resultOut := map[string]interface{}{
+		"Layout": map[string]string{
+			"PageSize":    iPageSize,
+			"Orientation": iOrientation,
+		},
 		"compname":        cmp.CompanyName,
 		"compadd":         compadd,
 		"uinno":           cmp.CompanyUid,
@@ -3371,9 +3376,11 @@ func GetPriorPolicyData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]
 
 // #200
 // term and condition
-func GetTermAndConditionData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]interface{} {
+func GetTermAndConditionData(iCompany uint, iPolicyID uint, iPageSize, iOrientation string, txn *gorm.DB) map[string]interface{} {
 	var polenq models.Policy
 	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
 	var cmp models.Company
 	txn.Find(&cmp, "id = ?", polenq.CompanyID)
 	var clt models.Client
@@ -3384,6 +3391,15 @@ func GetTermAndConditionData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[st
 	var priorpolenq []models.PriorPolicy
 	txn.Find(&priorpolenq, "company_id = ? and id = ?", iCompany, iPolicyID)
 
+	prcd, _ := ConvertYYYYMMDDtoDDMMYYYY(polenq.PRCD)
+	riskcessdate := benefitenq[0].BRiskCessDate
+	enddate, _ := ConvertYYYYMMDDtoDDMMYYYY(riskcessdate)
+
+	premwogstamt, gstamt, stampdutyamt, totalpremiumamt := GetPremiumDetailsFromGL(iCompany, iPolicyID)
+	totalpremiumamtwords := AmountInWords(totalpremiumamt)
+
+	fmt.Println(premwogstamt, gstamt, stampdutyamt)
+
 	//amtinwords, csymbol := AmountinWords(paymentenq.CompanyID, paymentenq.AccAmount, paymentenq.AccCurry)
 
 	// compadd := cmp.CompanyAddress1+", "+cmp.CompanyAddress2+", "+cmp.CompanyAddress3+", "+cmp.CompanyAddress4+", "+cmp.CompanyAddress5+", "+cmp.CompanyCountry+", "+cmp.CompanyPostalCode
@@ -3392,12 +3408,20 @@ func GetTermAndConditionData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[st
 	//yr := time.Now().Year()
 
 	resultOut := map[string]interface{}{
+		"Layout": map[string]string{
+			"PageSize":    iPageSize,
+			"Orientation": iOrientation,
+		},
 		"compname":         cmp.CompanyName,
 		"compadd":          compadd,
 		"uinno":            cmp.CompanyUid,
 		"policyno":         polenq.ID,
 		"ClientSalutation": clt.Salutation,
 		"ClientFullName":   clt.ClientLongName,
+		"totalpremiumamt":  totalpremiumamt,
+		"amountinwords":    totalpremiumamtwords,
+		"startdate":        prcd,
+		"enddate":          enddate,
 	}
 	return resultOut
 
@@ -3405,9 +3429,11 @@ func GetTermAndConditionData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[st
 
 // #201
 // premuim certificate
-func GetpremiumCertificateData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[string]interface{} {
+func GetpremiumCertificateData(iCompany uint, iPolicyID uint, iPageSize, iOrientation string, txn *gorm.DB) map[string]interface{} {
 	var polenq models.Policy
 	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
 	var cmp models.Company
 	txn.Find(&cmp, "id = ?", polenq.CompanyID)
 	var clt models.Client
@@ -3418,6 +3444,15 @@ func GetpremiumCertificateData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[
 	var priorpolenq []models.PriorPolicy
 	txn.Find(&priorpolenq, "company_id = ? and id = ?", iCompany, iPolicyID)
 
+	prcd, _ := ConvertYYYYMMDDtoDDMMYYYY(polenq.PRCD)
+	riskcessdate := benefitenq[0].BRiskCessDate
+	enddate, _ := ConvertYYYYMMDDtoDDMMYYYY(riskcessdate)
+
+	premwogstamt, gstamt, stampdutyamt, totalpremiumamt := GetPremiumDetailsFromGL(iCompany, iPolicyID)
+	totalpremiumamtwords := AmountInWords(totalpremiumamt)
+
+	fmt.Println(premwogstamt, gstamt, stampdutyamt)
+
 	//amtinwords, csymbol := AmountinWords(paymentenq.CompanyID, paymentenq.AccAmount, paymentenq.AccCurry)
 
 	// compadd := cmp.CompanyAddress1+", "+cmp.CompanyAddress2+", "+cmp.CompanyAddress3+", "+cmp.CompanyAddress4+", "+cmp.CompanyAddress5+", "+cmp.CompanyCountry+", "+cmp.CompanyPostalCode
@@ -3426,12 +3461,20 @@ func GetpremiumCertificateData(iCompany uint, iPolicyID uint, txn *gorm.DB) map[
 	//yr := time.Now().Year()
 
 	resultOut := map[string]interface{}{
+		"Layout": map[string]string{
+			"PageSize":    iPageSize,
+			"Orientation": iOrientation,
+		},
 		"compname":         cmp.CompanyName,
 		"compadd":          compadd,
 		"uinno":            cmp.CompanyUid,
 		"policyno":         polenq.ID,
 		"ClientSalutation": clt.Salutation,
 		"ClientFullName":   clt.ClientLongName,
+		"totalpremiumamt":  totalpremiumamt,
+		"amountinwords":    totalpremiumamtwords,
+		"startdate":        prcd,
+		"enddate":          enddate,
 	}
 	return resultOut
 
@@ -3657,4 +3700,68 @@ func GetPremiumDetailsFromGL(iCompany, iPolicy uint) (float64, float64, float64,
 	totalpremiumamt := premwogstamt + gstamt + stampdutyamt
 
 	return premwogstamt, gstamt, stampdutyamt, totalpremiumamt
+}
+
+func AmountInWords(amount float64) string {
+	unitNames := []string{
+		"", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+		"Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+		"Seventeen", "Eighteen", "Nineteen",
+	}
+	tensNames := []string{
+		"", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety",
+	}
+
+	numToWords := func(n int) string {
+		if n < 20 {
+			return unitNames[n]
+		} else if n < 100 {
+			return tensNames[n/10] + " " + unitNames[n%10]
+		}
+		return ""
+	}
+
+	convert := func(num int) string {
+		parts := []string{}
+
+		if num >= 10000000 {
+			crore := num / 10000000
+			parts = append(parts, numToWords(crore)+" Crore")
+			num %= 10000000
+		}
+		if num >= 100000 {
+			lakh := num / 100000
+			parts = append(parts, numToWords(lakh)+" Lakh")
+			num %= 100000
+		}
+		if num >= 1000 {
+			thousand := num / 1000
+			parts = append(parts, numToWords(thousand)+" Thousand")
+			num %= 1000
+		}
+		if num >= 100 {
+			hundred := num / 100
+			parts = append(parts, unitNames[hundred]+" Hundred")
+			num %= 100
+		}
+		if num > 0 {
+			if len(parts) > 0 {
+				parts = append(parts, "and")
+			}
+			parts = append(parts, numToWords(num))
+		}
+
+		return strings.Join(parts, " ")
+	}
+
+	rupees := int(math.Floor(amount))
+	paise := int(math.Round((amount - float64(rupees)) * 100))
+
+	result := "Rupees " + convert(rupees)
+	if paise > 0 {
+		result += " and " + convert(paise) + " Paise"
+	}
+	result += " Only"
+
+	return result
 }

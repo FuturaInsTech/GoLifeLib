@@ -30,24 +30,28 @@ type Addcomponent struct {
 type Cola struct {
 	gorm.Model
 	types.CModel
-	PolicyID         uint
-	BenefitID        uint
-	BCoverage        string `gorm:"type:varchar(05)"`
-	ColaMethod       string `gorm:"type:varchar(06)"`
-	BStartDate       string `gorm:"type:varchar(08)"` //20250525
-	BEndDate         string `gorm:"type:varchar(08)"` //20450525
-	BOriginalSA      uint64
-	BOrginalPrem     float64
-	BNewStartDate    string `gorm:"type:varchar(08)"`
-	BNewSA           uint64
-	BNewAnnualPrem   float64
-	BNewModelPrem    float64
-	PFreq            string `gorm:"type:varchar(01)"` //Q0009
-	BNewAge          uint
-	Active           string `gorm:"type:varchar(01)"`
-	Processed        string `gorm:"type:varchar(01)"`
-	NewOrExist       string `gorm:"type:varchar(01)"`
-	BNewTerm         uint
-	BNewPTerm        uint
-	CommissionAmount float64
+	PolicyID          uint
+	BenefitID         uint
+	BCoverage         string `gorm:"type:varchar(05)"`
+	ColaMethod        string `gorm:"type:varchar(06)"`
+	BStartDate        string `gorm:"type:varchar(08)"` //20250525
+	BEndDate          string `gorm:"type:varchar(08)"` //20450525
+	BOriginalSA       uint64
+	BOrginalPrem      float64
+	BOrgBasAnnualPrem float64 // Annualized Premium Before Applying Discount and Factor
+	BNewStartDate     string  `gorm:"type:varchar(08)"`
+	BNewSA            uint64
+	BNewAnnualPrem    float64
+	BNewModelPrem     float64
+	PFreq             string `gorm:"type:varchar(01)"` //Q0009
+	BNewAge           uint
+	Active            string `gorm:"type:varchar(01)"`
+	Processed         string `gorm:"type:varchar(01)"`
+	NewOrExist        string `gorm:"type:varchar(01)"`
+	BNewTerm          uint
+	BNewPTerm         uint
+	CommissionAmount  float64
+	BTotalAnnualPrem  float64
+	BTotalModalPrem   float64
+	BTotalSA          uint64
 }

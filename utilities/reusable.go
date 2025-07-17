@@ -1115,3 +1115,85 @@ func RoundUpToNext1000(n float64) float64 {
 func RoundToNearest100(val float64) float64 {
 	return math.Round(val/100.0) * 100.0
 }
+
+func DiscountCalculationForCola(iCompany uint, iNewSA float64, iNewAnnPrem float64, iDiscType string, iDiscMethod string, iDate string, prevAnnPrem *int, prevBandIndex *int) (float64, error) {
+
+	var oValue float64
+
+	switch iDiscType {
+	case "S":
+		// Fetch Sum Assured bands
+		var q0017data paramTypes.Q0017Data
+		var extradata paramTypes.Extradata = &q0017data
+		if err := utilities.GetItemD(int(iCompany), "Q0017", iDiscMethod, iDate, &extradata); err != nil {
+			return 0.0, err
+		}
+
+		currentSA := int(iNewSA)
+		currentPrem := int(iNewAnnPrem)
+		var oDiscount uint
+		currentBandIndex := -1
+
+		// Find applicable SA band
+		for i := len(q0017data.SaBand) - 1; i >= 0; i-- {
+			if currentSA >= int(q0017data.SaBand[i].Sa) {
+				currentBandIndex = i
+				break
+			}
+		}
+
+		if currentBandIndex != -1 {
+			if *prevBandIndex != currentBandIndex {
+				// First time in this band → full discount
+				oDiscount = uint(q0017data.SaBand[currentBandIndex].Discount) * uint(currentPrem) / 100
+			} else {
+				// Same band → incremental discount
+				diff := currentPrem - *prevAnnPrem
+				if diff > 0 {
+					oDiscount = uint(q0017data.SaBand[currentBandIndex].Discount) * uint(diff) / 100
+				}
+			}
+			*prevAnnPrem = currentPrem
+			*prevBandIndex = currentBandIndex
+		}
+
+		return float64(oDiscount), nil
+
+	case "P":
+		// Fetch Premium bands
+		var q0018data paramTypes.Q0018Data
+		var extradata paramTypes.Extradata = &q0018data
+		if err := utilities.GetItemD(int(iCompany), "Q0018", iDiscMethod, iDate, &extradata); err != nil {
+			return 0.0, err
+		}
+
+		currentPrem := int(iNewAnnPrem)
+		var oDiscount uint
+		currentBandIndex := -1
+
+		// Find applicable Premium band
+		for i := len(q0018data.PremBand) - 1; i >= 0; i-- {
+			if currentPrem >= int(q0018data.PremBand[i].AnnPrem) {
+				currentBandIndex = i
+				break
+			}
+		}
+
+		if currentBandIndex != -1 {
+			if *prevBandIndex != currentBandIndex {
+				oDiscount = uint(q0018data.PremBand[currentBandIndex].Discount) * uint(currentPrem) / 100
+			} else {
+				diff := currentPrem - *prevAnnPrem
+				if diff > 0 {
+					oDiscount = uint(q0018data.PremBand[currentBandIndex].Discount) * uint(diff) / 100
+				}
+			}
+			*prevAnnPrem = currentPrem
+			*prevBandIndex = currentBandIndex
+		}
+
+		return float64(oDiscount), nil
+	}
+
+	return oValue, nil
+}

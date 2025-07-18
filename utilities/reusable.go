@@ -1125,7 +1125,7 @@ func DiscountCalculationForCola(iCompany uint, iNewSA float64, iNewAnnPrem float
 		// Fetch Sum Assured bands
 		var q0017data paramTypes.Q0017Data
 		var extradata paramTypes.Extradata = &q0017data
-		if err := utilities.GetItemD(int(iCompany), "Q0017", iDiscMethod, iDate, &extradata); err != nil {
+		if err := GetItemD(int(iCompany), "Q0017", iDiscMethod, iDate, &extradata); err != nil {
 			return 0.0, err
 		}
 
@@ -1163,7 +1163,7 @@ func DiscountCalculationForCola(iCompany uint, iNewSA float64, iNewAnnPrem float
 		// Fetch Premium bands
 		var q0018data paramTypes.Q0018Data
 		var extradata paramTypes.Extradata = &q0018data
-		if err := utilities.GetItemD(int(iCompany), "Q0018", iDiscMethod, iDate, &extradata); err != nil {
+		if err := GetItemD(int(iCompany), "Q0018", iDiscMethod, iDate, &extradata); err != nil {
 			return 0.0, err
 		}
 

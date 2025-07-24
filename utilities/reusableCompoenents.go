@@ -642,6 +642,7 @@ func ConvertMapToStruct(m map[string]interface{}, s interface{}) error {
 // Outputs Annualized Premium as float (124.22)
 //
 // ©  FuturaInsTech
+
 func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string) (float64, error) {
 
 	var q0006data paramTypes.Q0006Data
@@ -652,8 +653,12 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 	var extradataq0010 paramTypes.Extradata = &q0010data
 	var q0010key string
 	var prem float64
-	term := strconv.FormatUint(uint64(iTerm), 10)
-	premTerm := strconv.FormatUint(uint64(iPremTerm), 10)
+	//term := strconv.FormatUint(uint64(iTerm), 10)
+	//premTerm := strconv.FormatUint(uint64(iPremTerm), 10)
+
+	term := fmt.Sprintf("%02d", iTerm)
+	premTerm := fmt.Sprintf("%02d", iPremTerm)
+
 	//fmt.Println("****************", iCompany, iCoverage, iAge, iGender, iTerm, iPremMethod, iDate, iMortality)
 	if q0006data.PremCalcType == "A" || q0006data.PremCalcType == "U" {
 		if q0006data.PremiumMethod == "PM002" {
@@ -664,6 +669,7 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 		// END1 + Male + Term + Premium Term
 		if q0006data.PremiumMethod == "PM001" || q0006data.PremiumMethod == "PM003" {
 			q0010key = iCoverage + iGender + term + premTerm
+
 		}
 
 	} else if q0006data.PremCalcType == "H" {

@@ -1,0 +1,93 @@
+#
+# checkjson.py is a  python script that uses filename-lp.txt file 
+# to navigate within filename.txt file to the line and position 
+# and allows to correct line/position error in the json file and save
+# Usage: Copy python script in C:\ProgramFiles\Notepad++\plugins\PythonScript\scripts\jsonerr-lp.py
+#
+
+from Npp import editor, notepad, console 
+import time
+import os
+
+def calculate_scroll_amount(line_index, pos_index, max_scroll=1200):
+    # Get the content of the specified line
+    line_text = editor.getLine(line_index)
+    # Get the length of the line
+    line_length = len(line_text) 
+    remaining_width = line_length - pos_index 
+    scroll_amount = min(max_scroll, remaining_width)
+    return scroll_amount
+
+# Get the opened Notepad++ filename
+filename = notepad.getCurrentFilename()
+
+# Get the directory of the filename & construct lp_filename
+dirname = os.path.dirname(filename)
+fname_without_ext = os.path.splitext(os.path.basename(filename))[0]
+lp_filename = "{}-lp.txt".format(fname_without_ext)
+
+# Construct path of lp_filename to use in open and read 
+lp_file = os.path.join(dirname, lp_filename)
+
+# Read the lp file, skipping the header row
+with open(lp_file, "r") as f:
+    lines = f.readlines()[1:]  # Skip the first row (headerline)
+
+# Convert to integer positions
+lp_lines = [(int(line.strip().split(",")[0]), int(line.strip().split(",")[1])) for line in lines]
+
+for index, (line_num, pos) in enumerate(lp_lines):
+    line_index = line_num - 1  # Convert to 0-based index
+    pos_index = pos - 1        # Convert to 0-based index
+    waittime = 10
+    while True:  # Infinite loop to stay on the same record if user selects No
+        # Ask user if they want to continue
+        user_choice = notepad.messageBox(
+            "Correction {} of {} : You have {} seconds to Correct & Save...\n Move to Line {}, Position {}?\n\nClick YES to continue.\nClick NO to Wait.\nClick CANCEL to exit.".format(
+                index + 1, len(lp_lines), waittime, line_num, pos
+            ),
+            "Confirm Correction",
+            3  # Message box with Yes/No/Cancel buttons
+        )
+
+        if user_choice == 6:  # User clicked YES (6 = Yes)
+            break  # Exit the while loop and proceed to the next record
+
+        elif user_choice == 7:  # User clicked NO (7 = No)
+            notepad.messageBox("You have {} more seconds to Correct & Save......".format(waittime), "Info", 0)
+            time.sleep(waittime)  # Pause execution before asking again
+            continue  # Re-prompt the message box
+
+        elif user_choice == 2:  # User clicked NO (2 = Cancel)
+            notepad.messageBox("Script stopped by user.", "Exit", 0)
+            exit()  # Stop execution of the entire script
+
+    # Move cursor to the correct line
+    editor.gotoLine(line_index)
+    editor.ensureVisible(line_index) 
+    editor.setFirstVisibleLine(line_index - 1)  # Make the target line the second visible line
+
+    # Get start position in line
+    line_start_pos = editor.positionFromLine(line_index)
+    target_pos = line_start_pos + pos_index
+
+    # Move cursor to the exact position
+    editor.setCurrentPos(target_pos)
+    editor.setSelection(target_pos - 1, target_pos - 1)  # Highlight character
+
+    # **Ensure column position is visible** (fix horizontal scrolling issue)
+    editor.scrollRange(target_pos - 1, target_pos - 1)  # Scroll to make sure position is visible
+
+    # Get the current horizontal offset
+    current_offset = editor.getXOffset()
+
+    # Set how much to scroll (increase for more scrolling)
+    scroll_amount = calculate_scroll_amount(line_index, pos_index)  # Make the position scrolled to left as much
+    editor.setXOffset(current_offset + scroll_amount)
+   
+    time.sleep(10.0)  # Small delay to allow movement
+
+    # Clear selection before moving to next position
+    editor.setSelection(target_pos, target_pos)
+
+notepad.messageBox("Hope you Saved All Changes. \n All Corrections processed!", "Finished All Corrections")

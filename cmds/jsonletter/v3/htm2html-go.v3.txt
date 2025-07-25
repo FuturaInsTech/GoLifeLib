@@ -1,0 +1,264 @@
+// htm2html.exe program code version 3
+// Usage: htm2html <base_filename> // without extension of .htm
+// In v3 Added header and footer file processing
+// In v3 saved Font Definitions in style tag and dropped HTML comment lines
+// In v3 Synchoronized all lang tags to body lang value 
+
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strings"
+)
+
+// Function to check if required files exist
+func checkInputHTMFilesExist(arg string) {
+
+	jFile := arg + ".htm"
+	jhFile := arg + "-h.htm"
+	jfFile := arg + "-f.htm"
+
+	// Check if HTM files Exists
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(jhFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jhFile)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(jfFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jfFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("All files '%s', '%s' and '%s' exists. Start Processing...\n", jFile, jhFile, jfFile)
+}
+
+// JoinHTMLAttributes takes a multi-line HTML string and joins attributes into a single line.
+func JoinHTMLAttributes(html string) string {
+	// Preserve blank lines by temporarily marking them
+	placeholder := "__BLANK_LINE__"
+	compactHTML := strings.ReplaceAll(html, "\n\n", placeholder)
+
+	// Remove all remaining single newlines (join lines)
+	re := regexp.MustCompile(`\n+`)                     // Match one or more newlines
+	compactHTML = re.ReplaceAllString(compactHTML, " ") // Replace newlines with space
+
+	// Restore blank lines
+	compactHTML = strings.ReplaceAll(compactHTML, placeholder, "\n\n")
+
+	// Remove newlines and excessive whitespace
+	compactHTML = regexp.MustCompile(`\s{2,}`).ReplaceAllString(compactHTML, " ") // Collapse multiple spaces
+
+	// Trim any unnecessary spaces at the start or end
+	return strings.TrimSpace(compactHTML)
+}
+
+func ExtractFontDefinitions(html string) (string, string) {
+	commentRe := regexp.MustCompile(`(?s)<!--(.*?)-->`)
+	matches := commentRe.FindAllStringSubmatch(html, -1)
+
+	var styleBlock string
+
+	for _, match := range matches {
+		fullComment := match[0]
+		commentBody := match[1]
+
+		if styleBlock == "" && strings.Contains(strings.ToLower(commentBody), "font definitions") {
+			cleaned := strings.TrimSpace(commentBody)
+			styleBlock = "<style>\n" + cleaned + "\n</style>"
+		}
+		html = strings.Replace(html, fullComment, "", 1) // remove the comment
+	}
+
+	return html, styleBlock
+}
+
+func InsertStyleIntoHead(html string, styleBlock string) string {
+	if styleBlock == "" {
+		return html
+	}
+	headRe := regexp.MustCompile(`(?i)<head[^>]*>`)
+	loc := headRe.FindStringIndex(html)
+
+	if loc != nil {
+		insertPos := loc[1] // after <head>
+		html = html[:insertPos] + "\n" + styleBlock + "\n" + html[insertPos:]
+	}
+	return html
+}
+
+// Function to clean <o:p></o:p> tags to manage blank lines
+// Used in htm2html processing
+func cleanOEmptyP(input string) string {
+	// 1. Remove all HTML comments
+	// re := regexp.MustCompile(`(?s)<!--.*?-->`)
+	// input = re.ReplaceAllString(input, "")
+
+	// 2. Remove <o:p></o:p> tags (even if there's whitespace inside)
+	re := regexp.MustCompile(`(?i)<o:p>\s*</o:p>`)
+	input = re.ReplaceAllString(input, "")
+
+	// 3. Replace <o:p>&nbsp;</o:p> with <br> for blank line rendering
+	re = regexp.MustCompile(`(?i)<o:p>\s*&nbsp;\s*</o:p>`)
+	return re.ReplaceAllString(input, "<br>")
+	//return re.ReplaceAllString(input, "")
+}
+
+// syncAllLangtoBodyLang extracts the `lang` attribute from <body> and replaces
+// all :lang(...) and [lang="..."] or [lang='...'] [*-language:'...'] values in the input content
+func syncAllLangtoBodyLang(content string) (string, error) {
+	var langValue string
+
+	// Step 1: Extract lang from <body> or fallback to <html>
+	bodyLangRe := regexp.MustCompile(`(?i)<body[^>]*\blang=["']?([^"'>\s]+)["']?`)
+	if matches := bodyLangRe.FindStringSubmatch(content); len(matches) >= 2 {
+		langValue = matches[1]
+	} else {
+		htmlLangRe := regexp.MustCompile(`(?i)<html[^>]*\blang=["']?([^"'>\s]+)["']?`)
+		if matches := htmlLangRe.FindStringSubmatch(content); len(matches) >= 2 {
+			langValue = matches[1]
+		}
+	}
+
+	if langValue == "" {
+		return content, fmt.Errorf("no lang attribute found in <body> or <html>")
+	}
+
+	// Step 2: Replace :lang(...) selectors
+	content = regexp.MustCompile(`:lang\(([^)]+)\)`).ReplaceAllString(content, fmt.Sprintf(`:lang(%s)`, langValue))
+
+	// Step 3: Replace [lang="..."] or [lang='...'] attribute selectors
+	content = regexp.MustCompile(`\[lang=['"][^'"]+['"]\]`).ReplaceAllString(content, fmt.Sprintf(`[lang="%s"]`, langValue))
+
+	// Step 4: Replace all *-language:... in inline styles or CSS
+	// Handles mso-fareast-language, bidi-language, ansi-language, etc.
+	content = regexp.MustCompile(`(?i)([\w\-]+-language)\s*:\s*[a-z\-A-Z]+`).ReplaceAllString(content, fmt.Sprintf(`${1}:%s`, langValue))
+
+	return content, nil
+}
+
+// Replace v:imagedata Tags with img tag
+// Used in htm2html processing
+func ReplaceImageDataTagWithImgTag(input string) string {
+	// Regular expression to find <v:imagedata ... />
+	re := regexp.MustCompile(`<v:imagedata([^>]*)\/?>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `<img${1}/>`)
+}
+
+// Strip SpellE SpanTags removes Spelling Eror non-standard tags but keeps others.
+// Used in htm2html processing
+func StripSpellESpanTags(input string) string {
+	// Regular expression to match <span> tags with class=SpellE
+	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?SpellE["']?[^>]*>(.*?)</span>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `$1`)
+}
+
+// Strip GramE SpanTags removes Grammer Eror non-standard tags but keeps others.
+// Used in htm2html processing
+func StripGramESpanTags(input string) string {
+	// Regular expression to match <span> tags with class=GramE
+	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?GramE["']?[^>]*>(.*?)</span>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `$1`)
+}
+
+func processHTMLFile(inputFilePath, outputFilePath string) {
+	// Open the input file
+	inputFile, err := os.Open(inputFilePath)
+	if err != nil {
+		fmt.Printf("Error opening input file: %v\n", err)
+		return
+	}
+	defer inputFile.Close()
+
+	// Read the input file content
+	content, err := io.ReadAll(inputFile)
+	if err != nil {
+		fmt.Printf("Error reading input file: %v\n", err)
+		return
+	}
+
+	// JoinHTMLAttributes takes a multi-line HTML string and joins attributes into a single line
+	joinedContent := JoinHTMLAttributes(string(content))
+
+	// Correct HTM file tags for HTML standards.....
+	// 1. Save the Font Defintions from HTML Comments into style tag
+	// 2. Clean empty o:p tags and remove HTML comment lines
+	// 3. Synchronize all lang tages to body lang values
+	// 4. Replacing v:imagedata tags with img tag & <o:p>&nbsp</o:p> with <br> tag
+	// 5. Removing Spelling & Grammer Error nonstandard tags
+	tempContent, styleblock := ExtractFontDefinitions(string(joinedContent))
+	temp1Content := InsertStyleIntoHead(tempContent, styleblock)
+	temp2Content := cleanOEmptyP(string(temp1Content))
+	temp1Content, _ = syncAllLangtoBodyLang(string(temp2Content))
+	temp2Content = ReplaceImageDataTagWithImgTag(string(temp1Content))
+	temp1Content = StripSpellESpanTags(string(temp2Content))
+	processedContent := StripGramESpanTags(string(temp1Content))
+	// End of Corrections
+
+	// Write the processed content to the output file
+	err = os.WriteFile(outputFilePath, []byte(processedContent), 0644)
+	if err != nil {
+		fmt.Printf("Error writing to output file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Processed HTML content written to %s\n", outputFilePath)
+}
+
+func main() {
+	var inputFile string
+	var iheaderFile string
+	var ifooterFile string
+
+	var outputFile string
+	var oheaderFile string
+	var ofooterFile string
+
+	var iFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> ...")
+		fmt.Println("Usage: cmd <basefilename> ...")
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	inputFile = iFile + ".htm"
+	iheaderFile = iFile + "-h.htm"
+	ifooterFile = iFile + "-f.htm"
+
+	outputFile = iFile + ".html"
+	oheaderFile = iFile + "-h.html"
+	ofooterFile = iFile + "-f.html"
+
+	// Check if the required files exist
+	checkInputHTMFilesExist(iFile)
+	fmt.Println("  In Progress...")
+
+	htm2html(inputFile, outputFile)
+	htm2html(iheaderFile, oheaderFile)
+	htm2html(ifooterFile, ofooterFile)
+}
+
+func htm2html(iFile string, oFile string) {
+	// Input and output file paths
+	inputFilePath := iFile
+	outputFilePath := oFile
+
+	// Process the file
+	processHTMLFile(inputFilePath, outputFilePath)
+
+	fmt.Println("HTML generated successfully: ", oFile)
+}

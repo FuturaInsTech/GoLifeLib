@@ -1,0 +1,275 @@
+// testgohtmljson.exe program code version 3
+// Usage: testgohtmljson <base_filename> // without extension of .htm
+// Added in v2 <E> Equals eq, <N> NotEquals ne, <C> Contains, <I> In and <O> Out Variations
+// Added in v3 besides the -outfile.html -hfile.html and -ffile.html files are generated 
+
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"log"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+)
+
+// Function to check if required files exist
+func checkInputFilesExist(arg string) {
+
+	jFile := arg + ".json"
+	gFile := arg + ".gohtml"
+	hgFile := arg + "-h.gohtml"
+	fgFile := arg + "-f.gohtml"
+
+	// Check if HTM files & json file Exists
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(gFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", gFile)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(hgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hgFile)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(fgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", fgFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("All files '%s, %s', '%s' and '%s' exists. Start Processing...\n", jFile, gFile, hgFile, fgFile)
+}
+
+// Used in testgohtmljson processing
+func formatInteger(famt string, ctype byte) string {
+	// Handle the Indian and Western numbering formats
+	n := len(famt)
+	if n <= 3 {
+		// No formatting needed for numbers with 3 or fewer digits
+		return famt
+	}
+
+	// Format the first three digits (thousands)
+	result := famt[n-3:]
+
+	if ctype == 'a' || ctype == 'A' {
+		// Format the remaining digits in groups of two (lakhs, crores, etc.)
+		for i := n - 3; i > 0; i -= 2 {
+			start := i - 2
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+	if ctype == 'c' || ctype == 'C' {
+		// Format the remaining digits in groups of three (millions, billions, etc.)
+		for i := n - 3; i > 0; i -= 3 {
+			start := i - 3
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+
+	// Return the formatted integer
+	return result
+}
+
+// Used in testgohtmljson processing
+func formatDecimal(famt string, ctype byte) string {
+	decimalpart := ""
+	decimallen, _ := strconv.Atoi(string(ctype))
+	//damt, _ := strconv.Atoi(string(famt))
+	var decimalFloat float64 = 0
+	if decimallen == 0 {
+		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
+	} else {
+		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
+	}
+	if decimallen == 0 {
+		return decimalpart
+	} else {
+		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
+		decimalpart = fmt.Sprintf(formatString, decimalFloat)
+		decimalpart = decimalpart[1:] // Remove the leading "0"
+		return decimalpart
+	}
+}
+
+// Used in testgohtmljson processing
+func formatNumber(value interface{}, fds string) string {
+	integralpart := ""
+	decimalpart := ""
+	famt := ""
+	famount := ""
+	decimallen, _ := strconv.Atoi(string(fds[1]))
+	if _, ok := value.(float64); ok {
+		famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(int); ok {
+		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(string); ok {
+		famt = value.(string)
+	}
+	parts := strings.Split(famt, ".")
+	if fds[0] == 'a' || fds[0] == 'A' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'c' || fds[0] == 'C' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'd' || fds[0] == 'D' {
+		integralpart = parts[0]
+	} else {
+		integralpart = parts[0]
+	}
+
+	if len(parts) > 1 {
+		decimalpart = formatDecimal(parts[1], fds[1])
+		famount = integralpart + decimalpart
+	} else {
+		famount = integralpart
+	}
+	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+// Custom template functions
+func createFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"formatNumber": formatNumber,
+		"contains":     strings.Contains,
+		"eq": func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+		},
+		"ne": func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) != fmt.Sprintf("%v", b)
+		},
+		"in": func(val interface{}, options ...interface{}) bool {
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return true
+				}
+			}
+			return false
+		},
+		"out": func(val string, options ...interface{}) bool {
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return false
+				}
+			}
+			return true
+		},
+	}
+}
+
+func main() {
+
+	var gohtmlFile string
+	var hgohtmlFile string
+	var fgohtmlFile string
+	var jsonFile string
+	var outFile string
+	var houtFile string
+	var foutFile string
+	var imgfolder string
+	var himgfolder string
+	var fimgfolder string
+
+	var iFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> ...")
+		fmt.Println("Usage: cmd <basefilename> ...")
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	gohtmlFile = iFile + ".gohtml"
+	hgohtmlFile = iFile + "-h.gohtml"
+	fgohtmlFile = iFile + "-f.gohtml"
+	jsonFile = iFile + ".json"
+	outFile = iFile + "-outfile.html"
+	houtFile = iFile + "-hfile.html"
+	foutFile = iFile + "-ffile.html"
+	imgfolder = iFile
+	himgfolder = iFile + "-h"
+	fimgfolder = iFile + "-f"
+
+	// Check if the required files exist
+	checkInputFilesExist(iFile)
+	fmt.Println("  In Progress...")
+
+	testgohtmljson(gohtmlFile, jsonFile, outFile, imgfolder)
+	testgohtmljson(hgohtmlFile, jsonFile, houtFile, himgfolder)
+	testgohtmljson(fgohtmlFile, jsonFile, foutFile, fimgfolder)
+}
+
+func testgohtmljson(gohtmlFile string, jsonFile string, outFile string, iFile string) {
+	// Read the HTML file
+	jsonData, err := os.ReadFile(jsonFile)
+	if err != nil {
+		fmt.Printf("Error reading JSON file: %v\n", err)
+		return
+	}
+
+	// Parse JSON into a map
+	var data map[string]interface{}
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, iFile)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
+	// Parse and execute template
+	funcMap := createFuncMap()
+	tmpl, err := template.New(gohtmlFile).Funcs(funcMap).Parse(modifiedContent)
+	if err != nil {
+		log.Fatalf("Error loading template: %v", err)
+	}
+
+	// Render template to standard output or file
+	outputFile, err := os.Create(outFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v", err)
+	}
+	defer outputFile.Close()
+
+	err = tmpl.Execute(outputFile, data)
+	if err != nil {
+		log.Fatalf("Error executing template: %v", err)
+	}
+
+	fmt.Printf("Test outfile created successfully at: %s\n", outFile)
+}

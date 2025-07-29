@@ -1,0 +1,102 @@
+{
+"compname": "FUTURAINSTECH INSURANCE COMPANY LIMITED",
+"compadd": "#2, Judge Colony 1st Main Road, Tambaram Sanatorium, Chennai, India, 600047",
+"uinno": "FITHLIP12345V456789",
+"clientno": "50000001",
+"yr": 2025,
+"policyno": "5000000125P3456789",
+"startdate": "01/01/2025",
+"enddate": "31/12/2025",
+"ClientSalutation": "Mr",
+"ClientFullName": "Shubham Patil",
+"ClientFullAddress": "X-999, STERLING HEIGHTS, S&P ESTATES, OPP THANE MAHANAGAR PALIKA, THANE WEST, MUMBAI",
+"agentname": "MY AGENT",
+"agentcode": "60000001",
+"agentphoneno": "9876543210",
+"agentemailaddress": "myagent@myagent.com",
+"datime": "04/04/2025 3:02:47 PM",
+"prevyr": 2024,
+"prevpol": "23456788",
+"clientemailaddress": "shubham@patil.com",
+"clientphoneno": "9876543210",
+"benefitplantypedesc": "Family Floater Basis",
+"bsumassured": 500000.00,
+"Layout": { "Orientation": "L", "PageSize": "A4" },
+"slno": [
+1,
+2,
+3
+],
+"laname": [
+"SHUBHAM PATIL",
+"PATILS FATHER",
+"PATILS MOTHER"
+],
+"ladob": [
+"01/01/2000",
+"03/07/1970",
+"29/11/1975"
+],
+"lagender": [
+"Male",
+"Male",
+"Female"
+],
+"larel": [
+"Self",
+"Father",
+"Mother"
+],
+"laoccup": [
+"Service",
+"Retired",
+"HomeMaker"
+],
+"pecdecl": [
+"None",
+"None",
+"None"
+],
+"ppolstdate": [
+"01/04/2022",
+"01/04/2022",
+"01/04/2022"
+],
+"lanominee": [
+"PATILS FATHER",
+"SHUBHAM PATIL",
+"SHUBHAM PATIL"
+],
+"lanomrel": [
+"Father",
+"Son",
+"Son"
+],
+"bprem": [
+27289.00,
+0.00,
+0.00
+],
+
+"totalbasepremium": 27289.00,
+"totalloadingprem": 0,
+"totalpreflifedisamt": 0,
+"totalloyaltydisamt": 5593.35,
+"totalfloaterdisamt": 0,
+"totalonlinedisamt": 0,
+"premwogstamt": 21846.00,
+"gstamt": 3932.00,
+"stampdutyamt": 1.00,
+"totalpremiumamt": 25778.00,
+"receiptno": "10107270023104118208",
+"receiptdate": "03/04/2025",
+
+"clientgstno": "",
+"saccode": "997133",
+"gstofficeno": "29AAACU5552C1ZF",
+"gstinvoiceno": "2823I103518806",
+"gstdate": "03/04/2025",
+"day": "03",
+"month": "April",
+"year": "2025"
+}

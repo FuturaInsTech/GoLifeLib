@@ -778,7 +778,7 @@ func SendSMSTwilio(iCompany, iclientID uint, itempName, iEffDate string, message
 	return nil
 }
 
-func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffectiveDate string, txn *gorm.DB) (oCapAmount float64, oBilledAmt float64, oUnBilledAmt float64, oError error) {
+func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffectiveDate string, iLoantype string, txn *gorm.DB) (oCapAmount float64, oBilledAmt float64, oUnBilledAmt float64, oError error) {
 	var polenq models.Policy
 	result := txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicy)
 	if result.Error != nil {
@@ -792,9 +792,17 @@ func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffecti
 	}
 
 	var loanenq []models.Loan
-	result = txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_seq_number = ? and loan_status = ?", iCompany, iPolicy, iLoanSeq, "AC")
-	if result.Error != nil {
-		return 0, 0, 0, result.Error
+	if iLoantype == "" {
+		result = txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_seq_number = ? and loan_status = ?", iCompany, iPolicy, iLoanSeq, "AC")
+		if result.Error != nil {
+			return 0, 0, 0, result.Error
+		}
+	} else {
+		result = txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_seq_number = ? and loan_status = ? and loan_type = ?", iCompany, iPolicy, iLoanSeq, "AC", iLoantype)
+		if result.Error != nil {
+			return 0, 0, 0, result.Error
+		}
+
 	}
 
 	var q0006data paramTypes.Q0006Data
@@ -809,9 +817,16 @@ func CalLoanOS(iCompany uint, iPolicy uint, iBenID uint, iLoanSeq uint, iEffecti
 		iIntBilled := 0.0
 		iIntUnBilled := 0.0
 		var loanbill []models.LoanBill
-		result = txn.Find(&loanbill, "company_id = ? and policy_id = ? and loan_id = ? and billing_status = ?", iCompany, iPolicy, loanenq[i].ID, "OP")
-		if result.Error != nil {
-			return 0, 0, 0, result.Error
+		if iLoantype == "" {
+			result = txn.Find(&loanbill, "company_id = ? and policy_id = ? and loan_id = ? and billing_status = ?", iCompany, iPolicy, loanenq[i].ID, "OP")
+			if result.Error != nil {
+				return 0, 0, 0, result.Error
+			}
+		} else {
+			result = txn.Find(&loanbill, "company_id = ? and policy_id = ? and loan_id = ? and billing_status = ? and loan_type = ?", iCompany, iPolicy, loanenq[i].ID, "OP", iLoantype)
+			if result.Error != nil {
+				return 0, 0, 0, result.Error
+			}
 		}
 		for j := 0; j < len(loanbill); j++ {
 			iIntBilled += loanbill[j].LoanIntAmount

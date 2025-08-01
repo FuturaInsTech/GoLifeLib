@@ -748,7 +748,7 @@ func main() {
 
 	iphone := os.Getenv("PHONE")
 	ipassword := os.Getenv("PWORD")
-	iparam := os.Getenv("PARAM")
+	iparam := os.Getenv("GOPROPARAM")
 
 	// Sign in
 	if err := CallSignInAPI(iphone, ipassword); err != nil {

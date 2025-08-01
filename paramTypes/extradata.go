@@ -382,6 +382,11 @@ func (m *Q0006Data) GetFormattedData(datamap map[string]string) map[string]inter
 		PremCalcType := m.PremCalcType
 		resp["AllowedPremCalcType"] = PremCalcType
 		return resp
+	} else if datamap["function"] == "ColaMethod" {
+		resp := make(map[string]interface{})
+		ColaMethod := m.ColaMethod
+		resp["AllowedColaMethod"] = ColaMethod
+		return resp
 	} else {
 		return nil
 	}

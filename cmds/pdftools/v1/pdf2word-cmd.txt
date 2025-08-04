@@ -1,0 +1,369 @@
+// Program Name: pdf2word.exe
+// Description : Save the contents of an input .pdf File as an Output .docx File
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/go-ole/go-ole"
+	"github.com/go-ole/go-ole/oleutil"
+	"github.com/ledongthuc/pdf"
+)
+
+type textFragment struct {
+	x float64
+	y float64
+	s string
+}
+
+var pdffile string
+var outfile string
+
+func main() {
+	// Check the number of command-line arguments
+	if len(os.Args) > 3 {
+		fmt.Println("Error: Too many arguments provided..")
+		fmt.Println("Usage: cmd <pdffile> [<outfile>]")
+	} else if len(os.Args) == 3 {
+		pdffile = os.Args[1] + ".pdf"
+		outfile = os.Args[2] + ".docx"
+	} else if len(os.Args) == 2 {
+		pdffile = os.Args[1] + ".pdf"
+		outfile = os.Args[1] + ".docx"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		fmt.Println("Usage: cmd <pdffile> [<outfile>]")
+		os.Exit(1)
+	}
+
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	ole.CoInitialize(0)
+	defer ole.CoUninitialize()
+
+	inputPDF := pdffile
+	outputDoc := outfile
+
+	f, r, err := pdf.Open(inputPDF)
+	if err != nil {
+		log.Fatalf("Failed to open PDF: %v", err)
+	}
+	defer f.Close()
+
+	unknown, err := oleutil.CreateObject("Word.Application")
+	if err != nil {
+		log.Fatalf("Failed to start Word: %v", err)
+	}
+	wordApp, _ := unknown.QueryInterface(ole.IID_IDispatch)
+	defer wordApp.Release()
+
+	oleutil.PutProperty(wordApp, "Visible", false)
+
+	documents := oleutil.MustGetProperty(wordApp, "Documents").ToIDispatch()
+	document := oleutil.MustCallMethod(documents, "Add").ToIDispatch()
+
+	const gapThreshold = 10.0
+	var prevMaxCols int
+
+	for pageIndex := 1; pageIndex <= r.NumPage(); pageIndex++ {
+		page := r.Page(pageIndex)
+		if page.V.IsNull() {
+			continue
+		}
+
+		fmt.Printf("📄 Processing Page %d...\n", pageIndex)
+
+		//insertParagraph(document, fmt.Sprintf("Page %d", pageIndex))
+
+		content := page.Content()
+		lines := map[float64][]textFragment{}
+		for _, txt := range content.Text {
+			lines[txt.Y] = append(lines[txt.Y], textFragment{txt.X, txt.Y, txt.S})
+		}
+
+		var ys []float64
+		for y := range lines {
+			ys = append(ys, y)
+		}
+		sort.Sort(sort.Reverse(sort.Float64Slice(ys)))
+
+		tableBuffer := [][]textFragment{}
+		for i, y := range ys {
+			fragments := lines[y]
+			sort.Slice(fragments, func(i, j int) bool { return fragments[i].x < fragments[j].x })
+			isTable := hasTableGaps(fragments, gapThreshold)
+
+			if isTable {
+				tableBuffer = append(tableBuffer, fragments)
+			} else {
+				if len(tableBuffer) > 0 {
+					maxCols := writeTable(document, tableBuffer, gapThreshold)
+					if prevMaxCols > 0 && maxCols != prevMaxCols {
+						insertParagraph(document, "")
+					}
+					prevMaxCols = maxCols
+					tableBuffer = [][]textFragment{}
+					time.Sleep(30 * time.Millisecond)
+				}
+				insertParagraph(document, buildLine(fragments))
+			}
+
+			if i == len(ys)-1 && len(tableBuffer) > 0 {
+				maxCols := writeTable(document, tableBuffer, gapThreshold)
+				if prevMaxCols > 0 && maxCols != prevMaxCols {
+					insertParagraph(document, "")
+				}
+				prevMaxCols = maxCols
+				tableBuffer = [][]textFragment{}
+			}
+		}
+
+		insertPageBreak(document)
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("failed to get current working directory: %w", err)
+		return
+	}
+
+	// Build the full Word output path
+	outfilepath := filepath.Join(cwdPath, outfile)
+
+	// Use in SaveAs:
+	_, err = oleutil.CallMethod(document, "SaveAs", outfilepath)
+	if err != nil {
+		fmt.Println("failed to save Word file: %w", err)
+		return
+	}
+
+	//oleutil.MustCallMethod(document, "SaveAs2", outputDoc)
+	oleutil.MustCallMethod(document, "Close", false)
+	oleutil.MustCallMethod(wordApp, "Quit")
+
+	fmt.Println("Word document created:", outputDoc)
+}
+
+func insertParagraph(document *ole.IDispatch, text string) {
+	if document == nil {
+		log.Printf("❌ insertParagraph skipped: document is nil")
+		return
+	}
+	for attempt := 1; attempt <= 2; attempt++ {
+		contentVariant, err := oleutil.GetProperty(document, "Content")
+		if err != nil || contentVariant == nil {
+			log.Printf("⚠️ Attempt %d: could not get Content: %v", attempt, err)
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		content := contentVariant.ToIDispatch()
+		rangeVariant, err := oleutil.GetProperty(content, "Duplicate")
+		if err != nil || rangeVariant == nil {
+			log.Printf("⚠️ Attempt %d: could not get Duplicate: %v", attempt, err)
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		rangeObj := rangeVariant.ToIDispatch()
+		_, err = oleutil.CallMethod(rangeObj, "Collapse", 0)
+		if err != nil {
+			log.Printf("⚠️ Attempt %d: Collapse failed: %v", attempt, err)
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		_, err = oleutil.CallMethod(rangeObj, "InsertAfter", text+"\r\n")
+		if err != nil {
+			log.Printf("⚠️ Attempt %d: InsertAfter failed: %v", attempt, err)
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		return
+	}
+	log.Printf("❌ insertParagraph skipped after 2 attempts: %s", text)
+}
+
+func insertPageBreak(document *ole.IDispatch) {
+	content := oleutil.MustGetProperty(document, "Content").ToIDispatch()
+	rangeObj := oleutil.MustGetProperty(content, "Duplicate").ToIDispatch()
+	oleutil.CallMethod(rangeObj, "Collapse", 0)
+	oleutil.CallMethod(rangeObj, "InsertBreak", 7) // wdPageBreak
+}
+
+func hasTableGaps(fragments []textFragment, gapThreshold float64) bool {
+	gaps := 0
+	for i := 0; i < len(fragments)-1; i++ {
+		gap := fragments[i+1].x - fragments[i].x - textWidthEstimate(fragments[i].s)
+		if gap > gapThreshold {
+			gaps++
+		}
+	}
+	return gaps > 0
+}
+
+func writeTable(document *ole.IDispatch, rows [][]textFragment, gapThreshold float64) int {
+	if document == nil || len(rows) == 0 {
+		log.Println("⚠️ writeTable skipped: invalid document or rows")
+		return 0
+	}
+
+	fmt.Printf("🧾 Writing table with %d rows...\n", len(rows))
+
+	maxCols := 1
+	for _, row := range rows {
+		gaps := 1
+		for i := 0; i < len(row)-1; i++ {
+			gap := row[i+1].x - row[i].x - textWidthEstimate(row[i].s)
+			if gap > gapThreshold {
+				gaps++
+			}
+		}
+		if gaps > maxCols {
+			maxCols = gaps
+		}
+	}
+
+	var table *ole.IDispatch
+	for attempt := 1; attempt <= 2; attempt++ {
+		tables := oleutil.MustGetProperty(document, "Tables").ToIDispatch()
+		contentVariant, err := oleutil.GetProperty(document, "Content")
+		if err != nil || contentVariant == nil {
+			log.Printf("⚠️ Attempt %d: could not get Content for table: %v", attempt, err)
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		content := contentVariant.ToIDispatch()
+		tableRangeVariant, err := oleutil.GetProperty(content, "Duplicate")
+		if err != nil || tableRangeVariant == nil {
+			log.Printf("⚠️ Attempt %d: could not get Duplicate for table: %v", attempt, err)
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		tableRange := tableRangeVariant.ToIDispatch()
+		oleutil.CallMethod(tableRange, "Collapse", 0)
+		tableVariant, err := oleutil.CallMethod(tables, "Add", tableRange, len(rows), maxCols)
+		if err != nil || tableVariant == nil {
+			log.Printf("⚠️ Attempt %d: table Add failed: %v", attempt, err)
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		table = tableVariant.ToIDispatch()
+		break
+	}
+	if table == nil {
+		log.Println("❌ writeTable failed: unable to create table")
+		return maxCols
+	}
+	oleutil.CallMethod(table, "AutoFitBehavior", 2)
+
+	columns := oleutil.MustGetProperty(table, "Columns").ToIDispatch()
+	for i := 1; i <= maxCols; i++ {
+		//col := oleutil.MustGetProperty(columns, "Item", i).ToIDispatch()
+		colVariant, err := oleutil.CallMethod(columns, "Item", i)
+		if err != nil || colVariant == nil {
+			log.Printf("⚠️ Could not get column %d: %v", i, err)
+			continue
+		}
+		col := colVariant.ToIDispatch()
+
+		oleutil.PutProperty(col, "PreferredWidthType", 1)
+		oleutil.PutProperty(col, "PreferredWidth", 468.0/float64(maxCols))
+	}
+
+	for rIndex, fragments := range rows {
+		colIndex := 1
+		cellFragments := []textFragment{}
+		for i, frag := range fragments {
+			cellFragments = append(cellFragments, frag)
+			if i < len(fragments)-1 {
+				gap := fragments[i+1].x - frag.x - textWidthEstimate(frag.s)
+				if gap > gapThreshold {
+					cleanText := buildLine(cellFragments)
+					safeWriteCell(table, rIndex+1, colIndex, cleanText, rIndex == 0)
+					colIndex++
+					cellFragments = []textFragment{}
+				}
+			}
+		}
+		if len(cellFragments) > 0 {
+			cleanText := buildLine(cellFragments)
+			safeWriteCell(table, rIndex+1, colIndex, cleanText, rIndex == 0)
+		}
+	}
+
+	return maxCols
+}
+
+func safeWriteCell(table *ole.IDispatch, row, col int, text string, isHeader bool) {
+	if table == nil {
+		return
+	}
+	cellVariant, err := oleutil.CallMethod(table, "Cell", row, col)
+	if err != nil || cellVariant == nil {
+		log.Printf("⚠️ Cannot access cell [%d,%d]: %v", row, col, err)
+		return
+	}
+	cell := cellVariant.ToIDispatch()
+	if cell == nil {
+		return
+	}
+	cellRange := oleutil.MustGetProperty(cell, "Range").ToIDispatch()
+	if cellRange == nil {
+		return
+	}
+	oleutil.PutProperty(cellRange, "Text", text)
+
+	borders := oleutil.MustGetProperty(cell, "Borders").ToIDispatch()
+	if borders != nil {
+		for i := 1; i <= 4; i++ {
+			borderVariant, err := oleutil.CallMethod(borders, "Item", i)
+			if err != nil || borderVariant == nil {
+				log.Printf("⚠️ Could not get border %d: %v", i, err)
+				continue
+			}
+			border := borderVariant.ToIDispatch()
+			oleutil.PutProperty(border, "LineStyle", 1)
+			oleutil.PutProperty(border, "LineWidth", 6)
+		}
+	}
+
+	if isHeader {
+		font := oleutil.MustGetProperty(cellRange, "Font").ToIDispatch()
+		if font != nil {
+			oleutil.PutProperty(font, "Bold", true)
+		}
+	}
+}
+
+func buildLine(fragments []textFragment) string {
+	if len(fragments) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fragments[0].s)
+
+	for i := 1; i < len(fragments); i++ {
+		prev := fragments[i-1]
+		curr := fragments[i]
+		gap := curr.x - prev.x - textWidthEstimate(prev.s)
+		if gap > 6.5 {
+			sb.WriteRune(' ')
+		}
+		sb.WriteString(curr.s)
+	}
+
+	return sb.String()
+}
+
+func textWidthEstimate(s string) float64 {
+	return float64(len(s)) * 5.0
+}

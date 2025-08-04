@@ -1,0 +1,365 @@
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000212 | ADBR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000212 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -3.12 | Commission Amount: -3.12
+Page 1 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000212 | END1
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000212 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000212 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000212 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000212 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+Count | Total | Average
+Policy Number: 4 | Commission Amount: -14.24 | Commission Amount: -3.56
+Page 2 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000212 | TMRR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000212 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000212 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+Count | Total | Average
+Policy Number: 2 | Commission Amount: -22.14 | Commission Amount: -11.07
+Page 3 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000228 | ADBR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000228 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -3.12 | Commission Amount: -3.12
+Page 4 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000228 | END1
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000228 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000228 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000228 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+Count | Total | Average
+Policy Number: 3 | Commission Amount: -13.21 | Commission Amount: -4.40
+Page 5 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000228 | TMRR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000228 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -11.07 | Commission Amount: -11.07
+Page 6 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000242 | ADBR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000242 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+Count | Total | Average
+Policy Number: 18 | Commission Amount: -56.14 | Commission Amount: -3.12
+Page 7 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000242 | END1
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+Page 8 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000242 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+Count | Total | Average
+Policy Number: 54 | Commission Amount: -237.78 | Commission Amount: -4.40
+Page 9 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000242 | TMRR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+100000242 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+Count | Total | Average
+Policy Number: 18 | Commission Amount: -199.26 | Commission Amount: -11.07
+Page 10 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000243 | ADBR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000243 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+100000243 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+Count | Total | Average
+Policy Number: 2 | Commission Amount: -6.24 | Commission Amount: -3.12
+Page 11 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000243 | END1
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000243 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000243 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+100000243 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000243 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000243 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+Count | Total | Average
+Policy Number: 5 | Commission Amount: -25.39 | Commission Amount: -5.08
+Page 12 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000243 | TMRR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000243 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -11.07 | Commission Amount: -11.07
+Page 13 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000244 | ADBR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000244 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -3.12 | Commission Amount: -3.12
+Page 14 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000244 | END1
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000244 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000244 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000244 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+Count | Total | Average
+Policy Number: 3 | Commission Amount: -13.21 | Commission Amount: -4.40
+Page 15 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000244 | TMRR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000244 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -11.07 | Commission Amount: -11.07
+Page 16 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000245 | ADBR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000245 | ADBR | 15/12/2023 | Cancel From Inception | -3.12
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -3.12 | Commission Amount: -3.12
+Page 17 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000245 | END1
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000245 | END1 | 15/12/2023 | Cancel From Inception | -1.03
+100000245 | END1 | 15/12/2023 | Cancel From Inception | -11.00
+100000245 | END1 | 15/12/2023 | Cancel From Inception | -1.18
+Count | Total | Average
+Policy Number: 3 | Commission Amount: -13.21 | Commission Amount: -4.40
+Page 18 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Group By: 100000245 | TMRR
+Agent Number | 3 | Name | Jayaseelan Yukesh Jayaseelan
+Bank Account No | 11510000013328 | IFSC Code | IFCIBO001
+Payment No | 175 | Total Amount | 10,591.72
+Policy Number | Coverage | Effective Date | Transaction | Commission Amount
+100000245 | TMRR | 15/12/2023 | Cancel From Inception | -11.07
+Count | Total | Average
+Policy Number: 1 | Commission Amount: -11.07 | Commission Amount: -11.07
+Page 19 of 20
+
+FuturaInsTech Insurance Company
+#2, Judge Colony First Main Road, Tambaram Sanatorium, Chennai Tamil Nadu India 600047
+Agent Commission Report
+Date: 27/06/2025 14:41:00
+Page 20 of 20

@@ -1,0 +1,114 @@
+// Program Name: pdf2txt.exe
+// Description : Save the contents of an input .pdf File as an Output .txt File.
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"sort"
+	"strings"
+
+	"github.com/ledongthuc/pdf"
+)
+
+type textFragment struct {
+	x float64
+	y float64
+	s string
+}
+
+var pdffile string
+var outfile string
+
+func main() {
+	// Check the number of command-line arguments
+	if len(os.Args) > 3 {
+		fmt.Println("Error: Too many arguments provided..")
+		fmt.Println("Usage: cmd <pdffile> [<outfile>]")
+	} else if len(os.Args) == 3 {
+		pdffile = os.Args[1] + ".pdf"
+		outfile = os.Args[2] + ".txt"
+	} else if len(os.Args) == 2 {
+		pdffile = os.Args[1] + ".pdf"
+		outfile = os.Args[1] + ".txt"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		fmt.Println("Usage: cmd <pdffile> [<outfile>]")
+		os.Exit(1)
+	}
+
+	inputPDF := pdffile
+	outputTXT := outfile
+
+	f, r, err := pdf.Open(inputPDF)
+	if err != nil {
+		log.Fatalf("Failed to open PDF: %v", err)
+	}
+	defer f.Close()
+
+	var allLines []string
+	const gapThreshold = 10.0 // gap (in points) to consider as cell separator
+
+	for pageIndex := 1; pageIndex <= r.NumPage(); pageIndex++ {
+		page := r.Page(pageIndex)
+		if page.V.IsNull() {
+			continue
+		}
+
+		content := page.Content()
+
+		// Group text fragments by line (Y coordinate)
+		lines := map[float64][]textFragment{}
+		for _, txt := range content.Text {
+			lines[txt.Y] = append(lines[txt.Y], textFragment{txt.X, txt.Y, txt.S})
+		}
+
+		// Sort lines top to bottom
+		var ys []float64
+		for y := range lines {
+			ys = append(ys, y)
+		}
+		sort.Sort(sort.Reverse(sort.Float64Slice(ys)))
+
+		// Process each line
+		for _, y := range ys {
+			fragments := lines[y]
+
+			// Sort fragments left to right by X
+			sort.Slice(fragments, func(i, j int) bool { return fragments[i].x < fragments[j].x })
+
+			var lineBuilder strings.Builder
+			for i, frag := range fragments {
+				// Append current text fragment without adding extra space
+				lineBuilder.WriteString(frag.s)
+
+				// Check gap to next fragment
+				if i < len(fragments)-1 {
+					next := fragments[i+1]
+					gap := next.x - frag.x - textWidthEstimate(frag.s)
+					if gap > gapThreshold {
+						// Add cell separator only with surrounding spaces
+						lineBuilder.WriteString(" | ")
+					}
+				}
+			}
+			allLines = append(allLines, lineBuilder.String())
+		}
+		allLines = append(allLines, "") // Page break
+	}
+
+	// Write output file
+	err = os.WriteFile(outputTXT, []byte(strings.Join(allLines, "\n")), 0644)
+	if err != nil {
+		log.Fatalf("Failed to write output file: %v", err)
+	}
+
+	fmt.Println("Clean cell separators added and saved to:", outputTXT)
+}
+
+// Estimate text width (simple fixed-width assumption)
+func textWidthEstimate(s string) float64 {
+	return float64(len(s)) * 5.0 // adjust as needed
+}

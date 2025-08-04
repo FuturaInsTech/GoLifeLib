@@ -1,0 +1,139 @@
+// Program Name: pdf2xlm.exe
+// Description : Save the contents of an input .pdf File as an Output .xlsx File
+// with each page data in a separate sheet within xlsx workbook.
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"sort"
+
+	"github.com/ledongthuc/pdf"
+	"github.com/xuri/excelize/v2"
+)
+
+type textFragment struct {
+	x float64
+	y float64
+	s string
+}
+
+var pdffile string
+var outfile string
+
+func main() {
+	// Check the number of command-line arguments
+	if len(os.Args) > 3 {
+		fmt.Println("Error: Too many arguments provided..")
+		fmt.Println("Usage: cmd <pdffile> [<outfile>]")
+	} else if len(os.Args) == 3 {
+		pdffile = os.Args[1] + ".pdf"
+		outfile = os.Args[2] + ".xlsx"
+	} else if len(os.Args) == 2 {
+		pdffile = os.Args[1] + ".pdf"
+		outfile = os.Args[1] + ".xlsx"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		fmt.Println("Usage: cmd <pdffile> [<outfile>]")
+		os.Exit(1)
+	}
+
+	inputPDF := pdffile
+	outputExcel := outfile
+
+	// Open PDF
+	f, r, err := pdf.Open(inputPDF)
+	if err != nil {
+		log.Fatalf("Failed to open PDF: %v", err)
+	}
+	defer f.Close()
+
+	// Create Excel file
+	excel := excelize.NewFile()
+	defaultSheet := excel.GetSheetName(0) // Excelize creates "Sheet1" by default, remove later if needed
+
+	const gapThreshold = 10.0 // points: gap between cells
+
+	// Loop through PDF pages
+	for pageIndex := 1; pageIndex <= r.NumPage(); pageIndex++ {
+		page := r.Page(pageIndex)
+		if page.V.IsNull() {
+			continue
+		}
+
+		// Create new sheet for each page
+		sheetName := fmt.Sprintf("Page-%d", pageIndex)
+		if pageIndex == 1 {
+			// Rename the default sheet for page 1
+			excel.SetSheetName(defaultSheet, sheetName)
+		} else {
+			excel.NewSheet(sheetName)
+		}
+
+		content := page.Content()
+
+		// Group fragments by line (Y coordinate)
+		lines := map[float64][]textFragment{}
+		for _, txt := range content.Text {
+			lines[txt.Y] = append(lines[txt.Y], textFragment{txt.X, txt.Y, txt.S})
+		}
+
+		// Sort lines top-to-bottom
+		var ys []float64
+		for y := range lines {
+			ys = append(ys, y)
+		}
+		sort.Sort(sort.Reverse(sort.Float64Slice(ys)))
+
+		rowIndex := 1
+		for _, y := range ys {
+			fragments := lines[y]
+
+			// Sort fragments left-to-right
+			sort.Slice(fragments, func(i, j int) bool { return fragments[i].x < fragments[j].x })
+
+			colIndex := 1
+			currentCell := ""
+
+			for i, frag := range fragments {
+				currentCell += frag.s // Append fragment text
+
+				// Check if large gap → new cell
+				if i < len(fragments)-1 {
+					next := fragments[i+1]
+					gap := next.x - frag.x - textWidthEstimate(frag.s)
+					if gap > gapThreshold {
+						// Write current cell
+						cellName, _ := excelize.ColumnNumberToName(colIndex)
+						excel.SetCellValue(sheetName, fmt.Sprintf("%s%d", cellName, rowIndex), currentCell)
+
+						colIndex++
+						currentCell = ""
+					}
+				}
+			}
+
+			// Write last cell
+			if currentCell != "" {
+				cellName, _ := excelize.ColumnNumberToName(colIndex)
+				excel.SetCellValue(sheetName, fmt.Sprintf("%s%d", cellName, rowIndex), currentCell)
+			}
+
+			rowIndex++
+		}
+	}
+
+	// Save Excel file
+	if err := excel.SaveAs(outputExcel); err != nil {
+		log.Fatalf("Failed to save Excel: %v", err)
+	}
+
+	fmt.Println("✅ Multi-sheet Excel saved as:", outputExcel)
+}
+
+// Approximate text width (for gap detection)
+func textWidthEstimate(s string) float64 {
+	return float64(len(s)) * 5.0 // adjust if needed
+}

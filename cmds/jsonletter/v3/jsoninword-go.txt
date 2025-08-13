@@ -1,0 +1,200 @@
+// jsoninword.exe is a developer utility to pull json keys with sample values
+// for letter development gohtml testing
+
+package main
+
+import (
+	"archive/zip"
+	"encoding/json"
+	"fmt"
+	"html"
+	"io"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+var infile string
+var outfile string
+
+func main() {
+	if len(os.Args) > 3 {
+		fmt.Println("Error: Too many arguments provided..")
+		fmt.Println("Usage: cmd <docfile> [<jsonfile>]")
+		return
+	} else if len(os.Args) == 3 {
+		infile = os.Args[1] + ".docx"
+		outfile = os.Args[2] + ".json"
+	} else if len(os.Args) == 2 {
+		infile = os.Args[1] + ".docx"
+		outfile = os.Args[1] + ".json"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		fmt.Println("Usage: cmd <docfile> [<jsonfile>]")
+		os.Exit(1)
+	}
+
+	r, err := zip.OpenReader(infile)
+	if err != nil {
+		fmt.Println("Error opening DOCX file:", err)
+		return
+	}
+	defer r.Close()
+
+	var allText strings.Builder
+
+	// Extract text from main document, headers, and footers
+	for _, f := range r.File {
+		if f.Name == "word/document.xml" ||
+			strings.HasPrefix(f.Name, "word/header") ||
+			strings.HasPrefix(f.Name, "word/footer") {
+			text, err := extractTextFromDocxPart(f)
+			if err != nil {
+				fmt.Printf("Error extracting text from %s: %v\n", f.Name, err)
+				continue
+			}
+			allText.WriteString(text)
+		}
+	}
+
+	// Unescape XML entities (e.g., &lt; &gt;) so that variables appear as <Variable>
+	plainText := html.UnescapeString(allText.String())
+
+	// Regex for variables <...>
+	varRe := regexp.MustCompile(`<[^>]+>`)
+	// Regex for <R> ... </R> blocks including multiline
+	rBlockRe := regexp.MustCompile(`(?s)<R>(.*?)</R>`)
+	rBlocks := rBlockRe.FindAllStringSubmatch(plainText, -1)
+
+	// Map full variable strings inside <R>
+	variablesInsideR := make(map[string]bool)
+	for _, block := range rBlocks {
+		blockText := block[1]
+		vars := varRe.FindAllString(blockText, -1)
+		for _, v := range vars {
+			token := strings.Trim(v, "<>")
+			variablesInsideR[token] = true
+		}
+	}
+
+	// Find all variables in entire text
+	allVars := varRe.FindAllString(plainText, -1)
+
+	outputData := make(map[string]interface{})
+	seen := make(map[string]bool)
+
+	for _, v := range allVars {
+		token := strings.Trim(v, "<>")
+		if seen[token] {
+			continue
+		}
+		seen[token] = true
+
+		parts := strings.Fields(token)
+		if len(parts) == 0 {
+			continue
+		}
+		key := parts[0]
+
+		if len(key) == 1 {
+			continue // skip single-character keys
+		}
+
+		// Skip keys with special chars like ':' or '/'
+		validKey := regexp.MustCompile(`^[A-Za-z0-9]+$`)
+		if !validKey.MatchString(key) {
+			continue
+		}
+
+		var value interface{}
+
+		if variablesInsideR[token] {
+			// Array field
+			if len(parts) == 1 {
+				value = []string{parts[0] + "Value1", parts[0] + "Value2"}
+			} else {
+				tag := parts[1]
+				if len(tag) >= 2 && tag[1] == '0' {
+					value = []int{123, 456}
+				} else if len(tag) >= 2 && tag[1] >= '1' && tag[1] <= '9' {
+					decimalPlaces, _ := strconv.Atoi(string(tag[1]))
+					value = []float64{
+						sampleFloat(decimalPlaces),
+						sampleFloat(decimalPlaces) + 111.11, // example second value
+					}
+				} else {
+					value = []int{123, 456} // fallback
+				}
+			}
+		} else {
+			// Non-array field
+			if len(parts) == 1 {
+				value = key + "Value"
+			} else {
+				tag := parts[1]
+				if len(tag) >= 2 && tag[1] == '0' {
+					value = 123
+				} else if len(tag) >= 2 && tag[1] >= '1' && tag[1] <= '9' {
+					decimalPlaces, _ := strconv.Atoi(string(tag[1]))
+					value = sampleFloat(decimalPlaces)
+				} else {
+					value = 123
+				}
+			}
+		}
+
+		// Assign to output map
+		outputData[key] = value
+	}
+
+	jsonBytes, err := json.MarshalIndent(outputData, "", "  ")
+	if err != nil {
+		fmt.Println("Error creating JSON:", err)
+		return
+	}
+
+	if err := os.WriteFile(outfile, jsonBytes, 0644); err != nil {
+		fmt.Println("Error writing JSON file:", err)
+		return
+	}
+
+	fmt.Printf("Extracted %d unique variables into %s\n", len(outputData), outfile)
+}
+
+// extractTextFromDocxPart extracts all <w:t> text runs from a DOCX XML part and concatenates without spaces
+func extractTextFromDocxPart(f *zip.File) (string, error) {
+	rc, err := f.Open()
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		return "", err
+	}
+	content := string(data)
+
+	// Regex to find all <w:t>...</w:t> tags (text runs)
+	re := regexp.MustCompile(`<w:t[^>]*>(.*?)</w:t>`)
+	matches := re.FindAllStringSubmatch(content, -1)
+
+	var textParts []string
+	for _, m := range matches {
+		textParts = append(textParts, m[1])
+	}
+
+	// Join all text runs without spaces to keep variables intact
+	return strings.Join(textParts, ""), nil
+}
+
+func sampleFloat(decimalPlaces int) float64 {
+	if decimalPlaces <= 0 {
+		return 123
+	}
+	format := "%." + strconv.Itoa(decimalPlaces) + "f"
+	str := fmt.Sprintf(format, 123.0+0.45)
+	val, _ := strconv.ParseFloat(str, 64)
+	return val
+}

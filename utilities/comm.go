@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// #104
+// 104
 // Create Communication (New Version with Rollback)
 //
 // # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
@@ -263,13 +264,18 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					for key, value := range oData {
 						resultMap[key] = value
 					}
-                  case oLetType == "45":
+				case oLetType == "45":
 					oData := ColaCancelData(iCompany, iPolicy, iHistoryCode, txn)
 					for key, value := range oData {
 						resultMap[key] = value
 					}
-			       case oLetType == "46":
+				case oLetType == "46":
 					oData := AplCancelData(iCompany, iPolicy, iHistoryCode, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "47":
+					oData := GetPOLSCDEndowmentData(iCompany, iPolicy, iPageSize, iOrientation, p0033data, txn)
 					for key, value := range oData {
 						resultMap[key] = value
 					}
@@ -315,7 +321,7 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 	return nil
 }
 
-// #104
+// 104
 // Create Communication
 //
 // # This function, Create Communication Records by getting input values as Company ID, History Code, Tranno, Date of Transaction, Policy Id, Client Id, Address Id, Receipt ID . Quotation ID, Agency ID
@@ -3913,4 +3919,280 @@ func AplCancelData(iCompany uint, iPolicy uint, iHistoryCode string, txn *gorm.D
 	}
 
 	return resultOut
+}
+
+func GetPOLSCDEndowmentData(iCompany uint, iPolicyID uint, iPageSize, iOrientation string, p0033Data paramTypes.P0033Data, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	txn.Find(&polenq, "company_id = ? and id = ?", iCompany, iPolicyID)
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+
+	var cmp models.Company
+	txn.Find(&cmp, "id = ?", polenq.CompanyID)
+	var clt models.Client
+	txn.Find(&clt, "company_id = ? and id = ?", iCompany, polenq.ClientID)
+	var cltAdd models.Address
+	txn.Find(&cltAdd, "company_id = ? and id = ?", iCompany, polenq.AddressID)
+	var agency models.Agency
+	txn.Find(&agency, "company_id = ? and id = ?", iCompany, polenq.AgencyID)
+	var agent models.Client
+	txn.Find(&agent, "company_id = ? and id = ?", iCompany, agency.ClientID)
+	var add models.Address
+	txn.Find(&add, "company_id = ? and id = ?", iCompany, polenq.AddressID)
+	var laclient models.Client
+	txn.Find(&laclient, "company_id = ? and id = ?", iCompany, benefitenq[0].ClientID)
+
+	//prcd, _ := ConvertYYYYMMDDtoDDMMYYYY(polenq.PRCD)
+	DistMktg := ""
+
+	if agency.AgencyChannel == "DM" {
+		DistMktg = "Yes"
+	} else {
+		DistMktg = "No"
+	}
+
+	riskcessdate := benefitenq[0].BRiskCessDate
+	baseRCessDate, _ := ConvertYYYYMMDDtoDDMMYYYY(riskcessdate)
+
+	BasePremDueDate, _ := GetPremDueDate(benefitenq[0].BPremCessDate, polenq.PFreq)
+	clientfulladdress, _ := GetFullAddress(iCompany, polenq.AddressID)
+	prcd, _ := ConvertYYYYMMDDtoDDMMYYYY(polenq.PRCD)
+	paidToDate, _ := ConvertYYYYMMDDtoDDMMYYYY(polenq.PaidToDate)
+	polAnniDate, _ := ConvertYYYYMMDDtoDDMMYYYY(polenq.AnnivDate)
+	ownerAge, _ := GetAgeFromDate(clt.ClientDob)
+	ownerDOB, _ := ConvertYYYYMMDDtoDDMMYYYY(clt.ClientDob)
+
+	agentfulladdress, _ := GetFullAddress(iCompany, agency.AddressID)
+
+	laAge, _ := GetAgeFromDate(laclient.ClientDob)
+	laDOB, _ := ConvertYYYYMMDDtoDDMMYYYY(laclient.ClientDob)
+
+	//benpalntypedesc := GetP0050ItemCodeDesc(iCompany, "HealthBenefitType", 1, benefitenq[0].BenefitType)
+
+	AppointeeAge := []string{}
+	AppointeeGender := []string{}
+	AppointeeName := []string{}
+
+	nomineeAge, nomineeLaRel, nomineeName, nomineeShare, nomineeGender, _ := GetNomineeData(iCompany, iPolicyID)
+
+	riderCover, riderInstPrem, riderPremDueDate, riderRCessDate, riderSa := ExtractRiderDetails(benefitenq, polenq)
+
+	resultOut := map[string]interface{}{
+		"Layout": map[string]string{
+			"PageSize":    iPageSize,
+			"Orientation": iOrientation,
+		},
+		"AgentEmailId":     agent.ClientEmail,
+		"AgentFullAddress": agentfulladdress,
+		"AgentMobileNo":    agent.ClientMobile,
+		"AgentName":        agent.ClientShortName,
+		"AgentNo":          agent.ID,
+		"AgentTelNo":       agent.ClientMobile,
+		"AppointeeAge":     AppointeeAge,
+		"AppointeeGender":  AppointeeGender,
+		"AppointeeName":    AppointeeName,
+		"AuthSignatory":    p0033Data.DepartmentHead, // Sign data values
+		"BaseAnnPrem":      benefitenq[0].BBasAnnualPrem,
+		"BaseCover":        benefitenq[0].BCoverage,
+		"BaseInstPrem":     benefitenq[0].BPrem,
+		"BasePremDueDate":  BasePremDueDate,
+		"BaseRCessDate":    baseRCessDate,
+		"BaseSa":           benefitenq[0].BSumAssured,
+		"CSCAddress":       clientfulladdress,
+		"ClientNo":         polenq.ClientID,
+		"DistMktg":         DistMktg, // as field is not present for now keeping it as default Yes
+		"Freq":             polenq.PFreq,
+		"InstalPrem":       polenq.InstalmentPrem,
+		"IssueDate":        "", // To be developed later
+
+		// base cover client
+		"LAName":        laclient.ClientShortName,
+		"LaAge":         laAge,
+		"LaAgeAdm":      "", // To be developed later
+		"LaClientID":    laclient.ID,
+		"LaDob":         laDOB,
+		"LaFullAddress": "", // To be developed later
+		"LaGender":      laclient.Gender,
+
+		"MaturityAmt": benefitenq[0].BSumAssured, // sum assured
+
+		"NomineeAge":   nomineeAge,
+		"NomineeLaRel": nomineeLaRel,
+		"NomineeName":  nomineeName,
+		"NomineeShare": nomineeShare,
+		"NomneeGender": nomineeGender,
+
+		"OwnerAdd1":        cltAdd.AddressLine1,
+		"OwnerAdd2":        cltAdd.AddressLine2,
+		"OwnerAdd3":        cltAdd.AddressLine3,
+		"OwnerAdd4":        cltAdd.AddressLine4,
+		"OwnerAdd5":        cltAdd.AddressLine5,
+		"OwnerAge":         ownerAge,
+		"OwnerAgeAdm":      "", // To be developed later
+		"OwnerClientID":    clt.ID,
+		"OwnerDob":         ownerDOB,
+		"OwnerFullAddress": clientfulladdress,
+		"OwnerName":        clt.ClientShortName,
+		"OwnerPostcode":    cltAdd.AddressPostCode,
+		"OwnerTelNo":       clt.ClientMobile,
+		"PRCD":             prcd,
+		"PaidToDate":       paidToDate,
+		"Place":            cltAdd.AddressLine4,
+		"PolAnnDate":       polAnniDate,
+		"PolicyNo":         polenq.ID,
+		"Ppt":              benefitenq[0].BPTerm,
+		"RiderCover":       riderCover,
+		"RiderInstPrem":    riderInstPrem,
+		"RiderPremDueDate": riderPremDueDate,
+		"RiderRCessDate":   riderRCessDate,
+		"RiderSa":          riderSa,
+
+		"StaffFlag": "", // To be developed later
+		"Term":      benefitenq[0].BTerm,
+	}
+	return resultOut
+
+}
+
+// GetAgeFromDate receives a date string in yyyymmdd format and returns the age
+func GetAgeFromDate(dateStr string) (int, error) {
+	if len(dateStr) != 8 {
+		return 0, fmt.Errorf("invalid date format, expected yyyymmdd")
+	}
+
+	// Parse year, month, day
+	year, err := strconv.Atoi(dateStr[:4])
+	if err != nil {
+		return 0, fmt.Errorf("invalid year: %v", err)
+	}
+	month, err := strconv.Atoi(dateStr[4:6])
+	if err != nil {
+		return 0, fmt.Errorf("invalid month: %v", err)
+	}
+	day, err := strconv.Atoi(dateStr[6:])
+	if err != nil {
+		return 0, fmt.Errorf("invalid day: %v", err)
+	}
+
+	// Create time object for birth date
+	birthDate := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	today := time.Now()
+
+	// Calculate age
+	age := today.Year() - birthDate.Year()
+	if today.Month() < birthDate.Month() ||
+		(today.Month() == birthDate.Month() && today.Day() < birthDate.Day()) {
+		age--
+	}
+
+	return age, nil
+}
+
+func GetNomineeData(iCompany, iPolicy uint) ([]int, []string, []string, []float64, []string, error) {
+	var nominees []models.Nominee
+	err := initializers.DB.Find(&nominees, "company_id = ? AND policy_id = ?", iCompany, iPolicy).Error
+	if err != nil {
+		return nil, nil, nil, nil, nil, fmt.Errorf("failed to fetch nominees: %w", err)
+	}
+
+	nomineeAge := make([]int, len(nominees))
+	nomineeLaRel := make([]string, len(nominees))
+	nomineeName := make([]string, len(nominees))
+	nomineeShare := make([]float64, len(nominees)) // nominee percentage
+	nomineeGender := make([]string, len(nominees))
+
+	for i, nom := range nominees {
+		// Fetch client details for nominee
+		var client models.Client
+		err := initializers.DB.First(&client, "company_id = ? AND id = ?", nom.CompanyID, nom.ClientID).Error
+		if err != nil {
+			return nil, nil, nil, nil, nil, fmt.Errorf("failed to fetch client for nominee %d: %w", i+1, err)
+		}
+
+		// Calculate age
+		age, ageErr := GetAgeFromDate(client.ClientDob) // yyyymmdd format
+		if ageErr != nil {
+			nomineeAge[i] = 0
+		} else {
+			nomineeAge[i] = age
+		}
+
+		// Relation description
+		// relationDesc := GetP0050ItemCodeDesc(iCompany, "PlanLARelations", 1, nom.NomineeRelationship)
+		// nomineeLaRel[i] = strings.TrimSpace(relationDesc)
+
+		nomineeLaRel[i] = strings.TrimSpace(nom.NomineeRelationship)
+
+		// Name
+		nomineeName[i] = strings.TrimSpace(client.ClientLongName)
+
+		// Share percentage (mapped directly)
+		nomineeShare[i] = nom.NomineePercentage // <-- mapped here
+
+		// Gender
+		nomineeGender[i] = strings.TrimSpace(client.Gender)
+	}
+
+	return nomineeAge, nomineeLaRel, nomineeName, nomineeShare, nomineeGender, nil
+}
+
+func ExtractRiderDetails(benefitenq []models.Benefit, policyenq models.Policy) (
+	[]string,
+	[]float64,
+	[]string,
+	[]string,
+	[]float64,
+) {
+
+	riderCover := make([]string, 0, len(benefitenq)-1)
+	riderInstPrem := make([]float64, 0, len(benefitenq)-1)
+	riderPremDueDate := make([]string, 0, len(benefitenq)-1)
+	riderRCessDate := make([]string, 0, len(benefitenq)-1)
+	riderSa := make([]float64, 0, len(benefitenq)-1)
+
+	for i, ben := range benefitenq {
+		if i == 0 {
+			continue // skip the first element
+		}
+
+		riderCover = append(riderCover, strings.TrimSpace(ben.BCoverage))
+		riderInstPrem = append(riderInstPrem, ben.BPrem)
+
+		riskcessdate := ben.BRiskCessDate
+		RiderRCessDate, _ := ConvertYYYYMMDDtoDDMMYYYY(riskcessdate)
+
+		BasePremDueDate, _ := GetPremDueDate(ben.BPremCessDate, policyenq.PFreq)
+
+		riderPremDueDate = append(riderPremDueDate, BasePremDueDate) // DD/MM/YYYY
+		riderRCessDate = append(riderRCessDate, RiderRCessDate)
+		riderSa = append(riderSa, float64(ben.BSumAssured))
+	}
+
+	return riderCover, riderInstPrem, riderPremDueDate, riderRCessDate, riderSa
+}
+
+// GetPremDueDate calculates the due date by subtracting frequency from prem cess date.
+func GetPremDueDate(premCessDate, freq string) (string, error) {
+	// Parse the input date (yyyymmdd)
+	t, err := time.Parse("20060102", premCessDate)
+	if err != nil {
+		return "", fmt.Errorf("invalid premCessDate format: %w", err)
+	}
+
+	// Subtract based on frequency
+	switch freq {
+	case "M": // Monthly
+		t = t.AddDate(0, -1, 0)
+	case "Q": // Quarterly
+		t = t.AddDate(0, -3, 0)
+	case "H": // Half-yearly
+		t = t.AddDate(0, -6, 0)
+	case "Y": // Yearly
+		t = t.AddDate(-1, 0, 0)
+	default:
+		return "", fmt.Errorf("invalid frequency: %s", freq)
+	}
+
+	// Return in dd/mm/yyyy format
+	return t.Format("02/01/2006"), nil
 }

@@ -274,11 +274,11 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					for key, value := range oData {
 						resultMap[key] = value
 					}
-				case oLetType == "47":
-					oData := GetPOLSCDEndowmentData(iCompany, iPolicy, iPageSize, iOrientation, p0033data, txn)
-					for key, value := range oData {
-						resultMap[key] = value
-					}
+				// case oLetType == "47":
+				// 	oData := GetPOLSCDEndowmentData(iCompany, iPolicy, iPageSize, iOrientation, p0033data, txn)
+				// 	for key, value := range oData {
+				// 		resultMap[key] = value
+				// 	}
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -3151,6 +3151,11 @@ func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					}
 				case oLetType == "44":
 					oData := GetpremiumCertificateData(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "47":
+					oData := GetPOLSCDEndowmentData(iCompany, iPolicy, iPageSize, iOrientation, p0033data, txn)
 					for key, value := range oData {
 						resultMap[key] = value
 					}

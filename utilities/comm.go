@@ -263,7 +263,16 @@ func CreateCommunicationsN(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					for key, value := range oData {
 						resultMap[key] = value
 					}
-
+                  case oLetType == "45":
+					oData := ColaCancelData(iCompany, iPolicy, iHistoryCode, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+			       case oLetType == "46":
+					oData := AplCancelData(iCompany, iPolicy, iHistoryCode, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
 
@@ -3764,4 +3773,144 @@ func AmountInWords(amount float64) string {
 	result += " Only"
 
 	return result
+}
+
+func ColaCancelData(iCompany uint, iPolicy uint, iHistoryCode string, txn *gorm.DB) map[string]interface{} {
+
+	iDate := GetBusinessDate(iCompany, 0, 0)
+	var iP0033Key string
+	var iP0034Key string
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+
+	iP0034Key = iHistoryCode
+	err1 := GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
+	if err1 != nil {
+		return map[string]interface{}{"error": "record not found"}
+	}
+
+	iP0033Key = p0034data.Letters[0].Templates
+	err := GetItemD(int(iCompany), "P0033", iP0033Key, iDate, &extradatap0033)
+	if err != nil {
+		return map[string]interface{}{"error": "record not found"}
+	}
+
+	var polenq models.Policy
+	result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicy)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var clnt models.Client
+	result = txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var address models.Address
+	result = txn.Find(&address, "company_id = ? AND id = ?", iCompany, polenq.AddressID)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var company models.Company
+	result = txn.Find(&company, "id = ?", iCompany)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+	compAddress := fmt.Sprintf("%s %s %s %s %s %s", company.CompanyAddress1, company.CompanyAddress2, company.CompanyAddress3, company.CompanyAddress4, company.CompanyAddress5, company.CompanyPostalCode)
+
+	// Create a result map for each loan bill
+	resultOut := map[string]interface{}{
+		"ClientFullName": clnt.ClientLongName,
+		"AddressLine1":   address.AddressLine1,
+		"AddressLine2":   address.AddressLine2,
+		"AddressLine3":   address.AddressLine3,
+		"AddressLine4":   address.AddressLine4,
+		"AddressLine5":   address.AddressState,
+		"compname":       company.CompanyName,
+		"compadd":        compAddress,
+		"PolicyID":       strconv.Itoa(int(polenq.ID)),
+		"Date":           DateConvert(iDate),
+		"Department":     p0033data.DepartmentName,
+		"SignedBy":       p0033data.DepartmentHead,
+		"CompanyEmail":   p0033data.CompanyEmail,
+		"CompanyNo":      p0033data.CompanyPhone,
+	}
+
+	return resultOut
+}
+
+func AplCancelData(iCompany uint, iPolicy uint, iHistoryCode string, txn *gorm.DB) map[string]interface{} {
+
+	iDate := GetBusinessDate(iCompany, 0, 0)
+	var iP0033Key string
+	var iP0034Key string
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+
+	iP0034Key = iHistoryCode
+	err1 := GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
+	if err1 != nil {
+		return map[string]interface{}{"error": "record not found"}
+	}
+
+	iP0033Key = p0034data.Letters[0].Templates
+	err := GetItemD(int(iCompany), "P0033", iP0033Key, iDate, &extradatap0033)
+	if err != nil {
+		return map[string]interface{}{"error": "record not found"}
+	}
+
+	var polenq models.Policy
+	result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicy)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var clnt models.Client
+	result = txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var address models.Address
+	result = txn.Find(&address, "company_id = ? AND id = ?", iCompany, polenq.AddressID)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var company models.Company
+	result = txn.Find(&company, "id = ?", iCompany)
+	if result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+	compAddress := fmt.Sprintf("%s %s %s %s %s %s", company.CompanyAddress1, company.CompanyAddress2, company.CompanyAddress3, company.CompanyAddress4, company.CompanyAddress5, company.CompanyPostalCode)
+
+	// Create a result map for each loan bill
+	resultOut := map[string]interface{}{
+		"ClientName":   clnt.ClientLongName,
+		"AddressLine1": address.AddressLine1,
+		"AddressLine2": address.AddressLine2,
+		"AddressLine3": address.AddressLine3,
+		"AddressLine4": address.AddressLine4,
+		"AddressLine5": address.AddressState,
+		"compname":     company.CompanyName,
+		"compadd":      compAddress,
+		"PolicyID":     strconv.Itoa(int(polenq.ID)),
+		"Date":         DateConvert(iDate),
+		"Department":   p0033data.DepartmentName,
+		"SignedBy":     p0033data.DepartmentHead,
+		"CompanyEmail": p0033data.CompanyEmail,
+		"CompanyNo":    p0033data.CompanyPhone,
+	}
+
+	return resultOut
 }

@@ -1,0 +1,876 @@
+//==============================================================
+//      G O P R O   E X C E L F I L E   T E S T I N G
+//==============================================================
+// Author      : Divya Lakshmi
+// Date        : 2025-08-01
+//
+// Program Name: goprotest.exe
+// Description : GoPro ExcelFile Testing Tool
+//
+// Key Features:
+//   - Extract an Excel template for a given item to help tester providing the test data
+//   - Validates the test data for its correctness of input json data of API submission
+//   - Submits the API and records the API response data values
+//   - Optionally track the API execution duration for every row of test data
+//
+
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/http/cookiejar"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/xuri/excelize/v2"
+)
+
+var (
+	authToken    = ""
+	refreshToken string
+	httpClient   *http.Client
+)
+
+type fieldsparam struct {
+	JsonName    string
+	ExcelName   string
+	FieldMode   uint
+	FieldType   uint
+	OuterKeys   string
+	InnerKeys   string
+	Mandatory   bool
+	Orientation uint
+}
+
+type APIResponse struct {
+	Param struct {
+		Data struct {
+			FieldArray []fieldsparam `json:"fieldArray"`
+		} `json:"data"`
+	} `json:"param"`
+}
+
+type FieldArray struct {
+	FieldArray []fieldsparam
+	List       []fieldsparam
+}
+
+func CallSignInAPI(iphone string, ipassword string) error {
+
+	reqBody := map[string]string{
+		"phone":    iphone,
+		"password": ipassword,
+	}
+
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return err
+	}
+
+	jar, _ := cookiejar.New(nil)
+	httpClient = &http.Client{Jar: jar}
+
+	req, err := http.NewRequest("POST", "http://localhost:3002/api/v1/auth/login", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("sign-in failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("sign-in error: %s", string(respBody))
+	}
+
+	for _, c := range resp.Cookies() {
+		if c.Name == "RefreshToken" {
+			refreshToken = c.Value
+		}
+		if c.Name == "Authorization" {
+			authToken = c.Value
+		}
+	}
+
+	if authToken == "" || refreshToken == "" {
+		return fmt.Errorf("missing auth/refresh tokens")
+	}
+
+	return nil
+}
+
+func parseFloatStrict(s string) (float64, bool) {
+	s = strings.ReplaceAll(s, ",", "")
+	if s == "" {
+		return 0, false
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	return f, err == nil
+}
+
+func parseIntStrict(s string) (int, bool) {
+	if s == "" {
+		return 0, false
+	}
+	i, err := strconv.Atoi(s)
+	return i, err == nil
+}
+
+func normalizeDate(s string) string {
+	if s == "" {
+		return "01-01-1900"
+	}
+	return s
+}
+
+func isNumeric(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
+}
+
+// --- Dynamic Data Loader ---
+func loadDynamicTestData(colrows [][]string, fields FieldArray) ([]map[string]interface{}, error) {
+
+	if len(colrows) == 0 {
+		return nil, fmt.Errorf("Excel is empty")
+	}
+
+	headers := colrows[0]
+	headerIndex := make(map[string]int)
+	for i, h := range headers {
+		headerIndex[strings.TrimSpace(h)] = i
+	}
+
+	var allData []map[string]interface{}
+RowLoop:
+	for _, row := range colrows[1:] {
+		isEmpty := true
+		for _, c := range row {
+			if strings.TrimSpace(c) != "" {
+				isEmpty = false
+				break
+			}
+		}
+		if isEmpty {
+			continue
+		}
+
+		data := make(map[string]interface{})
+		for _, field := range fields.FieldArray {
+			colIdx, ok := headerIndex[field.ExcelName]
+			if !ok || colIdx >= len(row) {
+				continue
+			}
+			raw := strings.TrimSpace(row[colIdx])
+			switch field.OuterKeys {
+			case "F":
+				val, ok := parseFloatStrict(raw)
+				if !ok {
+					continue RowLoop
+				}
+				data[field.JsonName] = val
+			case "I", "U":
+				val, ok := parseIntStrict(raw)
+				if !ok {
+					continue RowLoop
+				}
+				data[field.JsonName] = val
+			case "D":
+				data[field.JsonName] = normalizeDate(raw)
+			default:
+				data[field.JsonName] = raw
+			}
+		}
+		allData = append(allData, data)
+	}
+	return allData, nil
+}
+
+// --- API Call for each row ---
+func CallTestDataAPI(td map[string]interface{}, token string, client *http.Client, itemName string) map[string]interface{} {
+	//fmt.Printf("Sending to API for item: %s\n", itemName)
+
+	url := fmt.Sprintf("http://localhost:3002/api/v1/excelservices/result/%s", itemName)
+	//fmt.Printf("URL: %s\n", url)
+
+	body, _ := json.MarshalIndent(td, "", "  ")
+	//.Printf("Request Body: %s\n", string(body))
+
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		td["Error"] = err.Error()
+		return td
+	}
+	defer resp.Body.Close()
+
+	b, _ := io.ReadAll(resp.Body)
+	//fmt.Printf("API Raw Response: %s\n", string(b)) // <-- Now prints the actual response body
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		td["Error"] = resp.Status
+		return td
+	}
+
+	var respData map[string]interface{}
+	if err := json.Unmarshal(b, &respData); err != nil {
+		td["Error"] = "Invalid JSON response"
+		return td
+	}
+
+	// Merge response into td so it can be written to Excel
+	for k, v := range respData {
+		td[k] = v
+	}
+
+	return td
+}
+
+// --- Param Loader ---
+func ReadingParam(companyID int, paramName, itemName string) (FieldArray, error) {
+
+	//fmt.Printf("ReadingParam called with CompanyID=%d, ParamName=%s, ItemName=%s\n", companyID, paramName, itemName)
+
+	url := fmt.Sprintf("http://localhost:3002/api/v1/basicservices/paramItem?companyId=%d&name=%s&languageId=1&item=%s", companyID, paramName, itemName)
+
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+authToken)
+	resp, err := httpClient.Do(req)
+
+	if err != nil {
+		return FieldArray{}, err
+	}
+
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return FieldArray{}, fmt.Errorf("param read failed: %s", string(b))
+	}
+	var apiResp APIResponse
+
+	json.Unmarshal(b, &apiResp)
+
+	return FieldArray{FieldArray: apiResp.Param.Data.FieldArray}, nil
+}
+
+// --- Validate Headers ---
+func validateExcelHeadersAndTypes(fields FieldArray, rows [][]string) error {
+
+	if len(rows) == 0 {
+		return fmt.Errorf("empty Excel")
+	}
+
+	headers := rows[0]
+	headerIndex := make(map[string]int)
+	for idx, h := range headers {
+		headerIndex[strings.TrimSpace(h)] = idx
+	}
+
+	var missing []string
+	for _, field := range fields.FieldArray {
+		if _, ok := headerIndex[field.ExcelName]; !ok {
+			missing = append(missing, fmt.Sprintf("Missing header: '%s' (JsonName: %s)", field.ExcelName, field.JsonName))
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("Excel Validation Failed:\n%s", strings.Join(missing, "\n"))
+	}
+
+	return nil
+}
+
+// --- Check if Excel already processed ---
+func isExcelAlreadyProcessed(f *excelize.File, sheetName string) bool {
+	rows, _ := f.GetRows(sheetName)
+
+	if len(rows) <= 1 {
+		return false
+	}
+
+	// Detect output columns automatically (anything starting with 'o' or 'O')
+	var outputCols []int
+	for idx, header := range rows[0] {
+		if strings.HasPrefix(strings.ToLower(header), "o") {
+			outputCols = append(outputCols, idx)
+		}
+	}
+
+	if len(outputCols) == 0 {
+		return false
+	}
+
+	// Check for any non-empty output cell (starting row 2)
+	for _, row := range rows[1:] {
+		for _, colIdx := range outputCols {
+			if colIdx < len(row) && strings.TrimSpace(row[colIdx]) != "" {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func checkInputFileExist(filePath string) {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", filePath)
+		os.Exit(1)
+	}
+}
+
+func ProcessTestData(f *excelize.File, rows [][]string, fields FieldArray, threadCount int, itemName string, sheetName string) (*excelize.File, error) {
+	totalStart := time.Now()
+	//fmt.Printf("Actual Program Started At: %s\n", totalStart.Format("2006-01-02 15:04:05"))
+
+	if len(rows) <= 1 {
+		log.Fatalf("%s sheet is missing or empty", sheetName)
+	}
+
+	// Filter out completely empty rows
+	var filtered [][]string
+	for _, row := range rows {
+		isEmpty := true
+		for _, cell := range row {
+			if strings.TrimSpace(cell) != "" {
+				isEmpty = false
+				break
+			}
+		}
+		if !isEmpty {
+			filtered = append(filtered, row)
+		}
+	}
+	rows = filtered
+
+	// fmt.Printf("Loaded %d valid rows (including header) from '%s'. Processing %d records.\n",
+	// 	len(rows), sheetName, len(rows)-1)
+
+	// Map header names -> Excel columns
+	headerMap := make(map[string]string)
+
+	// rows[0] is the first row (the header row) from your Excel file
+	for i, header := range rows[0] {
+		col, _ := excelize.ColumnNumberToName(i + 1)
+		headerMap[strings.TrimSpace(header)] = col
+	}
+
+	// Validate headers (headerMap same ExcelName)
+	for _, field := range fields.FieldArray {
+		if _, ok := headerMap[field.ExcelName]; !ok {
+			log.Fatalf("Missing header: '%s' (JsonName: %s, OuterKey: %s)",
+				field.ExcelName, field.JsonName, field.OuterKeys)
+		}
+	}
+
+	var (
+		validData      []map[string]interface{}
+		validRowNums   []int
+		skippedRows    []int
+		skippedReasons []string
+	)
+
+	// Row validation
+	for rowIdx, row := range rows[1:] {
+		rowValid := true
+		var reason string
+
+		for _, field := range fields.FieldArray {
+			colIdx := -1
+			for idx, h := range rows[0] {
+				if strings.TrimSpace(h) == field.ExcelName {
+					colIdx = idx
+					break
+				}
+			}
+			if colIdx == -1 || colIdx >= len(row) {
+				continue
+			}
+
+			cellVal := strings.TrimSpace(row[colIdx])
+			cellValClean := strings.ReplaceAll(cellVal, ",", "")
+
+			switch field.OuterKeys {
+			case "F":
+				if _, err := strconv.ParseFloat(cellValClean, 64); err != nil {
+					rowValid = false
+					reason = fmt.Sprintf("Invalid Float for '%s' (got %q)", field.ExcelName, cellVal)
+				}
+			case "I", "U":
+				if _, err := strconv.Atoi(cellValClean); err != nil {
+					rowValid = false
+					reason = fmt.Sprintf("Invalid Integer for '%s' (got %q)", field.ExcelName, cellVal)
+				}
+			case "D":
+				if cellVal == "" {
+					rowValid = false
+					reason = fmt.Sprintf("Missing Date for '%s'", field.ExcelName)
+				}
+			case "S":
+				if cellVal == "" || isNumeric(cellValClean) {
+					rowValid = false
+					reason = fmt.Sprintf("Invalid String for '%s' (got %q)", field.ExcelName, cellVal)
+				}
+			}
+			if !rowValid {
+				break
+			}
+		}
+
+		rowNumber := rowIdx + 2
+
+		//Handel Invaild Row
+		if !rowValid {
+			skippedRows = append(skippedRows, rowNumber)
+			skippedReasons = append(skippedReasons, reason)
+
+			// Clear only output columns for skipped rows
+			for _, field := range fields.FieldArray {
+				if strings.HasPrefix(field.ExcelName, "o_") {
+					if col, ok := headerMap[field.ExcelName]; ok {
+						f.SetCellValue(sheetName, fmt.Sprintf("%s%d", col, rowNumber), "")
+					}
+				}
+			}
+			if col, ok := headerMap["Error"]; ok {
+				f.SetCellValue(sheetName, fmt.Sprintf("%s%d", col, rowNumber), reason)
+			}
+			continue
+		}
+
+		//Handel Vaild row
+
+		data, _ := loadDynamicTestData([][]string{rows[0], row}, fields)
+		validData = append(validData, data[0])
+		validRowNums = append(validRowNums, rowNumber)
+	}
+
+	//Print Skipped Row
+
+	for i, r := range skippedRows {
+		fmt.Printf("Row %d skipped: %s\n", r, skippedReasons[i])
+	}
+
+	if len(validData) == 0 {
+		f.Save()
+		return f, nil
+	}
+
+	// Concurrency
+	testdatas := validData
+	var (
+		wg                sync.WaitGroup
+		semaphore         = make(chan struct{}, threadCount) //Limit concurrent threads
+		results           = make([]map[string]interface{}, len(testdatas))
+		runningThreads    int32
+		maxRunningThreads int32
+		processedCount    int32
+		excelLock         sync.Mutex
+	)
+
+	startTime := time.Now()
+	batchStart := time.Now()
+
+	for i, td := range testdatas {
+		wg.Add(1)
+		semaphore <- struct{}{}
+
+		go func(i int, td map[string]interface{}) {
+			defer wg.Done()
+			defer func() {
+				<-semaphore
+				atomic.AddInt32(&runningThreads, -1)
+			}()
+
+			current := atomic.AddInt32(&runningThreads, 1)
+			for {
+				old := atomic.LoadInt32(&maxRunningThreads)
+				if current > old {
+					if atomic.CompareAndSwapInt32(&maxRunningThreads, old, current) {
+						break
+					}
+				} else {
+					break
+				}
+			}
+
+			recordStart := time.Now()
+			updated := CallTestDataAPI(td, authToken, httpClient, itemName)
+			updated["Timing"] = time.Since(recordStart).Truncate(time.Millisecond).String()
+			results[i] = updated
+
+			count := atomic.AddInt32(&processedCount, 1)
+			total := len(testdatas)
+
+			if count%100 == 0 || count == int32(total) {
+				batchTime := time.Since(batchStart).Truncate(time.Second)
+				elapsed := time.Since(startTime).Truncate(time.Second)
+				percent := (float64(count) / float64(total)) * 100
+
+				fmt.Printf("Processed %d/%d (%.1f%%) | Batch: %s | Elapsed: %s | Time: %s\n",
+					count, total, percent, batchTime, elapsed, time.Now().Format("15:04:05"))
+
+				batchStart = time.Now()
+
+				excelLock.Lock()
+				startIdx := int(count) - 100
+				if startIdx < 0 {
+					startIdx = 0
+				}
+				endIdx := int(count)
+				if endIdx > len(results) {
+					endIdx = len(results)
+				}
+
+				// Write ALL fields (not just o_) during batch update
+				for j := startIdx; j < endIdx; j++ {
+					rowNum := validRowNums[j]
+					td := results[j]
+
+					// Debug log for each row
+					//fmt.Printf("Row %d, Fields to write: %+v\n", rowNum, td)
+
+					//Excel Update
+					for _, field := range fields.FieldArray {
+						if col, ok := headerMap[field.ExcelName]; ok {
+							val, exists := td[field.JsonName]
+							if !exists || val == nil {
+								val = ""
+							} else if arr, ok := val.([]interface{}); ok {
+								// Convert slice to JSON-style string with commas
+								var parts []string
+								for _, v := range arr {
+									parts = append(parts, fmt.Sprintf("%v", v))
+								}
+								val = "[" + strings.Join(parts, ", ") + "]"
+							}
+							f.SetCellValue(sheetName, fmt.Sprintf("%s%d", col, rowNum), val)
+						}
+					}
+
+					if col, ok := headerMap["Timing"]; ok {
+						f.SetCellValue(sheetName, fmt.Sprintf("%s%d", col, rowNum), td["Timing"])
+					}
+				}
+				f.Save()
+				excelLock.Unlock()
+			}
+		}(i, td)
+	}
+
+	wg.Wait()
+
+	// Final update for all records (ALL fields)
+	for i, td := range results {
+		rowNum := validRowNums[i]
+
+		// Debug log for final update
+		//fmt.Printf("Final Row %d, Fields to write: %+v\n", rowNum, td)
+
+		for _, field := range fields.FieldArray {
+			if col, ok := headerMap[field.ExcelName]; ok {
+				val, exists := td[field.JsonName]
+				if !exists || val == nil {
+					val = ""
+				} else if arr, ok := val.([]interface{}); ok {
+					// Convert slice to JSON-style string with commas
+					var parts []string
+					for _, v := range arr {
+						parts = append(parts, fmt.Sprintf("%v", v))
+					}
+					val = "[" + strings.Join(parts, ", ") + "]"
+				}
+				f.SetCellValue(sheetName, fmt.Sprintf("%s%d", col, rowNum), val)
+			}
+		}
+
+		if col, ok := headerMap["Timing"]; ok {
+			f.SetCellValue(sheetName, fmt.Sprintf("%s%d", col, rowNum), td["Timing"])
+		}
+	}
+	f.Save()
+
+	end := time.Now()
+	fmt.Printf("\nProcessed all %d Records. Finished at: %s\n", len(testdatas), end.Format("15:04:05"))
+	fmt.Printf("Total Duration: %02d min %02d sec\n",
+		int(time.Since(totalStart).Minutes()), int(time.Since(totalStart).Seconds())%60)
+
+	return f, nil
+}
+
+func GenerateSampleSheet(fields FieldArray, itemName string, args []string) error {
+	// itemName = product name (RMBK, AEON, etc.)
+	output := itemName
+	if len(args) >= 3 {
+		output = args[2] // file name (e.g., 3, 20, 30)
+	}
+
+	fileName := output + ".xlsx"
+
+	// Prevent overwriting
+	if _, err := os.Stat(fileName); err == nil {
+		return fmt.Errorf("file %s already exists", fileName)
+	}
+
+	// Force sheet name to product name (not the file name)
+	sheetName := itemName
+
+	// Create Excel file
+	f := excelize.NewFile()
+	index, err := f.NewSheet(sheetName)
+	if err != nil {
+		return fmt.Errorf("failed to create sheet: %w", err)
+	}
+	f.SetActiveSheet(index)
+
+	// Determine which slice to use
+	var fieldList []fieldsparam
+	if len(fields.FieldArray) > 0 {
+		fieldList = fields.FieldArray
+	} else {
+		fieldList = fields.List
+	}
+
+	// Write headers using ExcelName
+	for colIdx, field := range fieldList {
+		cell, _ := excelize.CoordinatesToCellName(colIdx+1, 1)
+		f.SetCellValue(sheetName, cell, field.ExcelName)
+	}
+
+	// Remove default "Sheet1"
+	f.DeleteSheet("Sheet1")
+
+	// Save the file
+	if err := f.SaveAs(fileName); err != nil {
+		return fmt.Errorf("failed to save file: %w", err)
+	}
+
+	fmt.Printf("Created newFileName '%s' (headers only, sheet: %s).\n", fileName, sheetName)
+	return nil
+}
+
+func processExcelData(iparam, itemName, fileName string, threadCount int, addTiming bool) {
+
+	checkInputFileExist(fileName)
+
+	f, err := excelize.OpenFile(fileName)
+	if err != nil {
+		log.Fatalf("Failed to open Excel: %v", err)
+	}
+	defer f.Close()
+
+	sheetName := f.GetSheetName(f.GetActiveSheetIndex())
+
+	rows, _ := f.GetRows(sheetName)
+	if len(rows) <= 1 {
+		log.Fatalf("Sheet '%s' is empty or missing in %s", sheetName, fileName)
+	}
+
+	// Load parameter fields
+	fields, _ := ReadingParam(1, iparam, itemName)
+
+	// Validate headers and data types
+	if err := validateExcelHeadersAndTypes(fields, rows); err != nil {
+		log.Fatalf("Excel Validation Error: %v", err)
+	}
+
+	// Add Timing column for -pt only
+	if addTiming {
+		found := false
+		for _, h := range rows[0] {
+			if strings.EqualFold(h, "Timing") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			rows[0] = append(rows[0], "Timing")
+			col, _ := excelize.ColumnNumberToName(len(rows[0]))
+			f.SetCellValue(sheetName, fmt.Sprintf("%s1", col), "Timing")
+		}
+	}
+
+	// Check if already processed
+	if isExcelAlreadyProcessed(f, sheetName) {
+		fmt.Print("Excel already processed... Do you want to process again? (yes/no): ")
+		var answer string
+		fmt.Scanln(&answer)
+		answer = strings.ToLower(strings.TrimSpace(answer))
+		if answer != "yes" && answer != "y" {
+			fmt.Println("Skip Processing.... Exiting...")
+			return
+		}
+	}
+
+	ProcessTestData(f, rows, fields, threadCount, itemName, sheetName)
+}
+
+func UsageHelp(arg string) {
+	fmt.Println("Usage:")
+	fmt.Println("  1.", arg, " -x <serviceName> [<fileName>]")
+	fmt.Println("     -x : Using serviceName creates a filename.xlsx with SampleData")
+	fmt.Println()
+	fmt.Println("  2.", arg, " [-pt] <serviceName> [<fileName> <threads>]")
+	fmt.Println("     [-p]  : Process fileName.xlsx in Threads")
+	fmt.Println("     [-pt] : Process fileName in Threads with Execution Metrics")
+	fmt.Println("Default flag is -p; <fileName> is <serviceName> and <threads> is 1")
+}
+
+func main() {
+	// Show usage only if no arguments or too many
+	if len(os.Args) < 2 || len(os.Args) > 5 {
+		UsageHelp(os.Args[0])
+		os.Exit(1)
+	}
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	iphone := os.Getenv("PHONE")
+	ipassword := os.Getenv("PWORD")
+	iparam := os.Getenv("GOPROPARAM")
+
+	// Sign in
+	if err := CallSignInAPI(iphone, ipassword); err != nil {
+		log.Fatalf("Sign-in failed: %v", err)
+	}
+
+	mode := ""
+	argStart := 1
+	addTiming := false
+
+	// Detect mode (only -x, -p, -pt now)
+	if strings.HasPrefix(os.Args[argStart], "-") {
+		switch os.Args[1] {
+		case "-x":
+			mode = "-x"
+		case "-p":
+			mode = "-p"
+		case "-pt":
+			mode = "-p"
+			addTiming = true
+		default:
+			UsageHelp(os.Args[0])
+			os.Exit(1)
+		}
+		argStart = 2
+	}
+
+	// If mode is set but no itemName provided
+	if len(os.Args) <= argStart {
+		fmt.Println("Error: serviceName is required.")
+		os.Exit(1)
+	}
+
+	// program start time
+	start := time.Now()
+	fmt.Printf("Program Started At: %s\n", start.Format("2006-01-02 15:04:05"))
+
+	if mode == "-x" {
+		itemName := os.Args[argStart]
+
+		// Read fields from E0002
+		fields, _ := ReadingParam(1, iparam, itemName)
+
+		// Output file name (default = baseItemName)
+		outputName := itemName
+
+		if len(os.Args) >= argStart+2 {
+			outputName = os.Args[argStart+1]
+		}
+		fileName := outputName + ".xlsx"
+
+		// Prevent overwriting
+		if _, err := os.Stat(fileName); err == nil {
+			log.Fatalf("Failed to generate sample: file %s already exists", fileName)
+		}
+
+		// Build Excel file
+		f := excelize.NewFile()
+
+		// Sheet name must always be product name
+		sheetName := itemName
+		f.SetSheetName(f.GetSheetName(f.GetActiveSheetIndex()), sheetName)
+
+		var headers, samples []interface{}
+		hasSampleRow := false
+
+		for _, field := range fields.FieldArray {
+			headers = append(headers, field.ExcelName)
+			if field.FieldMode == 0 && strings.TrimSpace(field.InnerKeys) != "" {
+				samples = append(samples, field.InnerKeys)
+				hasSampleRow = true
+			} else {
+				samples = append(samples, "")
+			}
+		}
+
+		// Write row 1 (headers)
+		f.SetSheetRow(sheetName, "A1", &headers)
+
+		if hasSampleRow {
+			f.SetSheetRow(sheetName, "A2", &samples)
+			fmt.Printf("Created newFileName '%s' (headers + sample row).\n", fileName)
+		} else {
+			fmt.Printf("Warning: No SampleData found.\n")
+			fmt.Printf("Created newFileName '%s' (headers only).\n", fileName)
+		}
+
+		if err := f.SaveAs(fileName); err != nil {
+			log.Fatalf("Failed to save Excel: %v", err)
+		}
+		return
+	}
+
+	// Default processing mode (-p or -pt)
+	itemName := os.Args[argStart]
+
+	// Validate itemName (must not be a number)
+	if _, err := strconv.Atoi(itemName); err == nil {
+		fmt.Println("Error: First argument after -p must be the product name (e.g., AEON, RMBK), not a number.")
+		os.Exit(1)
+	}
+
+	fileName := itemName + ".xlsx"
+	threadCount := 1
+
+	//Thread Count
+	if len(os.Args) >= argStart+2 {
+		if n, err := strconv.Atoi(os.Args[argStart+1]); err == nil {
+			threadCount = n
+		} else {
+			fileName = os.Args[argStart+1]
+			if len(os.Args) == argStart+3 {
+				if n, err := strconv.Atoi(os.Args[argStart+2]); err == nil {
+					threadCount = n
+				}
+			}
+		}
+	}
+
+	//which Excel file will be processed
+	fmt.Println("Processing ", fileName, " file....")
+
+	// Always auto-picks first non-empty sheet
+	processExcelData(iparam, itemName, fileName, threadCount, addTiming)
+}

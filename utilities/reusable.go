@@ -1212,3 +1212,33 @@ func DiscountCalculationForCola(iCompany uint, iNewSA float64, iNewAnnPrem float
 
 	return oValue, nil
 }
+
+func CalculateFutureCommission(iCompany uint, ipolicy uint, ifuturedate string, txn *gorm.DB) float64 {
+	var polenq models.Policy
+	txn.Find(&polenq, "id = ?", ipolicy)
+
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "policy_id = ? AND b_status = ?", ipolicy, "IF")
+
+	// Get number of months between PRCD and PaidToDate
+	totalInstFromPTD := GetNoIstalmentsLA(polenq.PaidToDate, ifuturedate, polenq.PFreq)
+	var commissionamt float64
+
+	for j := 0; j < totalInstFromPTD; j++ {
+
+		nomonths1, freqinno := ConvertInstallmentsToMonths(totalInstFromPTD, polenq.PFreq)
+		noofmonths := nomonths1 + freqinno*j
+		for i := 0; i < len(benefitenq); i++ {
+
+			if polenq.PaidToDate <= benefitenq[i].BPremCessDate {
+				commrate := GetCommissionRates(iCompany, benefitenq[i].BCoverage, uint(noofmonths), polenq.PaidToDate)
+				commission := benefitenq[i].BPrem * commrate
+				commissionamt += commission
+			} else {
+
+				return 0
+			}
+		}
+	}
+	return commissionamt
+}

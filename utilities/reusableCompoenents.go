@@ -3507,6 +3507,13 @@ func GetSurrenderAmount(iCompany uint, iPolicy uint, iCoverage string, iEffectiv
 	var c float64
 	c = float64(a) / float64(b)
 
+	var colaenq models.Cola
+	result := initializers.DB.Find(&colaenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
+	if result.RowsAffected != 0 {
+		iTotalPrem, iTotalPaidPrem := ColaSurrenderCalc(iCompany, iPolicy, iCoverage)
+		c = iTotalPaidPrem / iTotalPrem
+	}
+
 	switch {
 	case iSurrMethod == "SM001": // Return of SA
 		for i := 0; i < len(p0053data.Rates); i++ {

@@ -1,0 +1,2279 @@
+// gohtmljson.exe program code version 3
+// Usage: gohtmljson <base_filename> // without extension of .htm
+// <E> Equals eq, <N> NotEquals ne, <C> Contains, <I> In and <O> Out Variations Added
+// In v3 harvested <style> from html comments and used in html
+// In v3 handled inline styles to align with word document styles
+// In v3 created [PageBrk], [OL], [OP] markers to handle page-breaks, page orientations
+
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"log"
+	"strconv"
+
+	"encoding/json"
+	"html/template"
+	"unicode"
+
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"golang.org/x/net/html"
+)
+
+func main() {
+
+	var iFile string
+	var option string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 3 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> [<option>] ...")
+		fmt.Println("Usage: cmd <basefilename> [<option>] ...")
+		fmt.Println("Option | 0 - htm to pdf | 1 - html to pdf | 2 - gohtml to html | 3 - gohtml to pdf |")
+	} else if len(os.Args) == 3 {
+		iFile = os.Args[1]
+		option = os.Args[2]
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+		option = "0"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	// Check if the required files exist
+	checkInputFilesExist(iFile, option)
+	fmt.Println("  In Progress...")
+
+	if option == "3" {
+		fmt.Println("Option: 3 Merge gohtml with Json data & PDF Generation...")
+		// Create outfile html file to verify the correctness of gohtml file
+		// testgohtmljson(iFile)
+		// fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		pdfgohtmljson(iFile)
+		fmt.Println("...pdfgohtmljson completed successfully...")
+	}
+	if option == "2" {
+		fmt.Println("Option: 2 Test gohtml with Json & HTML File Generation Only...")
+		// Create outfile html file to verify the correctness of gohtml file
+		testgohtmljson(iFile)
+		fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		// pdfgohtmljson(iFile)
+		// fmt.Println("...pdfgohtmljson completed successfully...")
+	}
+	if option == "1" {
+		fmt.Println("Option: 1 Create GoHTML & Merge with Json data & PDF Generation...")
+		// Create gohtmlFile for using in testgohtmljson processing
+		html2gohtml(iFile)
+		fmt.Println("...html2gohtml completed successfully...")
+		// Create outfile html file to verify the correctness of gohtml file
+		// testgohtmljson(iFile)
+		// fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		pdfgohtmljson(iFile)
+		fmt.Println("...pdfgohtmljson completed successfully...")
+	}
+	if option == "0" {
+		fmt.Println("Option: 0 Create HTML, GoHTML & Merge with Json data & PDF Generation...")
+		// Create htmlFile for using in html2gohtml processing
+		htm2html(iFile)
+		fmt.Println("...htm2html completed successfully...")
+		// Create gohtmlFile for using in testgohtmljson processing
+		html2gohtml(iFile)
+		fmt.Println("...html2gohtml completed successfully...")
+		// Create outfile html file to verify the correctness of gohtml file
+		// testgohtmljson(iFile)
+		// fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		pdfgohtmljson(iFile)
+		fmt.Println("...pdfgohtmljson completed successfully...")
+	}
+}
+
+// / END OF MAIN ///////////////////////////////////
+//
+// Function to check if required files exist
+func checkInputFilesExist(arg string, opt string) {
+
+	jFile := arg + ".json"
+	hFile := ""
+	hgFile := ""
+	fgFile := ""
+	// Check for JSON file
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+	// File names to check depending upon runopt value
+	if opt == "0" {
+		hFile = arg + ".htm"
+		hgFile = arg + "-h.htm"
+		fgFile = arg + "-f.htm"
+	} else if opt == "1" {
+		hFile = arg + ".html"
+		hgFile = arg + "-h.html"
+		fgFile = arg + "-f.html"
+	} else if opt == "2" {
+		hFile = arg + ".gohtml"
+		hgFile = arg + "-h.gohtml"
+		fgFile = arg + "-f.gohtml"
+	} else if opt == "3" {
+		hFile = arg + ".gohtml"
+		hgFile = arg + "-h.gohtml"
+		fgFile = arg + "-f.gohtml"
+	}
+
+	// Check for HTML File it shall be htm or html or gohtml depending on runopt
+	if _, err := os.Stat(hFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hFile)
+		os.Exit(1)
+	}
+
+	// Check for Header File it shall be htm or html or gohtml depending on runopt
+	if _, err := os.Stat(hgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hgFile)
+		os.Exit(1)
+	}
+
+	// Check for Footer File it shall be htm or html or gohtml depending on runopt
+	if _, err := os.Stat(fgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", fgFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("All files '%s','%s','%s' and '%s' exist. Start Processing...\n", jFile, hFile, hgFile, fgFile)
+}
+
+// ////  HTM2HTML FUNCTION /////////////////////////////////////////////////
+func htm2html(iFile string) {
+	inputFile := iFile + ".htm"
+	iheaderFile := iFile + "-h.htm"
+	ifooterFile := iFile + "-f.htm"
+
+	outputFile := iFile + ".html"
+	oheaderFile := iFile + "-h.html"
+	ofooterFile := iFile + "-f.html"
+
+	fmt.Println("  In Progress...")
+
+	crthtml(inputFile, outputFile)
+	crthtml(iheaderFile, oheaderFile)
+	crthtml(ifooterFile, ofooterFile)
+
+}
+
+// /////  HTML2GOHTML FUNCTION /////////////////////////////////////////////////
+func html2gohtml(iFile string) {
+
+	inputFile := iFile + ".html"
+	iheaderFile := iFile + "-h.html"
+	ifooterFile := iFile + "-f.html"
+	outputFile := iFile + ".gohtml"
+	oheaderFile := iFile + "-h.gohtml"
+	ofooterFile := iFile + "-f.gohtml"
+
+	fmt.Println("  In Progress...")
+
+	crtgohtml(inputFile, outputFile)
+	crtgohtml(iheaderFile, oheaderFile)
+	crtgohtml(ifooterFile, ofooterFile)
+
+}
+
+// /////  TESTGOHTMLJSON FUNCTION /////////////////////////////////////////////////
+func testgohtmljson(iFile string) {
+	gohtmlFile := iFile + ".gohtml"
+	hgohtmlFile := iFile + "-h.gohtml"
+	fgohtmlFile := iFile + "-f.gohtml"
+	jsonFile := iFile + ".json"
+	outFile := iFile + "-outfile.html"
+	houtFile := iFile + "-hfile.html"
+	foutFile := iFile + "-ffile.html"
+	imgfolder := iFile
+	himgfolder := iFile + "-h"
+	fimgfolder := iFile + "-f"
+
+	fmt.Println("  In Progress...")
+
+	crtgohtmljson(gohtmlFile, jsonFile, outFile, imgfolder)
+	crtgohtmljson(hgohtmlFile, jsonFile, houtFile, himgfolder)
+	crtgohtmljson(fgohtmlFile, jsonFile, foutFile, fimgfolder)
+
+}
+
+// /////  PDFGOHTMLJSON FUNCTION /////////////////////////////////////////////////
+var headerdefpt float64
+var footerdefpt float64
+
+func pdfgohtmljson(iFile string) {
+
+	gohtmlFile := iFile + ".gohtml"
+	hgohtmlFile := iFile + "-h.gohtml"
+	fgohtmlFile := iFile + "-f.gohtml"
+	jsonFile := iFile + ".json"
+	pdfFile := iFile + ".pdf"
+
+	outFile := iFile + "-outfile.html"
+	hFile := iFile + "-hfile.html"
+	fFile := iFile + "-ffile.html"
+	imgfolder := iFile
+	himgfolder := iFile + "-h"
+	fimgfolder := iFile + "-f"
+
+	fmt.Println("  In Progress...")
+
+	err := createhtml(gohtmlFile, jsonFile, imgfolder, outFile)
+	if err != nil {
+		fmt.Println("HTML creation error:", err)
+		return
+	}
+	err = createhtml(hgohtmlFile, jsonFile, himgfolder, hFile)
+	if err != nil {
+		fmt.Println("Header HTML creation error:", err)
+		return
+	}
+
+	err = createhtml(fgohtmlFile, jsonFile, fimgfolder, fFile)
+	if err != nil {
+		fmt.Println("Footer HTML creation error:", err)
+		return
+	}
+
+	marginTop, marginBottom, _ := calcMarginsFromCSS(hFile, fFile, 0, 0)
+
+	// Load JSON config
+	data, err := os.ReadFile(jsonFile)
+	if err != nil {
+		fmt.Println("Read jsonFile error:", err)
+		return
+	}
+
+	var m map[string]interface{}
+	err = json.Unmarshal(data, &m)
+	if err != nil {
+		fmt.Println("Unmarshal json data error:", err)
+		return
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Cannot find current working path:", err)
+		return
+	}
+
+	hFile = filepath.Join(cwdPath, hFile)
+	fFile = filepath.Join(cwdPath, fFile)
+	outFile = filepath.Join(cwdPath, outFile)
+	pdfFile = filepath.Join(cwdPath, pdfFile)
+
+	sections, _ := SplitHTMLByMarkers(outFile)
+
+	totalpages := len(sections)
+
+	if totalpages > 1 {
+		marginBottom = marginBottom + (footerdefpt * 0.352778)
+	}
+
+	// Return as strings with "mm"
+	mt := fmt.Sprintf("%.2fmm", marginTop)
+	mb := fmt.Sprintf("%.2fmm", marginBottom)
+
+	var pdfs []string
+	var pg int = 0
+	var cmd *exec.Cmd
+	for _, sec := range sections {
+		outPDF := strings.Replace(sec.FileName, ".html", ".pdf", 1)
+		pg += 1
+
+		// Create a unique footer temp file per section
+		footerTemp := fmt.Sprintf("footer_tmp_%d.html", pg)
+
+		// Inject the page line once per footer file (before running wkhtmltopdf), if more than 1 page:
+		if totalpages > 1 {
+			if err := InjectPageNumberLine(fFile, footerTemp, pg, totalpages); err != nil {
+				fmt.Println("footer inject failed:", err)
+				return
+			}
+		}
+		cmd = exec.Command(
+			"wkhtmltopdf",
+			"--enable-local-file-access",
+			"--header-html", hFile,
+			"--footer-html", footerTemp,
+			"--margin-top", mt,
+			"--margin-bottom", mb,
+			"--header-spacing", "0", // no forced spacing
+			"--orientation", sec.Orientation,
+			sec.FileName, outPDF,
+		)
+
+		var out, stderr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err != nil {
+			fmt.Printf("wkhtmltopdf failed (%s): %v\n%s", sec.FileName, err, stderr.String())
+		}
+
+		pdfs = append(pdfs, outPDF)
+
+		// Remove footer temp files
+		if err := os.Remove(footerTemp); err != nil {
+			fmt.Println("warning: could not remove footer temp:", footerTemp, err)
+		}
+	}
+
+	// Merge all PDFs
+	err = api.MergeCreateFile(pdfs, pdfFile, false, nil)
+	if err != nil {
+		fmt.Println("merge failed: %w", err)
+	}
+
+	// Remove section files
+	for _, s := range sections {
+		os.Remove(s.FileName)
+		pdf := strings.Replace(s.FileName, ".html", ".pdf", 1)
+		os.Remove(pdf)
+	}
+
+	fmt.Println("PDF created:", pdfFile)
+}
+
+///// END OF MAJOR FUNCTIONS //////////////////////////////////////////
+
+// // FUNCTIONS used in HTM2HTML  /////////////////////////////////
+
+func crthtml(iFile string, oFile string) {
+	// Input and output file paths
+	inputFilePath := iFile
+	outputFilePath := oFile
+
+	// Process the file
+	processHTMLFile(inputFilePath, outputFilePath)
+
+	fmt.Println("HTML generated successfully: ", oFile)
+}
+
+// Function to check if required files exist
+func checkInputHTMFilesExist(arg string) {
+
+	jFile := arg + ".htm"
+	jhFile := arg + "-h.htm"
+	jfFile := arg + "-f.htm"
+
+	// Check if HTM files Exists
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(jhFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jhFile)
+		os.Exit(1)
+	}
+	if _, err := os.Stat(jfFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jfFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("All files '%s', '%s' and '%s' exists. Start Processing...\n", jFile, jhFile, jfFile)
+}
+
+// Helper Function to safely escapes text for HTML output
+func htmlEscape(s string) string {
+	return html.EscapeString(s)
+}
+
+// Processes TOC HTML in htm file and builds a PDF-friendly TOC
+// that fills leaders with actual dot characters computed at render time.
+func BuildTOCTable(htmlContent string) string {
+	// Regex patterns
+	blockRe := regexp.MustCompile(`(?is)(?:<p[^>]*class\s*=\s*["']?MsoToc\d+["']?[^>]*>.*?</p>\s*)+`)
+	paraRe := regexp.MustCompile(`(?is)<p[^>]*class\s*=\s*["']?MsoToc\d+["']?[^>]*>(.*?)</p>`)
+	tagStrip := regexp.MustCompile(`(?is)<[^>]+>`)
+	lastDigits := regexp.MustCompile(`([0-9]+)\s*$`)
+	indexFromMsoList := regexp.MustCompile(`(?is)<span[^>]*mso-list:Ignore[^>]*>\s*([^<\s]+)\s*</span>`)
+	indexHTMLRe := regexp.MustCompile(`(?is)^\s*(?:<[^>]+>\s*)*([0-9]+(?:\.[0-9]+)*)[.)]?\s*`)
+
+	// Cleanup function to remove Word spans, links, dotted lines, extra spaces
+	cleanTOCTitle := func(innerHTML string) string {
+		// Remove mso-tab-count spans (dotted lines)
+		reTab := regexp.MustCompile(`(?is)<span[^>]*mso-tab-count[^>]*>.*?</span>`)
+		innerHTML = reTab.ReplaceAllString(innerHTML, "")
+
+		// Remove all <a> tags
+		reA := regexp.MustCompile(`(?is)</?a[^>]*>`)
+		innerHTML = reA.ReplaceAllString(innerHTML, "")
+
+		// Remove all other Word-specific spans, styles, etc.
+		reSpan := regexp.MustCompile(`(?is)</?span[^>]*>`)
+		innerHTML = reSpan.ReplaceAllString(innerHTML, "")
+
+		// Remove all Word XML tags like <w:*>
+		reWordXML := regexp.MustCompile(`(?is)<w:[^>]+>.*?</w:[^>]+>`)
+		innerHTML = reWordXML.ReplaceAllString(innerHTML, "")
+
+		// Remove conditional comments like <![endif]> or <![if !supportLists]>
+		reCond := regexp.MustCompile(`(?is)<!\[.*?\]>`)
+		innerHTML = reCond.ReplaceAllString(innerHTML, "")
+
+		// Replace non-breaking spaces and trim
+		innerHTML = strings.ReplaceAll(innerHTML, "\u00A0", " ")
+		innerHTML = strings.ReplaceAll(innerHTML, "&nbsp;", " ")
+		innerHTML = strings.TrimSpace(innerHTML)
+
+		// Collapse multiple whitespace or control characters into a single space
+		innerHTML = regexp.MustCompile(`[^\S\r\n]+`).ReplaceAllString(innerHTML, " ")
+
+		// Collapse multiple spaces
+		innerHTML = regexp.MustCompile(`\s+`).ReplaceAllString(innerHTML, " ")
+
+		// Trim leading/trailing spaces
+		innerHTML = strings.TrimSpace(innerHTML)
+
+		return innerHTML
+	}
+
+	locs := blockRe.FindAllStringIndex(htmlContent, -1)
+	if locs == nil {
+		return htmlContent
+	}
+
+	pageStripRe := regexp.MustCompile(`(?is)(?:\s|&nbsp;|<[^>]+>)*(?:[0-9](?:\s|&nbsp;|<[^>]+>)*)+$`)
+	tabRe := regexp.MustCompile(`(?is)<span[^>]*mso-tab-count[^>]*>.*?</span>`)
+	listIgnoreRe := indexFromMsoList
+
+	// Process blocks from end->start
+	for i := len(locs) - 1; i >= 0; i-- {
+		start, end := locs[i][0], locs[i][1]
+		blockHTML := htmlContent[start:end]
+
+		paras := paraRe.FindAllStringSubmatch(blockHTML, -1)
+		if len(paras) == 0 {
+			continue
+		}
+
+		// Split paragraphs into segments by "[PageBrk]"
+		var segments [][]string
+		current := []string{}
+		for _, pm := range paras {
+			inner := strings.TrimSpace(pm[1])
+			if strings.Contains(inner, "[PageBrk]") {
+				if len(current) > 0 {
+					segments = append(segments, current)
+					current = []string{}
+				}
+				continue
+			}
+			current = append(current, inner)
+		}
+		if len(current) > 0 {
+			segments = append(segments, current)
+		}
+
+		// Build table from paragraph slice
+		buildTable := func(rows []string) string {
+			var trs []string
+			for _, innerHTML := range rows {
+				plain := tagStrip.ReplaceAllString(innerHTML, "")
+				plain = strings.ReplaceAll(plain, "\u00A0", " ")
+				plain = strings.ReplaceAll(plain, "&nbsp;", " ")
+				plain = strings.TrimSpace(plain)
+
+				md := lastDigits.FindStringSubmatch(plain)
+				if len(md) != 2 {
+					continue
+				}
+				pageNum := md[1]
+
+				if len(pageNum) == 1 {
+					pageNum = fmt.Sprintf("%02s", pageNum)
+				}
+
+				titleHTML := pageStripRe.ReplaceAllString(innerHTML, "")
+				titleHTML = strings.TrimSpace(titleHTML)
+				titleHTML = tabRe.ReplaceAllString(titleHTML, "")
+				titleHTML = listIgnoreRe.ReplaceAllString(titleHTML, "")
+
+				indexText := ""
+				if m := indexFromMsoList.FindStringSubmatch(innerHTML); len(m) == 2 {
+					indexText = strings.TrimSpace(m[1])
+				} else if m := indexHTMLRe.FindStringSubmatch(innerHTML); len(m) == 2 {
+					indexText = strings.TrimSpace(m[1])
+				} else {
+					if m := regexp.MustCompile(`^([0-9]+(?:\.[0-9]+)*)[.)]?\s+`).FindStringSubmatch(plain); len(m) == 2 {
+						indexText = m[1]
+					}
+				}
+
+				if indexText != "" {
+					esc := regexp.QuoteMeta(indexText)
+					removeIndexRe := regexp.MustCompile(`(?is)^(?:<[^>]+>\s*)*` + esc + `(?:[.)]\s*)?(?:\s*</[^>]+>)*`)
+					titleHTML = removeIndexRe.ReplaceAllString(titleHTML, "")
+					titleHTML = strings.TrimSpace(titleHTML)
+				}
+
+				if titleHTML == "" {
+					descPlain := lastDigits.ReplaceAllString(plain, "")
+					descPlain = strings.TrimSpace(descPlain)
+					titleHTML = descPlain
+				}
+
+				titleHTML = regexp.MustCompile("(?is)^[\\s\\.\u00B7\\-]+").ReplaceAllString(titleHTML, "")
+				titleHTML = strings.TrimSpace(titleHTML)
+
+				// Clean Word-specific formatting
+				titleHTML = cleanTOCTitle(titleHTML)
+
+				// Prevent line breaks in TOC titles
+				reSpaces := regexp.MustCompile(`\s+`)
+				titleHTML = reSpaces.ReplaceAllString(titleHTML, "&nbsp;")
+
+				// Row: index | title | page
+				tr := fmt.Sprintf(`<tr>
+  <td class="toc-index">%s</td>
+  <td class="toc-title">%s</td>
+  <td class="toc-page">%s</td>
+</tr>`, htmlEscape(indexText), htmlEscape(titleHTML), htmlEscape(pageNum))
+
+				trs = append(trs, tr)
+			}
+			if len(trs) == 0 {
+				return ""
+			}
+			return `<table class="toc-table" role="presentation">
+  <colgroup>
+    <col style="width:6em">
+    <col>
+    <col style="width:6em">
+  </colgroup>
+  <tbody>` + strings.Join(trs, "\n") + `</tbody></table>`
+		}
+
+		var builtParts []string
+		for si, seg := range segments {
+			tbl := buildTable(seg)
+			if tbl != "" {
+				builtParts = append(builtParts, tbl)
+			}
+			if si < len(segments)-1 {
+				builtParts = append(builtParts, `<div style="page-break-before:always;"></div>`)
+			}
+		}
+		replacement := strings.Join(builtParts, "\n")
+		htmlContent = htmlContent[:start] + replacement + htmlContent[end:]
+	}
+
+	// Inject CSS only (simple table, no dotted lines)
+	cssOnly := `<style id="tocfix-style">
+.toc-table { width:100%; border-collapse:collapse; font-family:inherit; font-size:inherit; table-layout:fixed;}
+.toc-table td { padding:0; margin:0; vertical-align:middle; }
+.toc-index { white-space:nowrap; padding-right:0.6em; text-align:left; }
+.toc-title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.toc-page { white-space:nowrap; text-align:right; width:6em;}
+[role="presentation"] { border-collapse:collapse; }
+</style>`
+
+	lower := strings.ToLower(htmlContent)
+	if !strings.Contains(lower, "tocfix-style") {
+		if idx := strings.Index(lower, "</head>"); idx != -1 {
+			htmlContent = htmlContent[:idx] + cssOnly + htmlContent[idx:]
+		} else {
+			htmlContent = cssOnly + htmlContent
+		}
+	}
+
+	return htmlContent
+}
+
+// Extract the right dotted tab stop value (in pt) from a TOC paragraph
+func extractTabStop(line string) string {
+	tabRe := regexp.MustCompile(`right dotted ([0-9.]+pt)`)
+	if m := tabRe.FindStringSubmatch(line); len(m) > 1 {
+		return m[1]
+	}
+	return "500pt" // fallback
+}
+
+// Convert pt → px
+func ptToPx(ptStr string) int {
+	pt, err := strconv.ParseFloat(ptStr, 64)
+	if err != nil {
+		return 650 // safe fallback
+	}
+	return int(pt * 96.0 / 72.0) // 1pt = 96/72 px
+}
+
+// Finds TOC paragraphs in the full HTML and replace with aligned versions.
+func ProcessTOCBlock(html string) string {
+	// Find all TOC <p> lines (MsoToc class)
+	pRe := regexp.MustCompile(`(?is)<p[^>]*class="?MsoToc\d+"?[^>]*>.*?</p>`)
+	lines := pRe.FindAllString(html, -1)
+	if len(lines) == 0 {
+		return html // no TOC
+	}
+
+	// Extract the first tab stop (used for all lines)
+	tabStop := extractTabStop(lines[0])
+	pxStop := ptToPx(tabStop)
+
+	// Rebuild aligned lines
+	replacements := make(map[string]string)
+	for _, line := range lines {
+		newLine := cleanTOCLine(line, pxStop)
+		replacements[line] = newLine
+	}
+
+	// Replace in original HTML
+	result := html
+	for old, new := range replacements {
+		result = strings.ReplaceAll(result, old, new)
+	}
+
+	return result
+}
+
+// Clean and align a single TOC <p> line
+func cleanTOCLine(line string, pxStop int) string {
+	// Grab attributes
+	attrRe := regexp.MustCompile(`(?is)^<p([^>]*)>.*</p>`)
+	attr := ""
+	if m := attrRe.FindStringSubmatch(line); len(m) > 1 {
+		attr = m[1]
+	}
+
+	// Extract inner text
+	innerRe := regexp.MustCompile(`(?is)^<p[^>]*>(.*)</p>`)
+	inner := ""
+	if m := innerRe.FindStringSubmatch(line); len(m) > 1 {
+		inner = m[1]
+	}
+
+	// Extract page number
+	pageRe := regexp.MustCompile(`(\d+)\s*$`)
+	page := ""
+	desc := inner
+	if m := pageRe.FindStringSubmatch(inner); len(m) > 1 {
+		page = m[1]
+		desc = strings.TrimSpace(inner[:len(inner)-len(page)])
+	}
+	desc = strings.TrimRight(desc, ". \u00A0")
+
+	// Rebuild with flexbox for perfect alignment
+	return fmt.Sprintf(
+		`<p%[1]s style="display:flex; justify-content:space-between; max-width:%[2]dpx;">
+  <span>%[3]s</span>
+  <span>%[4]s</span>
+</p>`,
+		attr, pxStop, desc, page,
+	)
+}
+
+// Takes a multi-line HTML string and joins attributes into a single line.
+func JoinHTMLAttributes(html string) string {
+	// Preserve blank lines by temporarily marking them
+	placeholder := "__BLANK_LINE__"
+	compactHTML := strings.ReplaceAll(html, "\n\n", placeholder)
+
+	// Remove all remaining single newlines (join lines)
+	re := regexp.MustCompile(`\n+`)                     // Match one or more newlines
+	compactHTML = re.ReplaceAllString(compactHTML, " ") // Replace newlines with space
+
+	// Restore blank lines
+	compactHTML = strings.ReplaceAll(compactHTML, placeholder, "\n\n")
+
+	// Remove newlines and excessive whitespace
+	compactHTML = regexp.MustCompile(`\s{2,}`).ReplaceAllString(compactHTML, " ") // Collapse multiple spaces
+
+	// Trim any unnecessary spaces at the start or end
+	return strings.TrimSpace(compactHTML)
+}
+
+func ExtractFontDefinitions(html string) (string, string) {
+	commentRe := regexp.MustCompile(`(?s)<!--(.*?)-->`)
+	matches := commentRe.FindAllStringSubmatch(html, -1)
+
+	var styleBlock string
+
+	for _, match := range matches {
+		fullComment := match[0]
+		commentBody := match[1]
+
+		if styleBlock == "" && strings.Contains(strings.ToLower(commentBody), "font definitions") {
+			cleaned := strings.TrimSpace(commentBody)
+			styleBlock = "<style>\n" + cleaned + "\n</style>"
+		}
+		html = strings.Replace(html, fullComment, "", 1) // remove the comment
+	}
+
+	return html, styleBlock
+}
+
+func InsertStyleIntoHead(html string, styleBlock string) string {
+	if styleBlock == "" {
+		return html
+	}
+	headRe := regexp.MustCompile(`(?i)<head[^>]*>`)
+	loc := headRe.FindStringIndex(html)
+
+	if loc != nil {
+		insertPos := loc[1] // after <head>
+		html = html[:insertPos] + "\n" + styleBlock + "\n" + html[insertPos:]
+	}
+	return html
+}
+
+func isSingleColumnTable(table string) bool {
+	// Find all rows
+	reTr := regexp.MustCompile(`(?is)<tr[^>]*>.*?</tr>`)
+	rows := reTr.FindAllString(table, -1)
+
+	for _, row := range rows {
+		// Count td tags in this row
+		reTd := regexp.MustCompile(`(?is)<td[^>]*>`)
+		tds := reTd.FindAllString(row, -1)
+		if len(tds) != 1 {
+			return false // More than 1 column in a row
+		}
+	}
+	return true
+}
+
+// Removes <o:p> tags only outside of <table> blocks.
+// - <o:p>\s*</o:p> → removed
+// - <o:p>&nbsp;</o:p> → replaced with <br>
+func CleanOutsideTables(input string) string {
+	// Regex for full <table> blocks
+	reTable := regexp.MustCompile(`(?is)<table[^>]*>.*?</table>`)
+
+	// Regex for <o:p> cleanup
+	reEmpty := regexp.MustCompile(`(?i)<o:p>\s*</o:p>`)
+	reNbsp := regexp.MustCompile(`(?i)<o:p>\s*&nbsp;\s*</o:p>`)
+
+	var result string
+	lastIndex := 0
+
+	// Find all table blocks with their positions
+	matches := reTable.FindAllStringIndex(input, -1)
+
+	for _, m := range matches {
+		// Process the text before this table (outside part)
+		nonTable := input[lastIndex:m[0]]
+		nonTable = reEmpty.ReplaceAllString(nonTable, "")
+		nonTable = reNbsp.ReplaceAllString(nonTable, "<br>")
+		result += nonTable
+
+		// Add the untouched table
+		result += input[m[0]:m[1]]
+
+		lastIndex = m[1]
+	}
+
+	// Process any trailing text after the last table
+	nonTable := input[lastIndex:]
+	nonTable = reEmpty.ReplaceAllString(nonTable, "")
+	nonTable = reNbsp.ReplaceAllString(nonTable, "<br>")
+	result += nonTable
+
+	return result
+}
+
+// Clean <o:p></o:p> tags to manage blank lines
+// Used in htm2html processing
+func cleanOEmptyP(input string) string {
+	// In <table>
+	// When only one <td> is in a <tr>
+	// a. remove the <p> tag if its empty
+	// b. clean up with <br> if having nbsp.
+	// When there are more than one <td> in a <tr>
+	// a. remove the <p> tag for both empty and having nbsp.
+	reTable := regexp.MustCompile(`(?is)<table[^>]*>.*?</table>`)
+	// Building the modified HTML
+	processed := reTable.ReplaceAllStringFunc(input, func(table string) string {
+		if isSingleColumnTable(table) {
+			// clean single-column tables as required
+			reEmpty := regexp.MustCompile(`(?i)<o:p>\s*</o:p>`)
+			renbsp := regexp.MustCompile(`(?i)<o:p>\s*&nbsp;\s*</o:p>`)
+			table = reEmpty.ReplaceAllString(table, "")
+			return renbsp.ReplaceAllString(table, "<br>")
+		}
+
+		// For multi-column tables → remove empty <p>
+		re := regexp.MustCompile(`(?is)<td[^>]*>.*?</td>|<tr[^>]*>.*?</tr>`)
+		return re.ReplaceAllStringFunc(table, func(block string) string {
+			pRe := regexp.MustCompile(`(?is)<p[^>]*>(\s|<b[^>]*>|</b>|<span[^>]*>|</span>|<o:p>|</o:p>|&nbsp;)*</p>`)
+			return pRe.ReplaceAllString(block, "")
+		})
+	})
+
+	// Clean <o:p></o:p> tags outside <table> tags
+	final := CleanOutsideTables(processed)
+	return final
+
+}
+
+// Extracts the `lang` attribute from <body> and replaces
+// all :lang(...) and [lang="..."] or [lang='...'] [*-language:'...'] values in the input content
+func syncAllLangtoBodyLang(content string) (string, error) {
+	var langValue string
+
+	// Step 1: Extract lang from <body> or fallback to <html>
+	bodyLangRe := regexp.MustCompile(`(?i)<body[^>]*\blang=["']?([^"'>\s]+)["']?`)
+	if matches := bodyLangRe.FindStringSubmatch(content); len(matches) >= 2 {
+		langValue = matches[1]
+	} else {
+		htmlLangRe := regexp.MustCompile(`(?i)<html[^>]*\blang=["']?([^"'>\s]+)["']?`)
+		if matches := htmlLangRe.FindStringSubmatch(content); len(matches) >= 2 {
+			langValue = matches[1]
+		}
+	}
+
+	if langValue == "" {
+		return content, fmt.Errorf("no lang attribute found in <body> or <html>")
+	}
+
+	// Step 2: Replace :lang(...) selectors
+	content = regexp.MustCompile(`:lang\(([^)]+)\)`).ReplaceAllString(content, fmt.Sprintf(`:lang(%s)`, langValue))
+
+	// Step 3: Replace [lang="..."] or [lang='...'] attribute selectors
+	content = regexp.MustCompile(`\[lang=['"][^'"]+['"]\]`).ReplaceAllString(content, fmt.Sprintf(`[lang="%s"]`, langValue))
+
+	// Step 4: Replace all *-language:... in inline styles or CSS
+	// Handles mso-fareast-language, bidi-language, ansi-language, etc.
+	content = regexp.MustCompile(`(?i)([\w\-]+-language)\s*:\s*[a-z\-A-Z]+`).ReplaceAllString(content, fmt.Sprintf(`${1}:%s`, langValue))
+
+	return content, nil
+}
+
+// Replace v:imagedata Tags with img tag
+// Used in htm2html processing
+func ReplaceImageDataTagWithImgTag(input string) string {
+	// Regular expression to find <v:imagedata ... />
+	re := regexp.MustCompile(`<v:imagedata([^>]*)\/?>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `<img${1}/>`)
+}
+
+// Strip SpellE SpanTags removes Spelling Eror non-standard tags but keeps others.
+// Used in htm2html processing
+func StripSpellESpanTags(input string) string {
+	// Regular expression to match <span> tags with class=SpellE
+	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?SpellE["']?[^>]*>(.*?)</span>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `$1`)
+}
+
+// Strip GramE SpanTags removes Grammer Eror non-standard tags but keeps others.
+// Used in htm2html processing
+func StripGramESpanTags(input string) string {
+	// Regular expression to match <span> tags with class=GramE
+	re := regexp.MustCompile(`(?i)<span[^>]*class\s*=\s*["']?GramE["']?[^>]*>(.*?)</span>`)
+	// Replace matches with the content inside the tags
+	return re.ReplaceAllString(input, `$1`)
+}
+
+func processHTMLFile(inputFilePath, outputFilePath string) {
+	// Open the input file
+	inputFile, err := os.Open(inputFilePath)
+	if err != nil {
+		fmt.Printf("Error opening input file: %v\n", err)
+		return
+	}
+	defer inputFile.Close()
+
+	// Read the input file content
+	content, err := io.ReadAll(inputFile)
+	if err != nil {
+		fmt.Printf("Error reading input file: %v\n", err)
+		return
+	}
+
+	//tocCleanedContent := ProcessTOCBlock(string(content))
+	tocCleanedContent := BuildTOCTable(string(content))
+
+	// JoinHTMLAttributes takes a multi-line HTML string and joins attributes into a single line
+	joinedContent := JoinHTMLAttributes(tocCleanedContent)
+
+	// Correct HTM file tags for HTML standards.....
+	// 1. Save the Font Defintions from HTML Comments into style tag
+	// 2. Clean empty o:p tags and remove HTML comment lines
+	// 3. Synchronize all lang tages to body lang values
+	// 4. Replacing v:imagedata tags with img tag & <o:p>&nbsp</o:p> with <br> tag
+	// 5. Removing Spelling & Grammer Error nonstandard tags
+	temp1Content, styleblock := ExtractFontDefinitions(string(joinedContent))
+	tempContent := InsertStyleIntoHead(temp1Content, styleblock)
+
+	temp1Content = cleanOEmptyP(string(tempContent))
+	tempContent, _ = syncAllLangtoBodyLang(string(temp1Content))
+
+	temp1Content = ReplaceImageDataTagWithImgTag(string(tempContent))
+	tempContent = StripSpellESpanTags(string(temp1Content))
+
+	processedContent := StripGramESpanTags(string(tempContent))
+	// End of Corrections
+
+	// Write the processed content to the output file
+	err = os.WriteFile(outputFilePath, []byte(processedContent), 0644)
+	if err != nil {
+		fmt.Printf("Error writing to output file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Processed HTML content written to %s\n", outputFilePath)
+}
+
+////////////////// END OF FUNCTIONS used in HTM2HTML ///////////////////////////
+
+// // FUNCTIONS used in HTML2GOHTML ///////////////////////////////
+
+func crtgohtml(inputFile string, outputFile string) {
+	// Define the project root directory
+	projectRoot := "./" // Adjust this if the script isn't at the project root
+	staticFolder := filepath.Join(projectRoot, "static")
+
+	// Specify the html file
+	htmlFile := inputFile // Replace with your actual file name
+	fileNameWithoutExt := strings.TrimSuffix(htmlFile, filepath.Ext(htmlFile))
+
+	// Define source and destination folders
+	cpysrcFolder := filepath.Join(projectRoot, fileNameWithoutExt+"_files")
+	cpydestFolder := filepath.Join(staticFolder, fileNameWithoutExt)
+	imgdestFolder := "{{.Img}}"
+
+	// Ensure the new folder exists
+	err := os.MkdirAll(cpydestFolder, os.ModePerm)
+	if err != nil {
+		fmt.Println("Error creating new folder:", err)
+		return
+	}
+
+	// Read the HTML file
+	htmlContent, err := os.ReadFile(inputFile)
+	if err != nil {
+		fmt.Printf("Error reading HTML file: %v\n", err)
+		return
+	}
+
+	// Ensure page break CSS is added if not already available
+	cssContent := EnsurePageBreakCSS(string(htmlContent))
+
+	// Replace [PageBrk] with <div class="page-break"></div> after cleaning Word Page Break specific variations
+	var wordBreakBlock = regexp.MustCompile(
+		//	`(?is)<p[^>]*>\s*<span[^>]*>\s*\[PageBrk\]\s*<br[^>]*mso-special-character[^>]*-break[^>]*>\s*</span>\s*</p>`)
+		`(?is)(?:<p[^>]*>\s*)?(?:<span[^>]*>\s*)?\[PageBrk\](?:\s*<br[^>]*mso-special-character[^>]*-break[^>]*>)?(?:\s*</span>)?(?:\s*</p>)?`)
+
+	pgbkContent := wordBreakBlock.ReplaceAllString(string(cssContent), `<div class="page-break"></div>`)
+
+	// Parse the page break enabled HTML content
+	doc, err := html.Parse(bytes.NewReader([]byte(pgbkContent)))
+	if err != nil {
+		fmt.Printf("Error parsing HTML file: %v\n", err)
+		return
+	}
+
+	// Process the HTML to update image paths
+	err = updateImagePaths(doc, cpysrcFolder, cpydestFolder, imgdestFolder)
+	if err != nil {
+		fmt.Println("Error updating image paths:", err)
+		return
+	}
+
+	var Tcolct int = 0
+	// Convert the parsed HTML into GoHTML format
+	var processedHTML bytes.Buffer
+	processNode(doc, &processedHTML, 0, Tcolct)
+
+	// Check for <!DOCTYPE html> and insert if missing
+	rendered := processedHTML.String()
+	if !strings.HasPrefix(strings.TrimSpace(rendered), "<!DOCTYPE") {
+		rendered = "<!DOCTYPE html>\n" + rendered
+	}
+
+	// Write the GoHTML content to the output file
+	err = os.WriteFile(outputFile, []byte(rendered), 0644)
+	if err != nil {
+		fmt.Printf("Error writing GoHTML file: %v\n", err)
+		return
+	}
+
+	fmt.Printf("GoHTML file created successfully at: %s\n", outputFile)
+}
+
+// All below variables and functions are used in crtgohtml processing
+// These variables are to manage the range line and range data to write at correct place after
+// counting the number of tr tags, to process merged column headers and multi line headers of
+// homogeneous table where json data determine the number of row to get printed in gohtml
+// Used in html2gohtml processing
+var tag string = ""
+var Rcolct int = 0
+
+var trcount int = 0
+var tabletrct int = 0
+
+var Rrangeline string = ""
+var Rrangedata string = ""
+
+// processNode processes an HTML node and writes GoHTML output
+// Used in html2gohtml processing
+func processNode(n *html.Node, buffer *bytes.Buffer, indentLevel int, Tcolct int) {
+	// Calc the number of columns first if its a table node
+	if n.Data == "table" {
+		Tcolct, trcount = CountRInTable(n)
+		if Tcolct > 0 {
+			var t *html.Node
+			t = n
+			Rstring := findRStringInTable(t)
+			if Rstring != "" {
+				Rrangeline = transformRTagGoHTML(Rstring, Rcolct)
+			}
+		}
+	}
+
+	indent := strings.Repeat("  ", indentLevel)
+	text := strings.TrimSpace(n.Data)
+	if strings.Contains(text, "<R>") {
+		tag = "R"
+	} else if strings.Contains(text, "<C>") {
+		tag = "C"
+	} else if strings.Contains(text, "<E>") {
+		tag = "E"
+	} else if strings.Contains(text, "<N>") {
+		tag = "N"
+	} else if strings.Contains(text, "<I>") {
+		tag = "I"
+	} else if strings.Contains(text, "<O>") {
+		tag = "O"
+	} else {
+		tag = ""
+	}
+
+	switch n.Type {
+
+	case html.TextNode: // 1
+		if tag == "R" { // Repeat Tag for Fields to manage dynamic no of rows of data
+			// Alter placeholders for GoHTML range construct in text content
+			Rrangedata = transformRTagGoHTML(text, Rcolct)
+			buffer.WriteString(fmt.Sprintf("%s", Rrangedata))
+			if Rcolct <= Tcolct {
+				Rcolct = Rcolct + 1
+			}
+		} else if tag == "C" { // Contains Tag to check and print the given string in variable
+			// Alter placeholders for GoHTML C tag construct in text content
+			Ctagdata := transformCTagGoHTML(text)
+			if Ctagdata != "" {
+				buffer.WriteString(fmt.Sprintf("%s", Ctagdata))
+			}
+		} else if tag == "E" { // Equal Tag to check and print the given string is same as in variable
+			// Alter placeholders for GoHTML E tag construct in text content
+			Etagdata := transformETagGoHTML(text)
+			if Etagdata != "" {
+				buffer.WriteString(fmt.Sprintf("%s", Etagdata))
+			}
+		} else if tag == "N" { // Not Equal Tag to check and not print the given string is not same as in variable
+			// Alter placeholders for GoHTML N tag construct in text content
+			Ntagdata := transformNTagGoHTML(text)
+			if Ntagdata != "" {
+				buffer.WriteString(fmt.Sprintf("%s", Ntagdata))
+			}
+		} else if tag == "I" { // In Tag to check and print if any one is in the list of strings
+			// Alter placeholders for GoHTML I tag construct in text content
+			Itagdata := transformITagGoHTML(text)
+			if Itagdata != "" {
+				buffer.WriteString(fmt.Sprintf("%s", Itagdata))
+			}
+		} else if tag == "O" { // Out Tag to check and print if any one is not in the list of strings
+			// Alter placeholders for GoHTML O tag construct in text content
+			Otagdata := transformOTagGoHTML(text)
+			if Otagdata != "" {
+				buffer.WriteString(fmt.Sprintf("%s", Otagdata))
+			}
+
+		} else {
+			// Replace placeholders and escape double quotes in text content
+			processedText := escapeAttribute(processPlaceholders(text))
+			if processedText != "" {
+				buffer.WriteString(fmt.Sprintf("%s%s\n", indent, processedText))
+			}
+
+		}
+	case html.DocumentNode: // 2
+		// Process children only
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			processNode(c, buffer, indentLevel, Tcolct)
+		}
+
+	case html.ElementNode: // 3
+		// check tr after table and increment only if it a R table
+		if n.Data == "tr" && Rrangeline != "" {
+			if tabletrct == (trcount - 1) {
+				buffer.WriteString(fmt.Sprintf("%s", Rrangeline))
+				Rcolct = Rcolct + 1
+			} else {
+				tabletrct = tabletrct + 1
+			}
+		}
+
+		// Handle input and textarea elements specifically
+		if n.Data == "input" || n.Data == "textarea" || n.Data == "textbox" {
+			// Handle value attribute as placeholder
+			for _, attr := range n.Attr {
+				if attr.Key == "value" {
+					// Process the value attribute as a GoHTML placeholder
+					attr.Val = escapeAttribute(processPlaceholders(attr.Val))
+				}
+			}
+		}
+
+		// Write opening tag with attributes
+		buffer.WriteString(fmt.Sprintf("%s<%s", indent, n.Data))
+		for _, attr := range n.Attr {
+			// Properly escape attribute values, replacing double quotes with &quot;
+			if attr.Key != "value" {
+				buffer.WriteString(fmt.Sprintf(` %s="%s"`, attr.Key, escapeAttribute(attr.Val)))
+			} else {
+				// Special handling for value attributes
+				buffer.WriteString(fmt.Sprintf(` %s="%s"`, attr.Key, escapeAttribute(attr.Val)))
+			}
+		}
+		buffer.WriteString(">\n")
+
+		// Process children recursively
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if n.Data == "tbody" && Rrangeline != "" && Rcolct > 0 && Rcolct > Tcolct {
+				buffer.WriteString("\n {{ end }} \n")
+				Rrangeline = ""
+				Rcolct = 0
+				Tcolct = 0
+				tag = ""
+				tabletrct = 0
+				trcount = 0
+			}
+			processNode(c, buffer, indentLevel+1, Tcolct)
+		}
+
+		// Write closing tag
+		buffer.WriteString(fmt.Sprintf("%s</%s>\n", indent, n.Data))
+
+	case html.CommentNode: // 4
+		// Preserve comments if needed
+		buffer.WriteString(fmt.Sprintf("%s<!-- %s -->\n", indent, n.Data))
+	default:
+		// Log unsupported node types for debugging
+		fmt.Printf("Ignoring node type: %v\n", n.Type)
+	}
+} // PROCESSNODE ENDS HERE
+
+// process all <FieldName> and <FieldName D2> and process to GOHTML format {{ formatNumber ($.FieldName) 2 }}
+func processPlaceholders(input string) string {
+	// Clean the string to remove newlines and whitespaces within angled brackets
+	input = cleanString(input)
+	// Regex to match variables in the format <content> where content can have one or more parts
+	re := regexp.MustCompile(`<([^<>]+)>`)
+	return re.ReplaceAllStringFunc(input, func(match string) string {
+		// Extract content inside the angle brackets
+		trimmedContent := match[1 : len(match)-1] // Strip the angle brackets
+
+		// Split the content into parts based on whitespace
+		parts := strings.Fields(trimmedContent)
+
+		if len(parts) == 1 {
+			return "{{ $." + strings.TrimSpace(parts[0]) + " }} "
+		} else if (len(parts)) == 2 {
+			part1 := parts[1]
+			if isAlphaDigit(part1) {
+				return "{{ formatNumber $." + strings.TrimSpace(parts[0]) + " " + `"` + part1 + `"` + " }} "
+			} else {
+				return "{{ $." + strings.TrimSpace(parts[0]) + "-CHECKFORMAT-" + part1 + " }} "
+			}
+		} else {
+			return input
+
+		}
+	})
+}
+
+// escapeAttribute replaces double quotes with &quot; in attribute values and text content
+func escapeAttribute(value string) string {
+	// Replace double quotes with &quot if not formatNumber;
+	if !strings.Contains(value, "formatNumber") && !strings.Contains(value, "font") {
+		return strings.ReplaceAll(value, `"`, `&quot;`)
+	}
+	if strings.Contains(value, "font") {
+		return strings.ReplaceAll(value, "\"", "")
+	} else {
+		return value
+	}
+}
+
+// updateImagePaths processes the HTML nodes to update image paths
+func updateImagePaths(n *html.Node, cpysrcFolder, cpydestFolder, imgdestFolder string) error {
+	if n.Type == html.ElementNode && n.Data == "img" {
+		for i, attr := range n.Attr {
+			if attr.Key == "src" {
+				oldSrc := attr.Val
+				oldPath := filepath.Join(cpysrcFolder, filepath.Base(oldSrc))
+				newPath := filepath.Join(cpydestFolder, filepath.Base(oldSrc))
+
+				// Copy the image file to the new folder
+				err := copyFile(oldPath, newPath)
+				if err != nil {
+					return fmt.Errorf("error copying file %s to %s: %v", oldPath, newPath, err)
+				}
+
+				// Update the src attribute with {{.Img}} variable path
+				n.Attr[i].Val = filepath.Join(imgdestFolder, filepath.Base(oldSrc))
+			}
+		}
+	}
+
+	// Recursively process child nodes
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		err := updateImagePaths(c, cpysrcFolder, cpydestFolder, imgdestFolder)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	return err
+}
+
+// Function to transform <R>...</R> blocks to Go template syntax while preserving style tags
+// Used in html2gohtml processing
+func transformRTagGoHTML(input string, Rcolct int) string {
+	// Clean the string to remove newlines and whitespaces within angled brackets
+	input = cleanString(input)
+
+	// Regex to match <R> ... </R> blocks
+	re := regexp.MustCompile(`(?s)<R>(.*?)</R>`)
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	if len(matches) == 0 {
+		fmt.Println("No <R>.<>..</R> tags found")
+		return input
+	}
+
+	for _, match := range matches {
+		content := match[1]
+
+		// Regex to match variables in the format <content> where content can have one or more parts
+		re := regexp.MustCompile(`<([^<>]+)>`)
+		trimmedContent := re.ReplaceAllStringFunc(content, func(match string) string {
+			// Extract content inside the angle brackets
+			trimmedContent := match[1 : len(match)-1] // Strip the angle brackets
+			return trimmedContent
+		})
+		// Split the content into parts based on whitespace
+		parts := strings.Fields(trimmedContent)
+
+		// Replace original <R> ... </R> with transformed content wrapped in {{range ... end}}
+		var rangeBlock string
+		if Rcolct == 0 {
+			// Handle single or multiple parts (customize the processing here)
+			rangeBlock = "{{range $index, $element := ." + strings.TrimSpace(parts[0]) + "}} \n "
+		} else if Rcolct == 1 {
+			rangeBlock = "{{$element}}"
+		} else {
+			if len(parts) == 1 {
+				rangeBlock = "{{ (index $." + strings.TrimSpace(parts[0]) + " $index) " + " }} "
+			} else if (len(parts)) == 2 {
+				part1 := parts[1]
+				if isAlphaDigit(part1) {
+					rangeBlock = "{{ formatNumber (index $." + strings.TrimSpace(parts[0]) + " $index) " + `"` + part1 + `"` + " }} "
+				} else {
+					rangeBlock = "{{ $." + parts[0] + "CHECKFORMAT-" + part1 + " }} "
+				}
+			} else {
+				rangeBlock = "{{ $." + "CHECKFIELD-" + parts[0] + " }} "
+			}
+		}
+		//input = strings.Replace(input, match, rangeBlock, 1)
+		input = rangeBlock
+		return input
+	}
+	return ""
+}
+
+// CountRInTable takes a table node and counts the number of <R> elements in it.
+func CountRInTable(table *html.Node) (int, int) {
+	if table == nil || table.Type != html.ElementNode || table.Data != "table" {
+		return 0, 0
+	}
+
+	Rcount := 0
+	trcount := 0
+	// Traverse all child nodes of the table to find <R> elements
+	var traverse func(node *html.Node)
+	traverse = func(node *html.Node) {
+		if node.Type == html.ElementNode && strings.Contains(node.Data, "tr") {
+			trcount++
+		}
+		if node.Type == html.TextNode && strings.Contains(node.Data, "<R>") {
+			Rcount++
+		}
+		for c := node.FirstChild; c != nil; c = c.NextSibling {
+			traverse(c)
+		}
+	}
+
+	// Start traversal from the table node
+	traverse(table)
+	return Rcount, trcount
+}
+
+// Helper to find the parent node with a specific tag
+func findParent(n *html.Node, tagName string) *html.Node {
+	for p := n.Parent; p != nil; p = p.Parent {
+		if p.Type == html.ElementNode && p.Data == tagName {
+			return p
+		}
+	}
+	return nil
+}
+
+// Function to find the first <R> starting string in a table
+func findRStringInTable(tableNode *html.Node) string {
+	var result string
+
+	// Traverse function to search within the table node
+	var traverse func(*html.Node)
+	traverse = func(n *html.Node) {
+		if n == nil {
+			return
+		}
+
+		// Check if the node contains a text node starting with <R>
+		if n.Type == html.TextNode {
+			text := strings.TrimSpace(n.Data)
+			if strings.HasPrefix(text, "<R>") {
+				result = text
+				return
+			}
+		}
+
+		// Traverse children if no result found
+		for c := n.FirstChild; c != nil && result == ""; c = c.NextSibling {
+			traverse(c)
+		}
+	}
+
+	// Start traversing the table node
+	traverse(tableNode)
+
+	return result
+}
+
+// clean the contents in the angled brackets for processing
+func cleanString(input string) string {
+	// Remove multiple newlines and replace with a single newline
+	re := regexp.MustCompile(`\n+`)
+	normalized := re.ReplaceAllString(input, "")
+
+	// Replace "< " with "<" and " >" with ">"
+	normalized = strings.ReplaceAll(normalized, "< ", "<")
+	normalized = strings.ReplaceAll(normalized, " >", ">")
+
+	return normalized
+}
+
+func isAlphaDigit(s string) bool {
+	// Check if the string length is 2
+	if len(s) != 2 {
+		return false
+	}
+	// Check if the first character is alphabetic
+	if !unicode.IsLetter(rune(s[0])) {
+		return false
+	}
+	// Check if the second character is a digit
+	if !unicode.IsDigit(rune(s[1])) {
+		return false
+	}
+	return true
+}
+
+// Function to transform <C>...</C> blocks to Go template syntax while preserving style tags
+// Used in html2gohtml processing
+func transformCTagGoHTML(input string) string {
+	// Clean the string to remove newlines and whitespaces within angled brackets
+	input = cleanString(input)
+
+	// Regex to match <C> ... </C> blocks Contains...
+	re := regexp.MustCompile(`<C>\s*<(\w+)>\s+(\S+)\s+(.*?)\s*</C>`)
+
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	if len(matches) == 0 {
+		fmt.Println("No <C>.<>..</C> tags found")
+		return input
+	}
+
+	var builder strings.Builder
+
+	for _, match := range matches {
+		field := match[1]                      // Variable Name
+		value := match[2]                      // Value
+		message := strings.TrimSpace(match[3]) // The message
+
+		builder.WriteString(fmt.Sprintf(`{{ if contains .%s "%s" }}
+		%s
+		{{ end }}
+		`, field, value, message))
+	}
+	return builder.String()
+}
+
+// Function to transform <E>...</E> blocks to Go template syntax while preserving style tags
+// Used in html2gohtml processing
+func transformETagGoHTML(input string) string {
+	// Clean the string to remove newlines and whitespaces within angled brackets
+	input = cleanString(input)
+
+	// Regex to match <E> ... </E> blocks Equals...
+	re := regexp.MustCompile(`<E>\s*<(\w+)>\s+(\S+)\s+(.*?)\s*</E>`)
+
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	if len(matches) == 0 {
+		fmt.Println("No <E>.<>..</E> tags found")
+		return input
+	}
+
+	var builder strings.Builder
+
+	for _, match := range matches {
+		field := match[1]                      // Variable Name
+		value := match[2]                      // Value
+		message := strings.TrimSpace(match[3]) // The message
+
+		builder.WriteString(fmt.Sprintf(`{{ if eq .%s "%s" }}
+		%s
+		{{ end }}
+		`, field, value, message))
+	}
+	return builder.String()
+}
+
+// Function to transform <N>...</N> blocks to Go template syntax while preserving style tags
+// Used in html2gohtml processing
+func transformNTagGoHTML(input string) string {
+	// Clean the string to remove newlines and whitespaces within angled brackets
+	input = cleanString(input)
+
+	// Regex to match <N> ... </N> blocks Not Equals...
+	re := regexp.MustCompile(`<N>\s*<(\w+)>\s+(\S+)\s+(.*?)\s*</N>`)
+
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	if len(matches) == 0 {
+		fmt.Println("No <N>.<>..</N> tags found")
+		return input
+	}
+
+	var builder strings.Builder
+
+	for _, match := range matches {
+		field := match[1]                      // Variable Name
+		value := match[2]                      // Value
+		message := strings.TrimSpace(match[3]) // The message
+
+		builder.WriteString(fmt.Sprintf(`{{ if ne .%s "%s" }}
+		%s
+		{{ end }}
+		`, field, value, message))
+	}
+	return builder.String()
+}
+
+// Function to transform <I>...</I> blocks to Go template syntax while preserving style tags
+// Used in html2gohtml processing
+func transformITagGoHTML(input string) string {
+	// Clean the string to remove newlines and whitespaces within angled brackets
+	input = cleanString(input)
+
+	// Regex to match <I> ... </I> blocks Not Equals...
+	re := regexp.MustCompile(`<I>\s*<(\w+)>\s+\[([^\]]+)\]\s+(.*?)\s*</I>`)
+
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	if len(matches) == 0 {
+		fmt.Println("No <I>.<>..</I> tags found")
+		return input
+	}
+
+	var result string
+
+	for _, match := range matches {
+		//full := match[0]
+		field := match[1]
+		rawList := strings.Fields(match[2]) // dynamic values list [A B C ...]
+		message := strings.TrimSpace(match[3])
+
+		var quoted []string
+		for _, item := range rawList {
+			quoted = append(quoted, fmt.Sprintf("%q", item)) // "A", "B", ...
+		}
+
+		gohtmlBlock := fmt.Sprintf(`{{ if in .%s %s }}
+   		 %s 
+		{{ end }}`, field, strings.Join(quoted, " "), message)
+
+		//result = strings.Replace(result, full, gohtmlBlock, 1)
+		result = gohtmlBlock
+	}
+
+	return result
+}
+
+// Function to transform <O>...</O> blocks to Go template syntax while preserving style tags
+// Used in html2gohtml processing
+func transformOTagGoHTML(input string) string {
+	// Clean the string to remove newlines and whitespaces within angled brackets
+	input = cleanString(input)
+
+	// Regex to match <O> ... </O> blocks Not Equals...
+	re := regexp.MustCompile(`<O>\s*<(\w+)>\s+\[([^\]]+)\]\s+(.*?)\s*</O>`)
+
+	matches := re.FindAllStringSubmatch(input, -1)
+
+	if len(matches) == 0 {
+		fmt.Println("No <O>.<>..</O> tags found")
+		return input
+	}
+
+	var result string
+
+	for _, match := range matches {
+		//full := match[0]
+		field := match[1]
+		rawList := strings.Fields(match[2]) // dynamic values list [A B C ...]
+		message := strings.TrimSpace(match[3])
+
+		var quoted []string
+		for _, item := range rawList {
+			quoted = append(quoted, fmt.Sprintf("%q", item)) // "A", "B", ...
+		}
+
+		gohtmlBlock := fmt.Sprintf(`{{ if out .%s %s }}
+   		 %s 
+		{{ end }}`, field, strings.Join(quoted, " "), message)
+
+		//result = strings.Replace(result, full, gohtmlBlock, 1)
+		result = gohtmlBlock
+	}
+
+	return result
+}
+
+// EnsurePageBreakCSS makes sure the <style> for .page-break exists exactly once.
+// If not found, it inserts it inside <head>...</head>.
+func EnsurePageBreakCSS(htmlContent string) string {
+	pageBreakCSS := `
+<style>
+.page-break {
+  page-break-before: always;
+}
+</style>`
+
+	// If .page-break CSS already exists, do nothing.
+	if strings.Contains(htmlContent, ".page-break") {
+		return htmlContent
+	}
+
+	// Try to insert before </head>. If no <head>, add at the beginning.
+	if strings.Contains(htmlContent, "</head>") {
+		return strings.Replace(htmlContent, "</head>", pageBreakCSS+"\n</head>", 1)
+	}
+
+	// If no <head>, just prepend at the top.
+	return pageBreakCSS + "\n" + htmlContent
+}
+
+////////////// END OF FUNCTIONS used in HTML2GOHTML /////////////////////////////////////////
+
+// // FUNCTIONS used in TESTGOHTMLJSON ////////////////////////////////////////
+func crtgohtmljson(gohtmlFile string, jsonFile string, outFile string, iFile string) {
+	// Read the HTML file
+	jsonData, err := os.ReadFile(jsonFile)
+	if err != nil {
+		fmt.Printf("Error reading JSON file: %v\n", err)
+		return
+	}
+
+	// Parse JSON into a map
+	var data map[string]interface{}
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, iFile)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+		return
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
+	// Parse and execute template
+	funcMap := createFuncMap()
+	tmpl, err := template.New(gohtmlFile).Funcs(funcMap).Parse(modifiedContent)
+	if err != nil {
+		log.Fatalf("Error loading template: %v", err)
+	}
+	// Render template to standard output or file
+	outputFile, err := os.Create(outFile)
+	if err != nil {
+		log.Fatalf("Error creating output file: %v", err)
+	}
+	defer outputFile.Close()
+
+	err = tmpl.Execute(outputFile, data)
+	if err != nil {
+		log.Fatalf("Error executing template: %v", err)
+	}
+
+	fmt.Printf("Test outfile created successfully at: %s\n", outFile)
+}
+
+//////////////////// END OF FUNCTIONS used in TESTGOHTMLJSON /////////////////////////////////
+
+// // FUNCTIONS used in PDFGOHTMLJSON ////////////////////////////////////////
+func formatInteger(famt string, ctype byte) string {
+	// Handle the Indian and Western numbering formats
+	n := len(famt)
+	if n <= 3 {
+		// No formatting needed for numbers with 3 or fewer digits
+		return famt
+	}
+
+	// Format the first three digits (thousands)
+	result := famt[n-3:]
+
+	if ctype == 'a' || ctype == 'A' {
+		// Format the remaining digits in groups of two (lakhs, crores, etc.)
+		for i := n - 3; i > 0; i -= 2 {
+			start := i - 2
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+	if ctype == 'c' || ctype == 'C' {
+		// Format the remaining digits in groups of three (millions, billions, etc.)
+		for i := n - 3; i > 0; i -= 3 {
+			start := i - 3
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+
+	// Return the formatted integer
+	return result
+}
+
+func formatDecimal(famt string, ctype byte) string {
+	decimalpart := ""
+	decimallen, _ := strconv.Atoi(string(ctype))
+	//damt, _ := strconv.Atoi(string(famt))
+	var decimalFloat float64 = 0
+	if decimallen == 0 {
+		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
+	} else {
+		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
+	}
+	if decimallen == 0 {
+		return decimalpart
+	} else {
+		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
+		decimalpart = fmt.Sprintf(formatString, decimalFloat)
+		decimalpart = decimalpart[1:] // Remove the leading "0"
+		return decimalpart
+	}
+}
+
+func formatNumber(value interface{}, fds string) string {
+	integralpart := ""
+	decimalpart := ""
+	famt := ""
+	famount := ""
+	decimallen, _ := strconv.Atoi(string(fds[1]))
+	if _, ok := value.(float64); ok {
+		famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(int); ok {
+		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(string); ok {
+		famt = value.(string)
+	}
+	parts := strings.Split(famt, ".")
+	if fds[0] == 'a' || fds[0] == 'A' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'c' || fds[0] == 'C' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'd' || fds[0] == 'D' {
+		integralpart = parts[0]
+	} else {
+		integralpart = parts[0]
+	}
+
+	if len(parts) > 1 {
+		decimalpart = formatDecimal(parts[1], fds[1])
+		famount = integralpart + decimalpart
+	} else {
+		famount = integralpart
+	}
+	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+// Custom template functions
+func createFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"formatNumber": formatNumber,
+		"contains":     strings.Contains,
+		"eq": func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+		},
+		"ne": func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) != fmt.Sprintf("%v", b)
+		},
+		"in": func(val interface{}, options ...interface{}) bool {
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return true
+				}
+			}
+			return false
+		},
+		"out": func(val string, options ...interface{}) bool {
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return false
+				}
+			}
+			return true
+		},
+	}
+}
+
+// Function to check if required files exist
+func checkGOHTMLFilesExist(arg string) {
+
+	jFile := arg + ".json"
+	gFile := arg + ".gohtml"
+	hgFile := arg + "-h.gohtml"
+	fgFile := arg + "-f.gohtml"
+
+	// Check for JSON file
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+
+	// Check for GOHTML File
+	if _, err := os.Stat(gFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", gFile)
+		os.Exit(1)
+	}
+
+	// Check for Header GOHTML File
+	if _, err := os.Stat(hgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hgFile)
+		os.Exit(1)
+	}
+
+	// Check for Footer GOHTML File
+	if _, err := os.Stat(fgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", fgFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("All Input files '%s','%s','%s' and '%s' exist. Start Processing...\n", jFile, gFile, hgFile, fgFile)
+}
+
+func createhtml(gohtmlFile string, jsonFile string, imgFolder string, outFile string) (err error) {
+	// Read the HTML file
+	jsonData, err := os.ReadFile(jsonFile)
+	if err != nil {
+		return err
+	}
+
+	// Parse JSON into a map
+	var data map[string]interface{}
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		return err
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, imgFolder)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		return err
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
+	// Replace [PageBrk] with <div class="page-break"></div>
+	// pagebrkContent := strings.ReplaceAll(string(imgContent), "[PageBrk]", `<div class="page-break"></div>`)
+
+	// Ensure page break CSS is present
+	// modifiedContent := EnsurePageBreakCSS(string(pagebrkContent))
+
+	// Parse and execute template
+	funcMap := createFuncMap()
+	tmpl, err := template.New(gohtmlFile).Funcs(funcMap).Parse(string(modifiedContent))
+	if err != nil {
+		return err
+	}
+
+	// Execute template into a buffer first
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return err
+	}
+
+	// Check for <!DOCTYPE html> and insert if missing
+	rendered := buf.String()
+	if !strings.HasPrefix(strings.TrimSpace(rendered), "<!DOCTYPE") {
+		rendered = "<!DOCTYPE html>\n" + rendered
+	}
+
+	// Write final HTML to output file
+	err = os.WriteFile(outFile, []byte(rendered), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Function to split the html file into multiple files by [OP] and [OL] marker tags
+type Section struct {
+	FileName    string
+	Orientation string // "Portrait" or "Landscape"
+}
+
+// SplitHTMLByMarkers splits HTML by [OL], [OP], and .page-break
+func SplitHTMLByMarkers(inputHTMLPath string) ([]Section, error) {
+	content, err := os.ReadFile(inputHTMLPath)
+	if err != nil {
+		return nil, fmt.Errorf("read error: %w", err)
+	}
+
+	html := string(content)
+
+	// Extract <style> block or entire <head> section
+	styleStart := strings.Index(html, "<style")
+	styleEnd := strings.Index(html, "</style>")
+	var styleBlock string
+	if styleStart != -1 && styleEnd != -1 {
+		styleEnd += len("</style>")
+		styleBlock = html[styleStart:styleEnd]
+	} else {
+		styleBlock = "" // Optional: log warning if not found
+	}
+
+	// Prepare <head> or inline style to inject into each split segment
+	styleHeader := fmt.Sprintf("<head>%s</head>\n<body>", styleBlock)
+
+	var sections []Section
+	var orientation = "Portrait"
+
+	splitMarkers := []string{"[OL]", "[OP]", `<div class="page-break">`}
+	currentIndex := 0
+	sectionIndex := 1
+
+	for {
+		nextSplitIndex := -1
+		nextMarker := ""
+
+		// Find next closest marker
+		for _, marker := range splitMarkers {
+			idx := strings.Index(html[currentIndex:], marker)
+			if idx != -1 {
+				idx += currentIndex // convert to absolute index
+				if nextSplitIndex == -1 || idx < nextSplitIndex {
+					nextSplitIndex = idx
+					nextMarker = marker
+				}
+			}
+		}
+
+		// No more markers
+		if nextSplitIndex == -1 {
+			remaining := html[currentIndex:]
+			if strings.TrimSpace(remaining) != "" {
+				sectionFile := fmt.Sprintf("section_%d.html", sectionIndex)
+				finalContent := injectStyle(styleHeader, remaining)
+				if err := os.WriteFile(sectionFile, []byte(finalContent), 0644); err != nil {
+					return nil, err
+				}
+				sections = append(sections, Section{sectionFile, orientation})
+			}
+			break
+		}
+
+		// Save content up to marker
+		segment := html[currentIndex:nextSplitIndex]
+		sectionFile := fmt.Sprintf("section_%d.html", sectionIndex)
+		finalContent := injectStyle(styleHeader, segment)
+		if err := os.WriteFile(sectionFile, []byte(finalContent), 0644); err != nil {
+			return nil, err
+		}
+		sections = append(sections, Section{sectionFile, orientation})
+		sectionIndex++
+
+		// Update orientation if needed
+		switch nextMarker {
+		case "[OL]":
+			orientation = "Landscape"
+		case "[OP]":
+			orientation = "Portrait"
+		}
+
+		// Skip marker length and continue
+		currentIndex = nextSplitIndex + len(nextMarker)
+	}
+
+	return sections, nil
+}
+
+// injectStyle wraps segment in <html><head>...</head><body>...</body></html>
+func injectStyle(styleHeader, bodyContent string) string {
+	bodyTag := "<body>"
+	bodyIdx := strings.Index(strings.ToLower(bodyContent), bodyTag)
+	if bodyIdx != -1 {
+		bodyContent = bodyContent[bodyIdx+len(bodyTag):]
+	}
+	return fmt.Sprintf("<html>%s\n%s\n</body></html>", styleHeader, bodyContent)
+}
+
+func getDefaultPtFromHead(html string) float64 {
+	// Extract <head>...</head>
+	headRegex := regexp.MustCompile(`(?is)<head.*?>(.*?)</head>`)
+	headMatch := headRegex.FindStringSubmatch(html)
+
+	val := 100.0 // fallback default percentage
+
+	if len(headMatch) > 1 {
+		headContent := headMatch[1]
+
+		// Look only inside <head>
+		lhRegex := regexp.MustCompile(`(?i)line-height\s*[:=]\s*([0-9]+)%`)
+		match := lhRegex.FindStringSubmatch(headContent)
+
+		if len(match) > 1 {
+			parsed, err := strconv.ParseFloat(match[1], 64)
+			if err == nil {
+				val = parsed
+			}
+		}
+	}
+	// 100% = 16px (at 96 DPI standard CSS resolution)
+	// 1pt = 1.33px i.e, 1px = 0.751879699
+	// Formula: 16.0 * 0.75188 * val / 100.0
+	return 16.0 * 0.75188 * val / 100.0
+}
+
+// calcMarginBypbrTags calculates margin-bottom (in pt) from HTML string.
+// Uses <p> + <br> counts with defaultPt to return the value in mm and its count.
+func calcMarginByPBrTags(html string, defaultPt float64, lhct int) (float64, int) {
+	pbrlineinMM := 0.0
+	lineCount := 0
+	// Regex for <p>...</p>
+	pRegex := regexp.MustCompile(`(?is)<p[^>]*>(.*?)</p>`)
+	// Regex for <br>
+	brRegex := regexp.MustCompile(`(?i)<br\s*/?>`)
+
+	// Find all <p> blocks
+	paragraphs := pRegex.FindAllStringSubmatch(html, -1)
+	for _, p := range paragraphs {
+		content := p[1]
+		brCount := len(brRegex.FindAllString(content, -1))
+		if brCount > 0 {
+			lineCount += brCount
+		} else {
+			lineCount += 1 + brCount
+		}
+	}
+
+	// Remove <p>...</p> to avoid double-counting
+	htmlWithoutP := pRegex.ReplaceAllString(html, "")
+
+	// Count <br> outside <p>
+	outsideBrCount := len(brRegex.FindAllString(htmlWithoutP, -1))
+	lineCount += outsideBrCount
+
+	if lineCount == 0 {
+		lineCount = 1 // fallback, at least one line
+	}
+
+	// Adjust the lineCount for lhct not to double count
+	lineCount = lineCount - lhct
+
+	// 1pt equals 0.352778 in mm
+	pbrlineinMM = float64(lineCount) * defaultPt * 0.352778
+	return pbrlineinMM, lineCount
+}
+
+// absPath ensures Chrome can open local files
+func absPath(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return abs
+}
+
+// convertPtToMM converts points to millimeters (1pt = 0.3527mm)
+func convertPtToMM(pt float64) float64 {
+	return pt * 0.3527
+}
+
+// --- helper to extract pt-based height from style and convert to mm
+func parsePtToMM(style string) float64 {
+	re := regexp.MustCompile(`height:([\d.]+)pt`)
+	if m := re.FindStringSubmatch(style); len(m) > 1 {
+		pt, _ := strconv.ParseFloat(m[1], 64)
+		return pt * 0.352778
+	}
+	return 0
+}
+
+// --- helper to extract px height from img attr and convert to mm
+func parsePxToMM(attr string) float64 {
+	px, err := strconv.ParseFloat(attr, 64)
+	if err == nil {
+		return px * 25.4 / 96.0 // px → mm at 96 DPI
+	}
+	return 0
+}
+
+// --- compute table contribution
+func calcTableHeight(html string, defaultPt float64) float64 {
+	totalMM := 0.0
+	// find all <tr>...</tr>
+	trRe := regexp.MustCompile(`(?is)<tr[^>]*>(.*?)</tr>`)
+	trs := trRe.FindAllStringSubmatch(html, -1)
+
+	for _, tr := range trs {
+		row := tr[0]
+
+		// 1. explicit height in <tr> style
+		if mm := parsePtToMM(row); mm > 0 {
+			totalMM += mm
+			continue
+		}
+
+		// 2. check images inside row
+		imgRe := regexp.MustCompile(`(?i)<img[^>]+height=["']?(\d+)["']?`)
+		if m := imgRe.FindStringSubmatch(row); len(m) > 1 {
+			totalMM += parsePxToMM(m[1])
+			continue
+		}
+
+		// 3. fallback: treat as text lines inside row
+		brCount := strings.Count(strings.ToLower(row), "<br")
+		lines := brCount + 1
+		totalMM += float64(lines) * defaultPt * 0.352778
+	}
+
+	return totalMM
+}
+
+// --- Strip all tables so we don't double-count their inner content ---
+func stripTables(html string) string {
+	tableRe := regexp.MustCompile(`(?is)<table\b[^>]*>.*?</table>`)
+	return tableRe.ReplaceAllString(html, "")
+}
+
+// calcMarginsFromCSS calculates margin-top and margin-bottom (mm)
+// using line-height, padding and an optional moderation factor (extraMM)
+func calcMarginsFromCSS(headerFile, footerFile string, topMM, bottomMM float64) (float64, float64, error) {
+	var marginTop, marginBottom float64
+
+	// --- HEADER ---
+	if headerFile != "" {
+		data, err := os.ReadFile(headerFile)
+		if err != nil {
+			return 0.0, 0.0, fmt.Errorf("failed to read header file: %w", err)
+		}
+		headerCSS := string(data)
+		headerdefpt = getDefaultPtFromHead(headerCSS)
+
+		tableMM := calcTableHeight(headerCSS, headerdefpt)
+		headerCSS1 := stripTables(headerCSS)
+
+		margintopMM, _ := extractCSSValue(headerCSS1, "margin-top")
+		lineHeightMM, lhcount := extractCSSValue(headerCSS1, "line-height")
+		heightMM, _ := extractCSSValue(headerCSS1, "height")
+		paddingMM, _ := extractCSSValue(headerCSS1, "padding")
+		pbrlineMM, _ := calcMarginByPBrTags(headerCSS1, headerdefpt, lhcount)
+		//marginbottomMM, _ := extractCSSValue(headerCSS1, "margin-bottom")
+
+		totalMM := margintopMM + lineHeightMM + heightMM + paddingMM + pbrlineMM + tableMM + topMM
+
+		if totalMM > 0 {
+			marginTop += totalMM
+		} else {
+			marginTop = 0
+		}
+	}
+
+	// --- FOOTER ---
+	if footerFile != "" {
+		data, err := os.ReadFile(footerFile)
+		if err != nil {
+			return 0.0, 0.0, fmt.Errorf("failed to read footer file: %w", err)
+		}
+		footerCSS := string(data)
+		footerdefpt = getDefaultPtFromHead(footerCSS)
+
+		tableMM := calcTableHeight(footerCSS, footerdefpt)
+		footerCSS1 := stripTables(footerCSS)
+
+		//margintopMM, _ := extractCSSValue(footerCSS1, "margin-top")
+		lineHeightMM, lhcount := extractCSSValue(footerCSS1, "line-height")
+		heightMM, _ := extractCSSValue(footerCSS1, "height")
+		paddingMM, _ := extractCSSValue(footerCSS1, "padding")
+		marginbottomMM, _ := extractCSSValue(footerCSS1, "margin-bottom")
+		pbrlineMM, _ := calcMarginByPBrTags(footerCSS1, footerdefpt, lhcount)
+
+		totalMM := lineHeightMM + heightMM + paddingMM + marginbottomMM + pbrlineMM + tableMM + bottomMM
+
+		if totalMM > 0 {
+			marginBottom += totalMM
+		} else {
+			marginBottom = 0
+		}
+	}
+
+	return marginTop, marginBottom, nil
+}
+
+// extractCSSValue extracts a numeric CSS value in px|pt|cm|mm|em|rem|%
+// from inline CSS and returns the value in mm with count
+// Unit conversions
+// 1pt = 0.352778 mm.
+// 1pt = 1.333px (at 96 DPI standard CSS resolution)
+// 1px = 0.264583 mm.
+// 1.0% = 16px (of base font) / 100
+// 1cm = 10.000000 mm.
+// 1em or 1rem = 16px (of base font)
+func extractCSSValue(css, prop string) (float64, int) {
+	heightinMM := 0.0
+	// Remove everything inside <head>...</head> (case-insensitive, multiline, dotall)
+	headRe := regexp.MustCompile(`(?is)<head.*?>.*?</head>`)
+	css = headRe.ReplaceAllString(css, "")
+
+	//re := regexp.MustCompile(prop + `\s*:\s*([0-9.]+)pt`)
+	re := regexp.MustCompile(prop + `\s*:\s*([\d\.]+)(px|pt|cm|mm|em|rem|%)?`)
+	// Extract all line-heights
+	lineMatches := re.FindAllStringSubmatch(css, -1)
+	for _, m := range lineMatches {
+		if len(m) == 3 {
+			val, _ := strconv.ParseFloat(m[1], 64)
+			unit := m[2]
+			switch unit {
+			case "pt":
+				heightinMM += 0.352778 * val
+			case "px":
+				heightinMM += 0.264583 * val
+			case "mm":
+				heightinMM += val
+			case "cm":
+				heightinMM += 10 * val
+			case "%":
+				heightinMM += 16.0 * 0.264583 * val / 100.0
+			case "em", "rem":
+				heightinMM += 16.0 * 0.264583 * val
+			}
+		}
+	}
+	return heightinMM, len(lineMatches)
+}
+
+// InjectPageNumberLine replaces a "Page X of Y" line inside footer HTML by finding [PAGENO] placeholder
+func InjectPageNumberLine(fFile string, footerPath string, pg int, totalpages int) error {
+	// Read original footer HTML
+	b, err := os.ReadFile(fFile)
+	if err != nil {
+		return fmt.Errorf("read footer: %w", err)
+	}
+	html := string(b)
+
+	var replacement string
+	// Replace placeholder [PAGENO] with actual text as required
+	if totalpages > 1 {
+		replacement = fmt.Sprintf("Page %d of %d", pg, totalpages)
+	} else {
+		replacement = ""
+	}
+	html = strings.ReplaceAll(html, "[PAGENO]", replacement)
+
+	// Write to temp footer file
+	if err := os.WriteFile(footerPath, []byte(html), 0644); err != nil {
+		return fmt.Errorf("write footer: %w", err)
+	}
+
+	return nil
+}
+
+////////////////////// END OF FUNCTIONS used in PDFGOHTMLJSON /////////////////////////////

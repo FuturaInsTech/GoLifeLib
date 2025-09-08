@@ -1,0 +1,811 @@
+// pdfgohtmljson.exe program code version 4
+// Usage: pdfgohtmljson <base_filename> // without extension of .htm
+// In v2 added <E> Equals eq, <N> NotEquals ne, <C> Contains, <I> In and <O> Out Variations
+// In v3 using [OP] and [OL] html file is split and merged to handle orientation
+// In v3 used -outfile.html -hfile.html and -ffile.html temp files in PDF Generation
+// In v4 calculate Top and Bottom Margins and also process [PAGENO] printing if page size is more than 1
+
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+)
+
+var headerdefpt float64
+var footerdefpt float64
+
+func formatInteger(famt string, ctype byte) string {
+	// Handle the Indian and Western numbering formats
+	n := len(famt)
+	if n <= 3 {
+		// No formatting needed for numbers with 3 or fewer digits
+		return famt
+	}
+
+	// Format the first three digits (thousands)
+	result := famt[n-3:]
+
+	if ctype == 'a' || ctype == 'A' {
+		// Format the remaining digits in groups of two (lakhs, crores, etc.)
+		for i := n - 3; i > 0; i -= 2 {
+			start := i - 2
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+	if ctype == 'c' || ctype == 'C' {
+		// Format the remaining digits in groups of three (millions, billions, etc.)
+		for i := n - 3; i > 0; i -= 3 {
+			start := i - 3
+			if start < 0 {
+				start = 0
+			}
+			result = famt[start:i] + "," + result
+		}
+	}
+
+	// Return the formatted integer
+	return result
+}
+
+func formatDecimal(famt string, ctype byte) string {
+	decimalpart := ""
+	decimallen, _ := strconv.Atoi(string(ctype))
+	//damt, _ := strconv.Atoi(string(famt))
+	var decimalFloat float64 = 0
+	if decimallen == 0 {
+		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
+	} else {
+		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
+	}
+	if decimallen == 0 {
+		return decimalpart
+	} else {
+		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
+		decimalpart = fmt.Sprintf(formatString, decimalFloat)
+		decimalpart = decimalpart[1:] // Remove the leading "0"
+		return decimalpart
+	}
+}
+
+func formatNumber(value interface{}, fds string) string {
+	integralpart := ""
+	decimalpart := ""
+	famt := ""
+	famount := ""
+	decimallen, _ := strconv.Atoi(string(fds[1]))
+	if _, ok := value.(float64); ok {
+		famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(int); ok {
+		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
+	}
+	if _, ok := value.(string); ok {
+		famt = value.(string)
+	}
+	parts := strings.Split(famt, ".")
+	if fds[0] == 'a' || fds[0] == 'A' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'c' || fds[0] == 'C' {
+		integralpart = formatInteger(parts[0], fds[0])
+	} else if fds[0] == 'd' || fds[0] == 'D' {
+		integralpart = parts[0]
+	} else {
+		integralpart = parts[0]
+	}
+
+	if len(parts) > 1 {
+		decimalpart = formatDecimal(parts[1], fds[1])
+		famount = integralpart + decimalpart
+	} else {
+		famount = integralpart
+	}
+	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+// Custom template functions
+func createFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"formatNumber": formatNumber,
+		"contains":     strings.Contains,
+		"eq": func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
+		},
+		"ne": func(a, b interface{}) bool {
+			return fmt.Sprintf("%v", a) != fmt.Sprintf("%v", b)
+		},
+		"in": func(val interface{}, options ...interface{}) bool {
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return true
+				}
+			}
+			return false
+		},
+		"out": func(val string, options ...interface{}) bool {
+			valStr := fmt.Sprintf("%v", val)
+			for _, opt := range options {
+				if valStr == fmt.Sprintf("%v", opt) {
+					return false
+				}
+			}
+			return true
+		},
+	}
+}
+
+// Function to check if required files exist
+func checkGOHTMLFilesExist(arg string) {
+
+	jFile := arg + ".json"
+	gFile := arg + ".gohtml"
+	hgFile := arg + "-h.gohtml"
+	fgFile := arg + "-f.gohtml"
+
+	// Check for JSON file
+	if _, err := os.Stat(jFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
+		os.Exit(1)
+	}
+
+	// Check for GOHTML File
+	if _, err := os.Stat(gFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", gFile)
+		os.Exit(1)
+	}
+
+	// Check for Header GOHTML File
+	if _, err := os.Stat(hgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", hgFile)
+		os.Exit(1)
+	}
+
+	// Check for Footer GOHTML File
+	if _, err := os.Stat(fgFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", fgFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("All Input files '%s','%s','%s' and '%s' exist. Start Processing...\n", jFile, gFile, hgFile, fgFile)
+}
+
+// EnsurePageBreakCSS makes sure the <style> for .page-break exists exactly once.
+// If not found, it inserts it inside <head>...</head>.
+func EnsurePageBreakCSS(htmlContent string) string {
+	pageBreakCSS := `
+<style>
+.page-break {
+  page-break-before: always;
+}
+</style>`
+
+	// If .page-break CSS already exists, do nothing.
+	if strings.Contains(htmlContent, ".page-break") {
+		return htmlContent
+	}
+
+	// Try to insert before </head>. If no <head>, add at the beginning.
+	if strings.Contains(htmlContent, "</head>") {
+		return strings.Replace(htmlContent, "</head>", pageBreakCSS+"\n</head>", 1)
+	}
+
+	// If no <head>, just prepend at the top.
+	return pageBreakCSS + "\n" + htmlContent
+}
+
+func createhtml(gohtmlFile string, jsonFile string, imgFolder string, outFile string) (err error) {
+	// Read the HTML file
+	jsonData, err := os.ReadFile(jsonFile)
+	if err != nil {
+		return err
+	}
+
+	// Parse JSON into a map
+	var data map[string]interface{}
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		return err
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	iPath := filepath.Join(cwdPath, "static")
+	imagePath := filepath.Join(iPath, imgFolder)
+
+	// Read the gohtml file
+	fileContent, err := os.ReadFile(gohtmlFile)
+	if err != nil {
+		return err
+	}
+
+	// Convert content to string and replace {{.Img}} before parsing
+	modifiedContent := strings.ReplaceAll(string(fileContent), "{{.Img}}", imagePath)
+
+	// Replace [PageBrk] with <div class="page-break"></div>
+	// pagebrkContent := strings.ReplaceAll(string(imgContent), "[PageBrk]", `<div class="page-break"></div>`)
+
+	// Ensure page break CSS is present
+	// modifiedContent := EnsurePageBreakCSS(string(pagebrkContent))
+
+	// Parse and execute template
+	funcMap := createFuncMap()
+	tmpl, err := template.New(gohtmlFile).Funcs(funcMap).Parse(string(modifiedContent))
+	if err != nil {
+		return err
+	}
+
+	// Execute template into a buffer first
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return err
+	}
+
+	// Check for <!DOCTYPE html> and insert if missing
+	rendered := buf.String()
+	if !strings.HasPrefix(strings.TrimSpace(rendered), "<!DOCTYPE") {
+		rendered = "<!DOCTYPE html>\n" + rendered
+	}
+
+	// Write final HTML to output file
+	err = os.WriteFile(outFile, []byte(rendered), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Function to split the html file into multiple files by [OP] and [OL] marker tags
+type Section struct {
+	FileName    string
+	Orientation string // "Portrait" or "Landscape"
+}
+
+// SplitHTMLByMarkers splits HTML by [OL], [OP], and .page-break
+func SplitHTMLByMarkers(inputHTMLPath string) ([]Section, error) {
+	content, err := os.ReadFile(inputHTMLPath)
+	if err != nil {
+		return nil, fmt.Errorf("read error: %w", err)
+	}
+
+	html := string(content)
+
+	// Extract <style> block or entire <head> section
+	styleStart := strings.Index(html, "<style")
+	styleEnd := strings.Index(html, "</style>")
+	var styleBlock string
+	if styleStart != -1 && styleEnd != -1 {
+		styleEnd += len("</style>")
+		styleBlock = html[styleStart:styleEnd]
+	} else {
+		styleBlock = "" // Optional: log warning if not found
+	}
+
+	// Prepare <head> or inline style to inject into each split segment
+	styleHeader := fmt.Sprintf("<head>%s</head>\n<body>", styleBlock)
+
+	var sections []Section
+	var orientation = "Portrait"
+
+	splitMarkers := []string{"[OL]", "[OP]", `<div class="page-break">`}
+	currentIndex := 0
+	sectionIndex := 1
+
+	for {
+		nextSplitIndex := -1
+		nextMarker := ""
+
+		// Find next closest marker
+		for _, marker := range splitMarkers {
+			idx := strings.Index(html[currentIndex:], marker)
+			if idx != -1 {
+				idx += currentIndex // convert to absolute index
+				if nextSplitIndex == -1 || idx < nextSplitIndex {
+					nextSplitIndex = idx
+					nextMarker = marker
+				}
+			}
+		}
+
+		// No more markers
+		if nextSplitIndex == -1 {
+			remaining := html[currentIndex:]
+			if strings.TrimSpace(remaining) != "" {
+				sectionFile := fmt.Sprintf("section_%d.html", sectionIndex)
+				finalContent := injectStyle(styleHeader, remaining)
+				if err := os.WriteFile(sectionFile, []byte(finalContent), 0644); err != nil {
+					return nil, err
+				}
+				sections = append(sections, Section{sectionFile, orientation})
+			}
+			break
+		}
+
+		// Save content up to marker
+		segment := html[currentIndex:nextSplitIndex]
+		sectionFile := fmt.Sprintf("section_%d.html", sectionIndex)
+		finalContent := injectStyle(styleHeader, segment)
+		if err := os.WriteFile(sectionFile, []byte(finalContent), 0644); err != nil {
+			return nil, err
+		}
+		sections = append(sections, Section{sectionFile, orientation})
+		sectionIndex++
+
+		// Update orientation if needed
+		switch nextMarker {
+		case "[OL]":
+			orientation = "Landscape"
+		case "[OP]":
+			orientation = "Portrait"
+		}
+
+		// Skip marker length and continue
+		currentIndex = nextSplitIndex + len(nextMarker)
+	}
+
+	return sections, nil
+}
+
+// injectStyle wraps segment in <html><head>...</head><body>...</body></html>
+func injectStyle(styleHeader, bodyContent string) string {
+	bodyTag := "<body>"
+	bodyIdx := strings.Index(strings.ToLower(bodyContent), bodyTag)
+	if bodyIdx != -1 {
+		bodyContent = bodyContent[bodyIdx+len(bodyTag):]
+	}
+	return fmt.Sprintf("<html>%s\n%s\n</body></html>", styleHeader, bodyContent)
+}
+
+func getDefaultPtFromHead(html string) float64 {
+	// Extract <head>...</head>
+	headRegex := regexp.MustCompile(`(?is)<head.*?>(.*?)</head>`)
+	headMatch := headRegex.FindStringSubmatch(html)
+
+	val := 100.0 // fallback default percentage
+
+	if len(headMatch) > 1 {
+		headContent := headMatch[1]
+
+		// Look only inside <head>
+		lhRegex := regexp.MustCompile(`(?i)line-height\s*[:=]\s*([0-9]+)%`)
+		match := lhRegex.FindStringSubmatch(headContent)
+
+		if len(match) > 1 {
+			parsed, err := strconv.ParseFloat(match[1], 64)
+			if err == nil {
+				val = parsed
+			}
+		}
+	}
+	// 100% = 16px (at 96 DPI standard CSS resolution)
+	// 1pt = 1.33px i.e, 1px = 0.751879699
+	// Formula: 16.0 * 0.75188 * val / 100.0
+	return 16.0 * 0.75188 * val / 100.0
+}
+
+// calcMarginBypbrTags calculates margin-bottom (in pt) from HTML string.
+// Uses <p> + <br> counts with defaultPt to return the value in mm and its count.
+func calcMarginByPBrTags(html string, defaultPt float64, lhct int) (float64, int) {
+	pbrlineinMM := 0.0
+	lineCount := 0
+	// Regex for <p>...</p>
+	pRegex := regexp.MustCompile(`(?is)<p[^>]*>(.*?)</p>`)
+	// Regex for <br>
+	brRegex := regexp.MustCompile(`(?i)<br\s*/?>`)
+
+	// Find all <p> blocks
+	paragraphs := pRegex.FindAllStringSubmatch(html, -1)
+	for _, p := range paragraphs {
+		content := p[1]
+		brCount := len(brRegex.FindAllString(content, -1))
+		if brCount > 0 {
+			lineCount += brCount
+		} else {
+			lineCount += 1 + brCount
+		}
+	}
+
+	// Remove <p>...</p> to avoid double-counting
+	htmlWithoutP := pRegex.ReplaceAllString(html, "")
+
+	// Count <br> outside <p>
+	outsideBrCount := len(brRegex.FindAllString(htmlWithoutP, -1))
+	lineCount += outsideBrCount
+
+	if lineCount == 0 {
+		lineCount = 1 // fallback, at least one line
+	}
+
+	// Adjust the lineCount for lhct not to double count
+	lineCount = lineCount - lhct
+
+	// 1pt equals 0.352778 in mm
+	pbrlineinMM = float64(lineCount) * defaultPt * 0.352778
+	return pbrlineinMM, lineCount
+}
+
+// absPath ensures Chrome can open local files
+func absPath(path string) string {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return abs
+}
+
+// convertPtToMM converts points to millimeters (1pt = 0.3527mm)
+func convertPtToMM(pt float64) float64 {
+	return pt * 0.3527
+}
+
+// --- helper to extract pt-based height from style and convert to mm
+func parsePtToMM(style string) float64 {
+	re := regexp.MustCompile(`height:([\d.]+)pt`)
+	if m := re.FindStringSubmatch(style); len(m) > 1 {
+		pt, _ := strconv.ParseFloat(m[1], 64)
+		return pt * 0.352778
+	}
+	return 0
+}
+
+// --- helper to extract px height from img attr and convert to mm
+func parsePxToMM(attr string) float64 {
+	px, err := strconv.ParseFloat(attr, 64)
+	if err == nil {
+		return px * 25.4 / 96.0 // px → mm at 96 DPI
+	}
+	return 0
+}
+
+// --- compute table contribution
+func calcTableHeight(html string, defaultPt float64) float64 {
+	totalMM := 0.0
+	// find all <tr>...</tr>
+	trRe := regexp.MustCompile(`(?is)<tr[^>]*>(.*?)</tr>`)
+	trs := trRe.FindAllStringSubmatch(html, -1)
+
+	for _, tr := range trs {
+		row := tr[0]
+
+		// 1. explicit height in <tr> style
+		if mm := parsePtToMM(row); mm > 0 {
+			totalMM += mm
+			continue
+		}
+
+		// 2. check images inside row
+		imgRe := regexp.MustCompile(`(?i)<img[^>]+height=["']?(\d+)["']?`)
+		if m := imgRe.FindStringSubmatch(row); len(m) > 1 {
+			totalMM += parsePxToMM(m[1])
+			continue
+		}
+
+		// 3. fallback: treat as text lines inside row
+		brCount := strings.Count(strings.ToLower(row), "<br")
+		lines := brCount + 1
+		totalMM += float64(lines) * defaultPt * 0.352778
+	}
+
+	return totalMM
+}
+
+// --- Strip all tables so we don't double-count their inner content ---
+func stripTables(html string) string {
+	tableRe := regexp.MustCompile(`(?is)<table\b[^>]*>.*?</table>`)
+	return tableRe.ReplaceAllString(html, "")
+}
+
+// calcMarginsFromCSS calculates margin-top and margin-bottom (mm)
+// using line-height, padding and an optional moderation factor (extraMM)
+func calcMarginsFromCSS(headerFile, footerFile string, topMM, bottomMM float64) (float64, float64, error) {
+	var marginTop, marginBottom float64
+
+	// --- HEADER ---
+	if headerFile != "" {
+		data, err := os.ReadFile(headerFile)
+		if err != nil {
+			return 0.0, 0.0, fmt.Errorf("failed to read header file: %w", err)
+		}
+		headerCSS := string(data)
+		headerdefpt = getDefaultPtFromHead(headerCSS)
+
+		tableMM := calcTableHeight(headerCSS, headerdefpt)
+		headerCSS1 := stripTables(headerCSS)
+
+		margintopMM, _ := extractCSSValue(headerCSS1, "margin-top")
+		lineHeightMM, lhcount := extractCSSValue(headerCSS1, "line-height")
+		heightMM, _ := extractCSSValue(headerCSS1, "height")
+		paddingMM, _ := extractCSSValue(headerCSS1, "padding")
+		pbrlineMM, _ := calcMarginByPBrTags(headerCSS1, headerdefpt, lhcount)
+		//marginbottomMM, _ := extractCSSValue(headerCSS1, "margin-bottom")
+
+		totalMM := margintopMM + lineHeightMM + heightMM + paddingMM + pbrlineMM + tableMM + topMM
+
+		if totalMM > 0 {
+			marginTop += totalMM
+		} else {
+			marginTop = 0
+		}
+	}
+
+	// --- FOOTER ---
+	if footerFile != "" {
+		data, err := os.ReadFile(footerFile)
+		if err != nil {
+			return 0.0, 0.0, fmt.Errorf("failed to read footer file: %w", err)
+		}
+		footerCSS := string(data)
+		footerdefpt = getDefaultPtFromHead(footerCSS)
+
+		tableMM := calcTableHeight(footerCSS, footerdefpt)
+		footerCSS1 := stripTables(footerCSS)
+
+		//margintopMM, _ := extractCSSValue(footerCSS1, "margin-top")
+		lineHeightMM, lhcount := extractCSSValue(footerCSS1, "line-height")
+		heightMM, _ := extractCSSValue(footerCSS1, "height")
+		paddingMM, _ := extractCSSValue(footerCSS1, "padding")
+		marginbottomMM, _ := extractCSSValue(footerCSS1, "margin-bottom")
+		pbrlineMM, _ := calcMarginByPBrTags(footerCSS1, footerdefpt, lhcount)
+
+		totalMM := lineHeightMM + heightMM + paddingMM + marginbottomMM + pbrlineMM + tableMM + bottomMM
+
+		if totalMM > 0 {
+			marginBottom += totalMM
+		} else {
+			marginBottom = 0
+		}
+	}
+
+	return marginTop, marginBottom, nil
+}
+
+// extractCSSValue extracts a numeric CSS value in px|pt|cm|mm|em|rem|%
+// from inline CSS and returns the value in mm with count
+// Unit conversions
+// 1pt = 0.352778 mm.
+// 1pt = 1.333px (at 96 DPI standard CSS resolution)
+// 1px = 0.264583 mm.
+// 1.0% = 16px (of base font) / 100
+// 1cm = 10.000000 mm.
+// 1em or 1rem = 16px (of base font)
+func extractCSSValue(css, prop string) (float64, int) {
+	heightinMM := 0.0
+	// Remove everything inside <head>...</head> (case-insensitive, multiline, dotall)
+	headRe := regexp.MustCompile(`(?is)<head.*?>.*?</head>`)
+	css = headRe.ReplaceAllString(css, "")
+
+	//re := regexp.MustCompile(prop + `\s*:\s*([0-9.]+)pt`)
+	re := regexp.MustCompile(prop + `\s*:\s*([\d\.]+)(px|pt|cm|mm|em|rem|%)?`)
+	// Extract all line-heights
+	lineMatches := re.FindAllStringSubmatch(css, -1)
+	for _, m := range lineMatches {
+		if len(m) == 3 {
+			val, _ := strconv.ParseFloat(m[1], 64)
+			unit := m[2]
+			switch unit {
+			case "pt":
+				heightinMM += 0.352778 * val
+			case "px":
+				heightinMM += 0.264583 * val
+			case "mm":
+				heightinMM += val
+			case "cm":
+				heightinMM += 10 * val
+			case "%":
+				heightinMM += 16.0 * 0.264583 * val / 100.0
+			case "em", "rem":
+				heightinMM += 16.0 * 0.264583 * val
+			}
+		}
+	}
+	return heightinMM, len(lineMatches)
+}
+
+// InjectPageNumberLine replaces a "Page X of Y" line inside footer HTML by finding [PAGENO] placeholder
+func InjectPageNumberLine(fFile string, footerPath string, pg int, totalpages int) error {
+	// Read original footer HTML
+	b, err := os.ReadFile(fFile)
+	if err != nil {
+		return fmt.Errorf("read footer: %w", err)
+	}
+	html := string(b)
+
+	var replacement string
+	// Replace placeholder [PAGENO] with actual text as required
+	if totalpages > 1 {
+		replacement = fmt.Sprintf("Page %d of %d", pg, totalpages)
+	} else {
+		replacement = ""
+	}
+	html = strings.ReplaceAll(html, "[PAGENO]", replacement)
+
+	// Write to temp footer file
+	if err := os.WriteFile(footerPath, []byte(html), 0644); err != nil {
+		return fmt.Errorf("write footer: %w", err)
+	}
+
+	return nil
+}
+
+func main() {
+	var gohtmlFile string
+	var hgohtmlFile string
+	var fgohtmlFile string
+	var jsonFile string
+	var pdfFile string
+
+	var outFile string
+	var hFile string
+	var fFile string
+	var imgfolder string
+	var himgfolder string
+	var fimgfolder string
+
+	var iFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> ...")
+		fmt.Println("Usage: cmd <basefilename> ...")
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	gohtmlFile = iFile + ".gohtml"
+	hgohtmlFile = iFile + "-h.gohtml"
+	fgohtmlFile = iFile + "-f.gohtml"
+	jsonFile = iFile + ".json"
+	pdfFile = iFile + ".pdf"
+
+	outFile = iFile + "-outfile.html"
+	hFile = iFile + "-hfile.html"
+	fFile = iFile + "-ffile.html"
+	imgfolder = iFile
+	himgfolder = iFile + "-h"
+	fimgfolder = iFile + "-f"
+
+	// Check if the required files exist
+	checkGOHTMLFilesExist(iFile)
+	fmt.Println("  In Progress...")
+
+	err := createhtml(gohtmlFile, jsonFile, imgfolder, outFile)
+	if err != nil {
+		fmt.Println("HTML creation error:", err)
+		return
+	}
+	err = createhtml(hgohtmlFile, jsonFile, himgfolder, hFile)
+	if err != nil {
+		fmt.Println("Header HTML creation error:", err)
+		return
+	}
+
+	err = createhtml(fgohtmlFile, jsonFile, fimgfolder, fFile)
+	if err != nil {
+		fmt.Println("Footer HTML creation error:", err)
+		return
+	}
+
+	marginTop, marginBottom, _ := calcMarginsFromCSS(hFile, fFile, 0, 0)
+
+	// Load JSON config
+	data, err := os.ReadFile(jsonFile)
+	if err != nil {
+		fmt.Println("Read jsonFile error:", err)
+		return
+	}
+
+	var m map[string]interface{}
+	err = json.Unmarshal(data, &m)
+	if err != nil {
+		fmt.Println("Unmarshal json data error:", err)
+		return
+	}
+
+	// Get the current working directory
+	cwdPath, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Cannot find current working path:", err)
+		return
+	}
+
+	hFile = filepath.Join(cwdPath, hFile)
+	fFile = filepath.Join(cwdPath, fFile)
+	outFile = filepath.Join(cwdPath, outFile)
+	pdfFile = filepath.Join(cwdPath, pdfFile)
+
+	sections, _ := SplitHTMLByMarkers(outFile)
+
+	totalpages := len(sections)
+
+	if totalpages > 1 {
+		marginBottom = marginBottom + (footerdefpt * 0.352778)
+	}
+
+	// Return as strings with "mm"
+	mt := fmt.Sprintf("%.2fmm", marginTop)
+	mb := fmt.Sprintf("%.2fmm", marginBottom)
+
+	var pdfs []string
+	var pg int = 0
+	var cmd *exec.Cmd
+	for _, sec := range sections {
+		outPDF := strings.Replace(sec.FileName, ".html", ".pdf", 1)
+		pg += 1
+
+		// Create a unique footer temp file per section
+		footerTemp := fmt.Sprintf("footer_tmp_%d.html", pg)
+
+		// Inject the page line once per footer file (before running wkhtmltopdf), if more than 1 page:
+		if totalpages > 1 {
+			if err := InjectPageNumberLine(fFile, footerTemp, pg, totalpages); err != nil {
+				fmt.Println("footer inject failed:", err)
+				return
+			}
+		}
+		cmd = exec.Command(
+			"wkhtmltopdf",
+			"--enable-local-file-access",
+			"--header-html", hFile,
+			"--footer-html", footerTemp,
+			"--margin-top", mt,
+			"--margin-bottom", mb,
+			"--header-spacing", "0", // no forced spacing
+			"--orientation", sec.Orientation,
+			sec.FileName, outPDF,
+		)
+
+		var out, stderr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &stderr
+
+		err := cmd.Run()
+		if err != nil {
+			fmt.Printf("wkhtmltopdf failed (%s): %v\n%s", sec.FileName, err, stderr.String())
+		}
+
+		pdfs = append(pdfs, outPDF)
+
+		// Remove footer temp files
+		if err := os.Remove(footerTemp); err != nil {
+			fmt.Println("warning: could not remove footer temp:", footerTemp, err)
+		}
+	}
+
+	// Merge all PDFs
+	err = api.MergeCreateFile(pdfs, pdfFile, false, nil)
+	if err != nil {
+		fmt.Println("merge failed: %w", err)
+	}
+
+	// Remove section files
+	for _, s := range sections {
+		os.Remove(s.FileName)
+		pdf := strings.Replace(s.FileName, ".html", ".pdf", 1)
+		os.Remove(pdf)
+	}
+
+	fmt.Println("PDF created:", pdfFile)
+}

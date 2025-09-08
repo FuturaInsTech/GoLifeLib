@@ -1,0 +1,102 @@
+{
+  "AgentEmailId": "AgentEmailIdValue",
+  "AgentFullAddress": "AgentFullAddressValue",
+  "AgentMobileNo": 123,
+  "AgentName": "AgentNameValue",
+  "AgentNo": 123,
+  "AgentTelNo": 123,
+  "AppointeeAge": [
+    123,
+    456
+  ],
+  "AppointeeGender": [
+    "AppointeeGenderValue1",
+    "AppointeeGenderValue2"
+  ],
+  "AppointeeName": [
+    "AppointeeNameValue1",
+    "AppointeeNameValue2"
+  ],
+  "AuthSignatory": "AuthSignatoryValue",
+  "BaseAnnPrem": 123.45,
+  "BaseCover": "BaseCoverValue",
+  "BaseInstPrem": 123.45,
+  "BasePremDueDate": "BasePremDueDateValue",
+  "BaseRCessDate": "BaseRCessDateValue",
+  "BaseSa": 123,
+  "CSCAddress": "CSCAddressValue",
+  "ClientNo": 123,
+  "DistMktg": "DistMktgValue",
+  "Freq": "FreqValue",
+  "InstalPrem": 123.45,
+  "IssueDate": "IssueDateValue",
+  "LAName": "LANameValue",
+  "LaAge": 123,
+  "LaAgeAdm": "LaAgeAdmValue",
+  "LaClientID": 123,
+  "LaDob": "LaDobValue",
+  "LaFullAddress": "LaFullAddressValue",
+  "LaGender": "LaGenderValue",
+  "MaturityAmt": 123.45,
+  "NomineeAge": [
+    123,
+    456
+  ],
+  "NomineeLaRel": [
+    "NomineeLaRelValue1",
+    "NomineeLaRelValue2"
+  ],
+  "NomineeName": [
+    "NomineeNameValue1",
+    "NomineeNameValue2"
+  ],
+  "NomineeShare": [
+    123.45,
+    234.56
+  ],
+  "NomneeGender": [
+    "NomneeGenderValue1",
+    "NomneeGenderValue2"
+  ],
+  "OwnerAdd1": "OwnerAdd1Value",
+  "OwnerAdd2": "OwnerAdd2Value",
+  "OwnerAdd3": "OwnerAdd3Value",
+  "OwnerAdd4": "OwnerAdd4Value",
+  "OwnerAdd5": "OwnerAdd5Value",
+  "OwnerAge": 123,
+  "OwnerAgeAdm": "OwnerAgeAdmValue",
+  "OwnerClientID": 123,
+  "OwnerDob": "OwnerDobValue",
+  "OwnerFullAddress": "OwnerFullAddressValue",
+  "OwnerName": "OwnerNameValue",
+  "OwnerPostcode": 123,
+  "OwnerTelNo": 123,
+  "PRCD": "PRCDValue",
+  "PaidToDate": "PaidToDateValue",
+  "Place": "PlaceValue",
+  "PolAnnDate": "PolAnnDateValue",
+  "PolicyNo": 123,
+  "Ppt": 123,
+  "RiderCover": [
+    "RiderCoverValue1",
+    "RiderCoverValue2"
+  ],
+  "RiderInstPrem": [
+    123.45,
+    234.56
+  ],
+  "RiderPremDueDate": [
+    "RiderPremDueDateValue1",
+    "RiderPremDueDateValue2"
+  ],
+  "RiderRCessDate": [
+    "RiderRCessDateValue1",
+    "RiderRCessDateValue2"
+  ],
+  "RiderSa": [
+    123,
+    456
+  ],
+  "StaffFlag": "StaffFlagValue",
+  "Term": 123
+}

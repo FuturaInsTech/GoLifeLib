@@ -758,12 +758,10 @@ func main() {
 		// Create a unique footer temp file per section
 		footerTemp := fmt.Sprintf("footer_tmp_%d.html", pg)
 
-		// Inject the page line once per footer file (before running wkhtmltopdf), if more than 1 page:
-		if totalpages > 1 {
-			if err := InjectPageNumberLine(fFile, footerTemp, pg, totalpages); err != nil {
-				fmt.Println("footer inject failed:", err)
-				return
-			}
+		// Inject the page line once per footer file (before running wkhtmltopdf)
+		if err := InjectPageNumberLine(fFile, footerTemp, pg, totalpages); err != nil {
+			fmt.Println("footer inject failed:", err)
+			return
 		}
 		cmd = exec.Command(
 			"wkhtmltopdf",

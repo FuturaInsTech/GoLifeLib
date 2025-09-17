@@ -2904,6 +2904,15 @@ func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDa
 	iReceiptTranCode := "H0034"
 	iReceiptFor := ""
 
+	// if iReceipt != 0 {
+	// 	var receipt models.Receipt
+	// 	result := txn.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+	// 	if result.Error != nil {
+	// 		return result.Error
+	// 	}
+	// 	iReceiptFor = receipt.ReceiptFor
+	// }
+
 	if iReceipt != 0 {
 		var receipt models.Receipt
 		result := txn.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
@@ -2911,6 +2920,13 @@ func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDa
 			return result.Error
 		}
 		iReceiptFor = receipt.ReceiptFor
+
+		receiptMaxTRanNo, err := GetReceiptMaxTranNo(iCompany, iPolicy, iReceiptFor)
+
+		if err != nil {
+			return err
+		}
+		communication.Tranno = receiptMaxTRanNo
 	}
 
 	if iPolicy != 0 {
@@ -4284,4 +4300,20 @@ func PrtReceiptData(iCompany uint, iReceipt uint, iPolicy uint, iPa uint, p0033d
 		"ReceiptDueDate":     DateConvert(receiptenq.ReceiptDueDate),
 	}
 	return resultOut
+}
+
+func GetReceiptMaxTranNo(iCompanyId, iReferenceNo uint, iReceiptFor string) (uint, error) {
+	var maxTranNo uint
+
+	err := initializers.DB.
+		Table("communications").
+		Where("company_id = ? AND receipt_ref_no = ? AND receipt_for = ?", iCompanyId, iReferenceNo, iReceiptFor).
+		Select("COALESCE(MAX(tranno), 0)").
+		Scan(&maxTranNo).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return maxTranNo + 1, nil
 }

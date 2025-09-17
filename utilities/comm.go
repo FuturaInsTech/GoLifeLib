@@ -3159,6 +3159,11 @@ func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					for key, value := range oData {
 						resultMap[key] = value
 					}
+				case oLetType == "51":
+					oData := PrtReceiptData(iCompany, iReceipt, iPolicy, iPa, p0033data, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
 
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
@@ -4200,4 +4205,83 @@ func GetPremDueDate(premCessDate, freq string) (string, error) {
 
 	// Return in dd/mm/yyyy format
 	return t.Format("02/01/2006"), nil
+}
+
+func PrtReceiptData(iCompany uint, iReceipt uint, iPolicy uint, iPa uint, p0033data paramTypes.P0033Data, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicy); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var receiptenq models.Receipt
+	if result := txn.Find(&receiptenq, "company_id = ? AND id = ?", iCompany, iReceipt); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Receipt not found"}
+	}
+
+	var cmp models.Company
+	if err := txn.First(&cmp, polenq.CompanyID).Error; err != nil {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var agency models.Agency
+	if result := txn.Find(&agency, "company_id = ? AND id = ?", iCompany, polenq.AgencyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Agency not found"}
+	}
+
+	var add models.Address
+	if result := txn.Find(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var payingauth models.PayingAuthority
+	result := txn.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+	if result.Error != nil {
+		return nil
+	}
+
+	amtinwords, csymbol := AmountinWords(receiptenq.CompanyID, receiptenq.AccAmount, receiptenq.AccCurry)
+
+	var agent models.Client
+	txn.Find(&agent, "company_id = ? and id = ?", iCompany, agency.ClientID)
+
+	resultOut := map[string]interface{}{
+		"AddressLine1":       add.AddressLine1,
+		"AddressLine2":       add.AddressLine2,
+		"AddressLine3":       add.AddressLine3,
+		"AddressLine4":       add.AddressLine4,
+		"AddressLine5":       add.AddressLine5,
+		"AddressPostCode":    add.AddressPostCode,
+		"CompanyName":        cmp.CompanyName,
+		"CompanyFullAddress": cmp.CompanyAddress1 + " " + cmp.CompanyAddress2 + " " + cmp.CompanyAddress3 + " " + cmp.CompanyPostalCode,
+		"PayingauthID":       IDtoPrint(payingauth.ID),
+		"PaName":             payingauth.PaName,
+		"ReceiptFor":         receiptenq.ReceiptFor,
+		"Branch":             receiptenq.Branch,
+		"AccCurry":           receiptenq.AccCurry,
+		"ReceiptID":          IDtoPrint(receiptenq.ID),
+		"ReceiptRefNo":       IDtoPrint(receiptenq.ReceiptRefNo),
+		"DateOfCollection":   DateConvert(receiptenq.DateOfCollection),
+		"ClientName":         clnt.ClientLongName + " " + clnt.ClientShortName,
+		"Salutation":         clnt.Salutation,
+		"AgentName":          agent.ClientLongName,
+		"AgentCode":          agent.ID,
+		"AccAmount":          NumbertoPrint(receiptenq.AccAmount),
+		"AmountInWords":      amtinwords,
+		"CurrSymbol":         csymbol,
+		"TypeOfReceipt":      receiptenq.TypeOfReceipt,
+		"ClientMobile":       clnt.ClientMobile,
+		"Department":         p0033data.DepartmentName,
+		"DepartmentHead":     p0033data.DepartmentHead,
+		"CoEmail":            p0033data.CompanyEmail,
+		"CoPhone":            p0033data.CompanyPhone,
+		"ClientID":           IDtoPrint(clnt.ID),
+		"ReceiptAmount":      receiptenq.ReceiptAmount,
+		"ReceiptDueDate":     DateConvert(receiptenq.ReceiptDueDate),
+	}
+	return resultOut
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-size: 10pt;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .header {
+      border-bottom: 1px solid #000;
+      padding-bottom: 2px;
+    }
+	
+    h1 { color: navy; font-size: 18px; text-align: center; line-height: 1.4;  }
+    h2, h3, h5 { color: black; text-align: center; margin-bottom: 2px; }
+    h2 { font-size: 16px; line-height: 1.2;}
+    h3 { font-size: 11px; line-height: 1.1;}
+    h4 { color: black; font-size: 12px; text-align: right; line-height: 1.1;} }
+    .logo {
+      max-height: 40px; /* adjust size as needed */
+	  margin-bottom: 2px;
+    }
+	
+	.inline-headings {
+    display: flex;
+    align-items: baseline; /* keeps text aligned nicely */
+    gap: 8px; /* spacing between h3 and h4 */
+  }
+  .inline-headings h3,
+  .inline-headings h4 {
+    margin: 0;
+  }
+  </style>
+</head>
+<body>
+  <div class="header">
+    {{if .LogoPath}}
+	 <img class="logo" src="{{.LogoPath}}" style="max-height:80px; max-width:200px;">
+    {{end}}
+    <h2>{{.CoName}}</h2>
+	<div class="inline-headings">
+		<h3>{{.CoAddress}}</h3><h4>Date: {{.CurrentDate}}</h4>
+	</div>
+    <h1>{{.Title}}</h1>
+  </div>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+		h5 { font-size: 11px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; }
+        th, td { border: 1px solid black; padding: 8px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        .page-break { page-break-after: always; }
+        .left-align { text-align: left; }
+        .center-align { text-align: center; }
+        .right-align { text-align: right; }
+		.footer { text-align: center; font-size: 12px; margin-top: 20px; }
+</style>
+</head>
+<body>
+{{range $groupKey, $group := .GroupedAggs}}
+	 <h5>Group By: {{$groupKey}}</h5>
+ 	 <table class="context-table">
+        <tr>
+        {{- $cols := 2 }}
+		{{- $isLandscape := or (eq $.Layout.Orientation "Landscape") (eq $.Layout.Orientation "L") -}}
+		{{- $cols := cond $isLandscape 3 2 -}}
+
+        {{- range $i, $ctx := $.Context }}
+            {{- if eq (mod1 $i $cols) 0}}{{if ne $i 0}}</tr><tr>{{end}}{{end}}
+            {{- range $k, $v := $ctx }}
+                <td class="context-key">{{$k}}</td>
+                 <td class="context-value
+                {{if inList $.AlignFields.AlignRight $k}}right-align{{end}}
+                {{if inList $.AlignFields.AlignLeft $k}}left-align{{end}}
+                {{if inList $.AlignFields.AlignCenter $k}}center-align{{end}}">{{$v}}</td>
+            {{- end}}
+        {{- end}}
+        </tr>
+    </table>
+	<p>
+    <table>
+        <tr>
+            {{range $.Order}}
+                <th>{{.}}</th>
+            {{end}}
+        </tr>
+        {{range $i, $rec := $group.Rows}}
+            <tr>
+                {{range $.Order}}
+                        <td 
+						{{if inList $.AlignFields.AlignRight .}} class="right-align"
+						{{else if inList $.AlignFields.AlignLeft .}} class="left-align"
+						{{else if inList $.AlignFields.AlignCenter .}} class="center-align"
+						{{end}}>{{index $rec .}}</td>
+                    {{end}}
+            </tr>
+        {{end}}
+		{{ if eq $.Layout.Summary "Y" }}
+        <table style="width:100%; border-collapse: collapse; margin-top: 20px;table-layout: fixed;">
+		<thead>
+		<tr>
+		{{ if not (eq (len $group.Count) 0) }}
+		<th style="text-align: left; border-bottom: 1px solid #ccc;">Count</th>
+		{{ end }}
+		{{ if not (eq (len $group.Total) 0) }}
+		<th style="text-align: left; border-bottom: 1px solid #ccc;">Total</th>
+		{{ end }}
+		{{ if not (eq (len $group.Average) 0) }}
+		<th style="text-align: left; border-bottom: 1px solid #ccc;">Average</th>
+		{{ end }}
+		</tr>
+		</thead>
+		<tbody>
+		<tr>
+		<!-- Count Column -->
+		{{ if not (eq (len $group.Count) 0) }}
+		<td style="vertical-align: top; padding: 5px;">
+        {{ range $k, $v := $group.Count }}
+          {{ $k }}: {{ $v }}<br>
+        {{ end }}
+		</td>
+		{{ end }}
+
+		<!-- Total Column -->
+		{{ if not (eq (len $group.Total) 0) }}
+		<td style="vertical-align: top; padding: 5px;">
+        {{ range $k, $v := $group.Total }}
+          {{ $k }}: {{ printf "%.2f" $v }}<br>
+        {{ end }}
+		</td>
+		{{ end }}
+
+		<!-- Average Column -->
+		{{ if not (eq (len $group.Average) 0) }}
+		<td style="vertical-align: top; padding: 5px;">
+        {{ range $k, $v := $group.Average }}
+          {{ $k }}: {{ printf "%.2f" $v }}<br>
+        {{ end }}
+		</td>
+		{{ end }}
+		</tr>
+		</tbody>
+		</table>
+		{{end}}
+    </table>
+
+    <div class="page-break"></div>
+	
+{{end}}
+</body>
+</html>

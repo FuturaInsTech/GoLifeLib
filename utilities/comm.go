@@ -3180,6 +3180,41 @@ func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDa
 					for key, value := range oData {
 						resultMap[key] = value
 					}
+				case oLetType == "54":
+					oData := PrtCollectionData(iCompany, iPolicy, iDate, p0033data, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "55":
+					oData := PrtAnniData(iCompany, iPolicy, iDate, p0033data, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "56":
+					oData := PrtAnniILPData(iCompany, iPolicy, iDate, p0033data, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "65":
+					oData := PrtFreqChangeData(iCompany, iPolicy, iDate, p0033data, iAgency, iHistoryCode, iTranno, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "66":
+					oData := PrtSachangeData(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "67":
+					oData := PrtCompaddData(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
+				case oLetType == "68":
+					oData := PrtSurrData(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					for key, value := range oData {
+						resultMap[key] = value
+					}
 
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
@@ -3195,11 +3230,13 @@ func CreateCommunicationsM(iCompany uint, iHistoryCode string, iTranno uint, iDa
 				communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
 				// New Changes for Online Print and Email Trigger
 				if p0033data.Online == "Y" {
-					err := GetReportforOnline(communication, p0033data.TemplateName, txn)
+					//err := GetReportforOnline(communication, p0033data.TemplateName, txn)
+					err := GetReportforOnlineV3(communication, p0033data.TemplateName, txn)
 					if err != nil {
 						log.Fatalf("Failed to generate report: %v", err)
 					}
 				}
+
 				if p0033data.SMSAllowed == "Y" {
 					err := SendSMSTwilio(communication.CompanyID, communication.ClientID, p0033data.TemplateName, communication.EffectiveDate, p0033data.SMSBody, txn)
 					if err != nil {
@@ -4223,6 +4260,22 @@ func GetPremDueDate(premCessDate, freq string) (string, error) {
 	return t.Format("02/01/2006"), nil
 }
 
+func GetReceiptMaxTranNo(iCompanyId, iReferenceNo uint, iReceiptFor string) (uint, error) {
+	var maxTranNo uint
+
+	err := initializers.DB.
+		Table("communications").
+		Where("company_id = ? AND receipt_ref_no = ? AND receipt_for = ?", iCompanyId, iReferenceNo, iReceiptFor).
+		Select("COALESCE(MAX(tranno), 0)").
+		Scan(&maxTranNo).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	return maxTranNo + 1, nil
+}
+
 func PrtReceiptData(iCompany uint, iReceipt uint, iPolicy uint, iPa uint, p0033data paramTypes.P0033Data, txn *gorm.DB) map[string]interface{} {
 	var polenq models.Policy
 	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicy); result.RowsAffected == 0 {
@@ -4302,18 +4355,650 @@ func PrtReceiptData(iCompany uint, iReceipt uint, iPolicy uint, iPa uint, p0033d
 	return resultOut
 }
 
-func GetReceiptMaxTranNo(iCompanyId, iReferenceNo uint, iReceiptFor string) (uint, error) {
-	var maxTranNo uint
-
-	err := initializers.DB.
-		Table("communications").
-		Where("company_id = ? AND receipt_ref_no = ? AND receipt_for = ?", iCompanyId, iReferenceNo, iReceiptFor).
-		Select("COALESCE(MAX(tranno), 0)").
-		Scan(&maxTranNo).Error
-
-	if err != nil {
-		return 0, err
+func PrtCollectionData(iCompany uint, iPolicyID uint, iDate string, p0033data paramTypes.P0033Data, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
 	}
 
-	return maxTranNo + 1, nil
+	var cmp models.Company
+	if err := txn.First(&cmp, polenq.CompanyID).Error; err != nil {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var add models.Address
+	if result := txn.Find(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+
+	oRiskCessDate := ""
+	for _, b := range benefitenq {
+		if oRiskCessDate < b.BRiskCessDate {
+			oRiskCessDate = b.BRiskCessDate
+		}
+	}
+
+	resulout := map[string]interface{}{
+		"CompanyName":       cmp.CompanyName,
+		"CompanyAddress1":   cmp.CompanyAddress1,
+		"CompanyAddress2":   cmp.CompanyAddress2,
+		"CompanyAddress3":   cmp.CompanyAddress3,
+		"CompanyPostalCode": cmp.CompanyPostalCode,
+		"LetterDate":        DateConvert(iDate),
+		"ClientShortName":   clnt.ClientShortName,
+		"ClientLongName":    clnt.ClientLongName,
+		"Salutation":        clnt.Salutation,
+		"AddressLine1":      add.AddressLine1,
+		"AddressLine2":      add.AddressLine2,
+		"AddressLine3":      add.AddressLine3,
+		"AddressLine4":      add.AddressLine4,
+		"AddressLine5":      add.AddressLine5,
+		"AddressPostCode":   add.AddressPostCode,
+		"PolicyID":          IDtoPrint(polenq.ID),
+		"PaidToDate":        DateConvert(polenq.PaidToDate),
+		"ClientID":          IDtoPrint(clnt.ID),
+		"PRCD":              DateConvert(polenq.PRCD),
+		"PFreq":             polenq.PFreq,
+		"InstalmentPrem":    NumbertoPrint(polenq.InstalmentPrem),
+		"RiskCessDate":      DateConvert(oRiskCessDate),
+		"Department":        p0033data.DepartmentName,
+		"DepartmentHead":    p0033data.DepartmentHead,
+		"CoEmail":           p0033data.CompanyEmail,
+		"CoPhone":           p0033data.CompanyPhone,
+	}
+	return resulout
+}
+
+func PrtAnniData(iCompany uint, iPolicyID uint, iDate string, p0033data paramTypes.P0033Data, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var cmp models.Company
+	if err := txn.First(&cmp, polenq.CompanyID).Error; err != nil {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var add models.Address
+	if result := txn.Find(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+
+	oRiskCessDate := ""
+	oPremCessDate := ""
+	for i := 0; i < len(benefitenq); i++ {
+		if oRiskCessDate < benefitenq[i].BRiskCessDate {
+			oRiskCessDate = benefitenq[i].BRiskCessDate
+		}
+		if oPremCessDate < benefitenq[i].BPremCessDate {
+			oPremCessDate = benefitenq[i].BPremCessDate
+		}
+	}
+
+	AnnivDate := String2Date(polenq.AnnivDate)
+	oPRCD := String2Date(polenq.PRCD)
+	completedyears, _, _, _, _, _ := DateDiff(AnnivDate, oPRCD, "")
+
+	// RiskCessDate := String2Date(oRiskCessDate)
+	// sPRCD := String2Date(polenq.PRCD)
+	// RiskTerm, _, _, _, _, _ := DateDiff(sPRCD, RiskCessDate)
+
+	// PremCessDate := String2Date(oPremCessDate)
+	// sPRCD = String2Date(polenq.PRCD)
+	// PremTerm, _, _, _, _, _ := DateDiff(PremCessDate, sPRCD, "")
+
+	resultout := map[string]interface{}{
+		"CompanyName":        cmp.CompanyName,
+		"CompanyFullAddress": cmp.CompanyAddress1 + " " + cmp.CompanyAddress2 + " " + cmp.CompanyAddress3 + " " + cmp.CompanyPostalCode,
+		"LetterDate":         DateConvert(iDate),
+		"ClientShortName":    clnt.ClientShortName,
+		"ClientLongName":     clnt.ClientLongName,
+		"Salutation":         clnt.Salutation,
+		"AddressLine1":       add.AddressLine1,
+		"AddressLine2":       add.AddressLine2,
+		"AddressLine3":       add.AddressLine3,
+		"AddressLine4":       add.AddressLine4,
+		"AddressLine5":       add.AddressLine5,
+		"AddressPostCode":    add.AddressPostCode,
+		"PolicyID":           IDtoPrint(polenq.ID),
+		"PaidToDate":         DateConvert(polenq.PaidToDate),
+		"ClientID":           IDtoPrint(clnt.ID),
+		"PRCD":               DateConvert(polenq.PRCD),
+		"PFreq":              polenq.PFreq,
+		"InstalmentPrem":     NumbertoPrint(polenq.InstalmentPrem),
+		"RiskCessDate":       DateConvert(oRiskCessDate),
+		"PremCessDate":       DateConvert(oPremCessDate),
+		"AnnivDate":          DateConvert(polenq.AnnivDate),
+		"CompletedYears":     completedyears,
+		"Department":         p0033data.DepartmentName,
+		"DepartmentHead":     p0033data.DepartmentHead,
+		"CoEmail":            p0033data.CompanyEmail,
+		"CoPhone":            p0033data.CompanyPhone,
+	}
+	return resultout
+}
+
+func PrtSachangeData(iCompany uint, iPolicyID uint, iDate string, p0033data paramTypes.P0033Data, iAgency uint, iTranno uint, txn *gorm.DB) map[string]interface{} {
+
+	var polenq models.Policy
+	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var cmp models.Company
+	if err := txn.First(&cmp, polenq.CompanyID).Error; err != nil {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var add models.Address
+	if result := txn.Find(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var benefitenq []models.Benefit
+	if result := txn.Find(&benefitenq, "company_id = ? AND policy_id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Benefit not found"}
+	}
+
+	var agency models.Agency
+	txn.Find(&agency, "company_id = ? AND id = ?", iCompany, iAgency)
+	var agent models.Client
+	txn.Find(&agent, "company_id = ? AND id = ?", iCompany, agency.ClientID)
+	var sachangeenq []models.SaChange
+	txn.Find(&sachangeenq, "company_id = ? and policy_id = ? and tranno = ?", iCompany, iPolicyID, iTranno)
+
+	osumAssured := []uint64{}
+	oBterm := []uint{}
+	oPbterm := []uint{}
+	oPrem := []float64{}
+	nsumAssured := []uint64{}
+	nBterm := []uint{}
+	nPbterm := []uint{}
+	nPrem := []float64{}
+	bCoverage := []string{}
+	prevInstalmentPrem := 0.0
+	newInstalmentPrem := 0.0
+	for _, saChan := range sachangeenq {
+		_, oCoverage, _ := GetParamDesc(iCompany, "Q0006", saChan.BCoverage, 1)
+		bCoverage = append(bCoverage, oCoverage)
+		osumAssured = append(osumAssured, saChan.BSumAssured)
+		oBterm = append(oBterm, saChan.BTerm)
+		oPbterm = append(oPbterm, saChan.BPTerm)
+		oPrem = append(oPrem, saChan.BPrem)
+		nsumAssured = append(nsumAssured, saChan.NSumAssured)
+		nBterm = append(nBterm, saChan.NTerm)
+		nPbterm = append(nPbterm, saChan.NPTerm)
+		nPrem = append(nPrem, saChan.NPrem)
+		prevInstalmentPrem += saChan.BPrem
+		newInstalmentPrem += saChan.NPrem
+	}
+
+	var (
+		bRiskCessDate string
+	)
+	if len(benefitenq) > 0 {
+		bRiskCessDate = benefitenq[0].BRiskCessDate
+
+	}
+
+	resultout := map[string]interface{}{
+		"CompanyName":        cmp.CompanyName,
+		"CompanyFullAddress": cmp.CompanyAddress1 + " " + cmp.CompanyAddress2 + " " + cmp.CompanyAddress3 + " " + cmp.CompanyPostalCode,
+		"LetterDate":         DateConvert(iDate),
+		"ClientShortName":    clnt.ClientShortName,
+		"ClientLongName":     clnt.ClientLongName,
+		"AddressLine1":       add.AddressLine1,
+		"AddressLine2":       add.AddressLine2,
+		"AddressLine3":       add.AddressLine3,
+		"AddressLine4":       add.AddressLine4,
+		"AddressLine5":       add.AddressLine5,
+		"AddressPostCode":    add.AddressPostCode,
+		"Salutation":         clnt.Salutation,
+		"PProduct":           polenq.PProduct,
+		"PolicyID":           IDtoPrint(polenq.ID),
+		"ClientID":           IDtoPrint(clnt.ID),
+		"PRCD":               DateConvert(polenq.PRCD),
+		"EndDate":            DateConvert(bRiskCessDate),
+		"PFreq":              polenq.PFreq,
+		"PaidToDate":         DateConvert(polenq.PaidToDate),
+		"InstalmentPrem":     prevInstalmentPrem,
+		"NInstalmentPrem":    newInstalmentPrem,
+		"Department":         p0033data.DepartmentName,
+		"DepartmentHead":     p0033data.DepartmentHead,
+		"CoEmail":            p0033data.CompanyEmail,
+		"CoPhone":            p0033data.CompanyPhone,
+		"BCoverage":          bCoverage,
+		"OSumAssured":        osumAssured,
+		"OBterm":             oBterm,
+		"OBPterm":            oPbterm,
+		"oPrem":              oPrem,
+		"NSumAssured":        nsumAssured,
+		"NBterm":             nBterm,
+		"NBPterm":            nPbterm,
+		"NPrem":              nPrem,
+	}
+
+	return resultout
+}
+
+func PrtFreqChangeData(iCompany uint, iPolicyID uint, iDate string, p0033data paramTypes.P0033Data, iAgency uint, iHistoryCode string, iTranno uint, txn *gorm.DB) map[string]interface{} {
+
+	var polenq models.Policy
+	if result := txn.First(&polenq, "company_id = ? AND id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var cmp models.Company
+	if result := txn.First(&cmp, "id = ?", iCompany); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.First(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var add models.Address
+	if result := txn.First(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	bCoverage := []string{}
+	obPrem := []float64{}
+	nbPrem := []float64{}
+	bPremCessDate := []string{}
+
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? AND policy_id = ?", iCompany, iPolicyID)
+
+	var agency models.Agency
+	txn.First(&agency, "company_id = ? AND id = ?", iCompany, iAgency)
+
+	var agent models.Client
+	txn.First(&agent, "company_id = ? AND id = ?", iCompany, agency.ClientID)
+
+	var phistory models.PHistory
+	result := txn.Find(&phistory, "company_id = ? and policy_id = ? and history_code = ?  and tranno =  ?", iCompany, iPolicyID, iHistoryCode, iTranno)
+	if result.Error != nil {
+		return nil
+	}
+
+	for _, ben := range benefitenq {
+		_, oCoverage, _ := GetParamDesc(iCompany, "Q0006", ben.BCoverage, 1)
+		bCoverage = append(bCoverage, oCoverage)
+		nbPrem = append(nbPrem, ben.BPrem)
+		bPremCessDate = append(bPremCessDate, DateConvert(ben.BPremCessDate))
+	}
+	if benefits, ok := phistory.PrevData["Benefits"].([]interface{}); ok {
+		for _, b := range benefits {
+			if ben, ok := b.(map[string]interface{}); ok {
+				if prem, ok := ben["BPrem"].(float64); ok {
+					obPrem = append(obPrem, prem)
+				}
+			}
+		}
+	}
+
+	prevPFreq := ""
+	prevInsta := 0.0
+	previousPolicy := phistory.PrevData["Policy"]
+	if policyMap, ok := previousPolicy.(map[string]interface{}); ok {
+		if pf, ok := policyMap["PFreq"].(string); ok {
+			prevPFreq = pf
+		}
+		if pf, ok := policyMap["InstalmentPrem"].(float64); ok {
+			prevInsta = pf
+		}
+	}
+	var bRiskCessDate string
+	if len(benefitenq) > 0 {
+		bRiskCessDate = benefitenq[0].BRiskCessDate
+	}
+	pdate := make([]string, len(bCoverage))
+
+	for i := range bCoverage {
+		pdate[i] = DateConvert(polenq.PaidToDate)
+	}
+
+	resultout := map[string]interface{}{
+		"CompanyName":        cmp.CompanyName,
+		"CompanyFullAddress": cmp.CompanyAddress1 + " " + cmp.CompanyAddress2 + " " + cmp.CompanyAddress3 + " " + cmp.CompanyPostalCode,
+		"LetterDate":         DateConvert(iDate),
+		"ClientShortName":    clnt.ClientShortName,
+		"ClientLongName":     clnt.ClientLongName,
+		"AddressLine1":       add.AddressLine1,
+		"AddressLine2":       add.AddressLine2,
+		"AddressLine3":       add.AddressLine3,
+		"AddressLine4":       add.AddressLine4,
+		"AddressLine5":       add.AddressLine5,
+		"AddressPostCode":    add.AddressPostCode,
+		"Salutation":         clnt.Salutation,
+		"PProduct":           polenq.PProduct,
+		"PolicyID":           IDtoPrint(polenq.ID),
+		"ClientID":           IDtoPrint(clnt.ID),
+		"PRCD":               DateConvert(polenq.PRCD),
+		"NPFreq":             polenq.PFreq,
+		"OPFreq":             prevPFreq,
+		"PaidToDate":         DateConvert(polenq.PaidToDate),
+		"NInstalmentPrem":    polenq.InstalmentPrem,
+		"OInstalmentPrem":    prevInsta,
+		"Department":         p0033data.DepartmentName,
+		"DepartmentHead":     p0033data.DepartmentHead,
+		"CoEmail":            p0033data.CompanyEmail,
+		"CoPhone":            p0033data.CompanyPhone,
+		"BRiskCessDate":      bPremCessDate,
+		"BCoverage":          bCoverage,
+		"NBPrem":             nbPrem,
+		"OBPrem":             obPrem,
+		"BPaidToDate":        pdate,
+		"PolEndDate":         DateConvert(bRiskCessDate),
+	}
+
+	return resultout
+}
+
+func PrtCompaddData(iCompany uint, iPolicyID uint, iDate string, p0033data paramTypes.P0033Data, iAgency uint, iTranno uint, txn *gorm.DB) map[string]interface{} {
+
+	var polenq models.Policy
+	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var cmp models.Company
+	if err := txn.First(&cmp, polenq.CompanyID).Error; err != nil {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var add models.Address
+	if result := txn.Find(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var benefitenq []models.Benefit
+	if result := txn.Find(&benefitenq, "company_id = ? AND policy_id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Benefit not found"}
+	}
+
+	var agency models.Agency
+	txn.Find(&agency, "company_id = ? AND id = ?", iCompany, iAgency)
+	var agent models.Client
+	txn.Find(&agent, "company_id = ? AND id = ?", iCompany, agency.ClientID)
+	var sachangeenq []models.SaChange
+	txn.Find(&sachangeenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+	var (
+		bRiskCessDate string
+	)
+	if len(benefitenq) > 0 {
+		bRiskCessDate = benefitenq[0].BRiskCessDate
+
+	}
+	var addcomp []models.Addcomponent
+	txn.Find(&addcomp, "company_id = ? and policy_id =? and tranno = ?", iCompany, iPolicyID, iTranno)
+
+	bCoverage := []string{}
+	bTerm := []uint{}
+	bPrem := []float64{}
+	bCaRiskCessDate := []string{}
+	bStartDate := []string{}
+	bClientId := []uint{}
+	bSumAssured := []uint64{}
+	bPTerm := []uint{}
+
+	for _, adcomp := range addcomp {
+		_, oCoverage, _ := GetParamDesc(iCompany, "Q0006", adcomp.BCoverage, 1)
+		bCoverage = append(bCoverage, oCoverage)
+		bTerm = append(bTerm, adcomp.BTerm)
+		bPrem = append(bPrem, adcomp.BPrem)
+		bCaRiskCessDate = append(bCaRiskCessDate, DateConvert(adcomp.BRiskCessDate))
+		bStartDate = append(bStartDate, DateConvert(adcomp.BStartDate))
+		bClientId = append(bClientId, adcomp.ClientID)
+		bSumAssured = append(bSumAssured, adcomp.BSumAssured)
+		bPTerm = append(bPTerm, adcomp.BTerm)
+	}
+
+	resultout := map[string]interface{}{
+		"CompanyName":        cmp.CompanyName,
+		"CompanyFullAddress": cmp.CompanyAddress1 + " " + cmp.CompanyAddress2 + " " + cmp.CompanyAddress3 + " " + cmp.CompanyPostalCode,
+		"LetterDate":         DateConvert(iDate),
+		"ClientShortName":    clnt.ClientShortName,
+		"ClientLongName":     clnt.ClientLongName,
+		"AddressLine1":       add.AddressLine1,
+		"AddressLine2":       add.AddressLine2,
+		"AddressLine3":       add.AddressLine3,
+		"AddressLine4":       add.AddressLine4,
+		"AddressLine5":       add.AddressLine5,
+		"AddressPostCode":    add.AddressPostCode,
+		"Salutation":         clnt.Salutation,
+		"PProduct":           polenq.PProduct,
+		"PolicyID":           IDtoPrint(polenq.ID),
+		"ClientID":           IDtoPrint(clnt.ID),
+		"PRCD":               DateConvert(polenq.PRCD),
+		"PFreq":              polenq.PFreq,
+		"PaidToDate":         DateConvert(polenq.PaidToDate),
+		"InstalmentPrem":     NumbertoPrint(polenq.InstalmentPrem),
+		"PolEndDate":         DateConvert(bRiskCessDate),
+		"Department":         p0033data.DepartmentName,
+		"DepartmentHead":     p0033data.DepartmentHead,
+		"CoEmail":            p0033data.CompanyEmail,
+		"CoPhone":            p0033data.CompanyPhone,
+		"BCoverage":          bCoverage,
+		"BStartDate":         bStartDate,
+		"BLAClientID":        bClientId,
+		"BSumAssured":        bSumAssured,
+		"BTerm":              bTerm,
+		"BPTerm":             bPTerm,
+		"BPrem":              bPrem,
+		"BRiskCessDate":      bCaRiskCessDate,
+	}
+
+	return resultout
+}
+
+func PrtSurrData(iCompany uint, iPolicyID uint, iDate string, p0033data paramTypes.P0033Data, iAgency uint, iTronno uint, txn *gorm.DB) map[string]interface{} {
+
+	var polenq models.Policy
+	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var cmp models.Company
+	if err := txn.First(&cmp, polenq.CompanyID).Error; err != nil {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var add models.Address
+	if result := txn.Find(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var benefitenq []models.Benefit
+	if result := txn.Find(&benefitenq, "company_id = ? AND policy_id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Benefit not found"}
+	}
+
+	var agency models.Agency
+	txn.Find(&agency, "company_id = ? AND id = ?", iCompany, iAgency)
+	var agent models.Client
+	txn.Find(&agent, "company_id = ? AND id = ?", iCompany, agency.ClientID)
+	var sachangeenq []models.SaChange
+	txn.Find(&sachangeenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+	var (
+		bRiskCessDate string
+		bSumA         float64
+	)
+	if len(benefitenq) > 0 {
+		bRiskCessDate = benefitenq[0].BRiskCessDate
+		bSumA = float64(benefitenq[0].BSumAssured)
+
+	}
+	var addcomp []models.Addcomponent
+	txn.Find(&addcomp, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+	var surrhenq models.SurrH
+	txn.Find(&surrhenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+	var surrdenq models.SurrD
+	txn.Find(&surrdenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+
+	oCashDep := GetGlBal(iCompany, uint(iPolicyID), "CashDeposit")
+
+	resultout := map[string]interface{}{
+		"CompanyName":        cmp.CompanyName,
+		"CompanyFullAddress": cmp.CompanyAddress1 + " " + cmp.CompanyAddress2 + " " + cmp.CompanyAddress3 + " " + cmp.CompanyPostalCode,
+		"LetterDate":         DateConvert(iDate),
+		"ClientShortName":    clnt.ClientShortName,
+		"ClientLongName":     clnt.ClientLongName,
+		"AddressLine1":       add.AddressLine1,
+		"AddressLine2":       add.AddressLine2,
+		"AddressLine3":       add.AddressLine3,
+		"AddressLine4":       add.AddressLine4,
+		"AddressLine5":       add.AddressLine5,
+		"AddressPostCode":    add.AddressPostCode,
+		"Salutation":         clnt.Salutation,
+		"PProduct":           polenq.PProduct,
+		"PolicyID":           IDtoPrint(polenq.ID),
+		"ClientID":           IDtoPrint(clnt.ID),
+		"PRCD":               DateConvert(polenq.PRCD),
+		"PFreq":              polenq.PFreq,
+		"PaidToDate":         DateConvert(polenq.PaidToDate),
+		"InstalmentPrem":     NumbertoPrint(polenq.InstalmentPrem),
+		"RiskCessDate":       DateConvert(bRiskCessDate),
+		"Department":         p0033data.DepartmentName,
+		"DepartmentHead":     p0033data.DepartmentHead,
+		"CoEmail":            p0033data.CompanyEmail,
+		"CoPhone":            p0033data.CompanyPhone,
+		"EffectiveDate":      DateConvert(surrhenq.EffectiveDate),
+		"SurrAmount":         surrdenq.SurrAmount,
+		"RevBonus":           surrdenq.RevBonus,
+		"InterimBonus":       surrdenq.InterimBonus,
+		"TerminalBonus":      surrdenq.TerminalBonus,
+		"AccumDividend":      surrdenq.AccumDividend,
+		"AccumDivInt":        surrdenq.AccumDivInt,
+		"CashDeposit":        NumbertoPrint(oCashDep),
+		"PolicyDepost":       surrhenq.PolicyDepost,
+		"AplAmount":          surrhenq.AplAmount,
+		"LoanAmount":         surrhenq.LoanAmount,
+		"TotalSurrPayable":   surrhenq.TotalSurrPayable,
+		"SurrenderDate":      surrhenq.EffectiveDate,
+		"BsumAssured":        bSumA,
+	}
+
+	return resultout
+}
+
+func PrtAnniILPData(iCompany uint, iPolicyID uint, iDate string, p0033data paramTypes.P0033Data, txn *gorm.DB) map[string]interface{} {
+	var polenq models.Policy
+	if result := txn.Find(&polenq, "company_id = ? AND id = ?", iCompany, iPolicyID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Policy not found"}
+	}
+
+	var cmp models.Company
+	if err := txn.First(&cmp, polenq.CompanyID).Error; err != nil {
+		return map[string]interface{}{"error": "Company not found"}
+	}
+
+	var clnt models.Client
+	if result := txn.Find(&clnt, "company_id = ? AND id = ?", iCompany, polenq.ClientID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Client not found"}
+	}
+
+	var add models.Address
+	if result := txn.Find(&add, "company_id = ? AND id = ?", iCompany, polenq.AddressID); result.RowsAffected == 0 {
+		return map[string]interface{}{"error": "Address not found"}
+	}
+
+	var benefitenq []models.Benefit
+	txn.Find(&benefitenq, "company_id = ? and policy_id = ?", iCompany, iPolicyID)
+
+	oRiskCessDate := ""
+	oPremCessDate := ""
+	for i := 0; i < len(benefitenq); i++ {
+		if oRiskCessDate < benefitenq[i].BRiskCessDate {
+			oRiskCessDate = benefitenq[i].BRiskCessDate
+		}
+		if oPremCessDate < benefitenq[i].BPremCessDate {
+			oPremCessDate = benefitenq[i].BPremCessDate
+		}
+	}
+
+	sAnnivDate := String2Date(polenq.AnnivDate)
+	sPRCD := String2Date(polenq.PRCD)
+	ocompletedyears, _, _, _, _, _ := DateDiff(sAnnivDate, sPRCD, "")
+
+	sPremCessDate := String2Date(oPremCessDate)
+	oPremTerm, _, _, _, _, _ := DateDiff(sPremCessDate, sPRCD, "")
+
+	oRevBonus := GetGlBal(iCompany, uint(iPolicyID), "ReversionaryBonus")
+	oAccumDiv := GetGlBal(iCompany, uint(iPolicyID), "AccumDividend")
+	oAccumDivInt := GetGlBal(iCompany, uint(iPolicyID), "AccumDivInt")
+	oCashDep := GetGlBal(iCompany, uint(iPolicyID), "CashDeposit")
+	oPolicyDeposit := GetGlBal(iCompany, uint(iPolicyID), "PolicyDeposit")
+	oAplAmt := GetGlBal(iCompany, uint(iPolicyID), "AplAmount")
+
+	resultout := map[string]interface{}{
+		"CompanyName":        cmp.CompanyName,
+		"CompanyFullAddress": cmp.CompanyAddress1 + " " + cmp.CompanyAddress2 + " " + cmp.CompanyAddress3 + " " + cmp.CompanyPostalCode,
+		"LetterDate":         DateConvert(iDate),
+		"ClientShortName":    clnt.ClientShortName,
+		"ClientLongName":     clnt.ClientLongName,
+		"Salutation":         clnt.Salutation,
+		"AddressLine1":       add.AddressLine1,
+		"AddressLine2":       add.AddressLine2,
+		"AddressLine3":       add.AddressLine3,
+		"AddressLine4":       add.AddressLine4,
+		"AddressLine5":       add.AddressLine5,
+		"AddressPostCode":    add.AddressPostCode,
+		"PolicyID":           IDtoPrint(polenq.ID),
+		"PaidToDate":         DateConvert(polenq.PaidToDate),
+		"ClientID":           IDtoPrint(clnt.ID),
+		"PRCD":               DateConvert(polenq.PRCD),
+		"PFreq":              polenq.PFreq,
+		"InstalmentPrem":     NumbertoPrint(polenq.InstalmentPrem),
+		"RiskCessDate":       DateConvert(oRiskCessDate),
+		"PremCessDate":       DateConvert(oPremCessDate),
+		"CompletedYears":     ocompletedyears,
+		"PremiumTerm":        oPremTerm,
+		"AnnivDate":          DateConvert(polenq.AnnivDate),
+		"RevBonus":           NumbertoPrint(oRevBonus),
+		"AccDividend":        NumbertoPrint(oAccumDiv),
+		"AccDivInt":          NumbertoPrint(oAccumDivInt),
+		"CashDeposit":        NumbertoPrint(oCashDep),
+		"PolicyDeposit":      NumbertoPrint(oPolicyDeposit),
+		"AplAmount":          NumbertoPrint(oAplAmt),
+		"Department":         p0033data.DepartmentName,
+		"DepartmentHead":     p0033data.DepartmentHead,
+		"CoEmail":            p0033data.CompanyEmail,
+		"CoPhone":            p0033data.CompanyPhone,
+	}
+	return resultout
 }

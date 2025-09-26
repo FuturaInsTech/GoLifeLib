@@ -3,6 +3,7 @@ package utilities
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -525,6 +526,7 @@ func MoveFile(sourcePath, destPath string) error {
 	return nil
 }
 
+// GetReportforOnline creates pdf outputs WITHOUT headers and footers
 func GetReportforOnline(icommuncation models.Communication, itempName string, txn *gorm.DB) error {
 	defaultpath := os.Getenv("REPORTPDF_SAVE_PATH")
 	parts := strings.Split(icommuncation.TemplatePath, "/")
@@ -683,6 +685,339 @@ func (r *RequestPdf) GeneratePDFP(inputFile io.Writer, iUserco uint, iClientid u
 	os.Remove(protectedFile)
 
 	return true, nil
+}
+
+// end of GetReportforOnline
+
+// GetReportforOnlineV3 creates pdf outputs WITH headers and footers
+func GetReportforOnlineV3(icommunication models.Communication, itempName string, txn *gorm.DB) error {
+	defaultpath := os.Getenv("PDF_SAVE_PATH")
+	parts := strings.Split(icommunication.TemplatePath, "/")
+	templateFile := parts[len(parts)-1]
+	imgFolder := strings.TrimSuffix(templateFile, "."+strings.Split(templateFile, ".")[1])
+	remainingPath := strings.Join(parts[:len(parts)-1], "/")
+	absolutePath, err := filepath.Abs(remainingPath)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path: %w", err)
+	}
+
+	staticPath := filepath.Join(absolutePath, "static", imgFolder)
+	staticPath = filepath.ToSlash(staticPath)
+	//staticPath = "file:///" + strings.ReplaceAll(staticPath, " ", "%20")
+	staticPath = toFileURL(staticPath)
+
+	if icommunication.ExtractedData == nil {
+		icommunication.ExtractedData = make(map[string]interface{})
+	}
+	icommunication.ExtractedData["Img"] = staticPath
+
+	basePath := strings.TrimSuffix(templateFile, ".gohtml")
+	templateFileWithPath := filepath.Join(remainingPath, templateFile)
+	templateFileWithHeaderPath := filepath.Join(remainingPath, basePath+"-h.gohtml")
+	templateFileWithFooterPath := filepath.Join(remainingPath, basePath+"-f.gohtml")
+
+	hFile := filepath.Base(strings.TrimSuffix(templateFileWithHeaderPath, ".gohtml"))
+	fFile := filepath.Base(strings.TrimSuffix(templateFileWithFooterPath, ".gohtml"))
+	iFile := filepath.Base(templateFileWithPath)
+
+	cwdPath, _ := os.Getwd()
+	iPath := filepath.Join(cwdPath, "reportTemplates", "static")
+	imgPath := filepath.Join(iPath, iFile)
+	imgHeaderPath := filepath.Join(iPath, hFile)
+	imgFooterPath := filepath.Join(iPath, fFile)
+
+	ifileContent, err := os.ReadFile(templateFileWithPath)
+	if err != nil {
+		return fmt.Errorf("error reading body template: %w", err)
+	}
+	hfileContent, err := os.ReadFile(templateFileWithHeaderPath)
+	if err != nil {
+		return fmt.Errorf("error reading header template: %w", err)
+	}
+	ffileContent, err := os.ReadFile(templateFileWithFooterPath)
+	if err != nil {
+		return fmt.Errorf("error reading footer template: %w", err)
+	}
+
+	bodyTpl := strings.ReplaceAll(string(ifileContent), "{{.Img}}", imgPath)
+	headTpl := strings.ReplaceAll(string(hfileContent), "{{.Img}}", imgHeaderPath)
+	footTpl := strings.ReplaceAll(string(ffileContent), "{{.Img}}", imgFooterPath)
+
+	ioutFile := filepath.Join(defaultpath, iFile+"-outfile.html")
+	houtFile := filepath.Join(defaultpath, hFile+"-outfile.html")
+	foutFile := filepath.Join(defaultpath, fFile+"-outfile.html")
+
+	tempHTMLFiles := []string{ioutFile, houtFile, foutFile}
+
+	if err := createhtml(bodyTpl, icommunication.ExtractedData, ioutFile, ioutFile); err != nil {
+		return fmt.Errorf("body HTML creation error: %w", err)
+	}
+	if err := createhtml(headTpl, icommunication.ExtractedData, houtFile, houtFile); err != nil {
+		return fmt.Errorf("header HTML creation error: %w", err)
+	}
+	if err := createhtml(footTpl, icommunication.ExtractedData, foutFile, foutFile); err != nil {
+		return fmt.Errorf("footer HTML creation error: %w", err)
+	}
+
+	houtFile = toFileURL(houtFile)
+	foutFile = toFileURL(foutFile)
+
+	var pdfBuf bytes.Buffer
+
+	finalBody, _ := os.ReadFile(ioutFile)
+	r := NewRequestPdfV3(string(finalBody), houtFile, foutFile)
+
+	pdffileName := fmt.Sprintf("%s_%d_%d_%s.pdf", icommunication.TemplateName, icommunication.ClientID, icommunication.PolicyID, time.Now().Format("20060102150405"))
+
+	success, err := r.GeneratePDFPV3(&pdfBuf, icommunication.CompanyID, icommunication.ClientID, txn)
+	if err != nil || !success {
+		return fmt.Errorf("error generating PDF: %w", err)
+	}
+
+	pdfFilePath := filepath.Join(defaultpath, pdffileName)
+	if icommunication.PDFPath != "" {
+		pdfFilePath = filepath.Join(icommunication.PDFPath, pdffileName)
+	}
+
+	pdfFilePath = filepath.ToSlash(filepath.Clean(pdfFilePath))
+	if err := os.WriteFile(pdfFilePath, pdfBuf.Bytes(), 0644); err != nil {
+		return fmt.Errorf("error saving PDF: %w", err)
+	}
+
+	if icommunication.EmailAllowed == "Y" {
+		if err := EmailTriggerM(icommunication, pdfBuf.Bytes(), txn); err != nil {
+			return fmt.Errorf("error sending email: %w", err)
+		}
+	}
+
+	for _, file := range tempHTMLFiles {
+		_ = os.Remove(file)
+	}
+
+	return nil
+}
+
+func toFileURL(path string) string {
+	path = filepath.ToSlash(path)
+	path = strings.ReplaceAll(path, " ", "%20")
+	return "file:///" + path
+}
+
+func NewRequestPdfV3(body, headerFile, footerFile string) *RequestPdfV3 {
+	return &RequestPdfV3{
+		body:       body,
+		HeaderFile: headerFile,
+		FooterFile: footerFile,
+	}
+}
+
+type RequestPdfV3 struct {
+	body       string
+	HeaderFile string
+	FooterFile string
+}
+
+func (r *RequestPdfV3) GeneratePDFPV3(output io.Writer, iUserco, iClientid uint, txn *gorm.DB) (bool, error) {
+	opassword := "FuturaInsTech"
+	var clntenq models.Client
+	ipassword := ""
+
+	result := txn.First(&clntenq, "company_id = ? and id = ?", iUserco, iClientid)
+	if result.RowsAffected == 0 {
+		ipassword = opassword
+	} else {
+		ipassword = strconv.Itoa(int(iClientid)) + clntenq.ClientMobile
+	}
+
+	tempHTML := "temp.html"
+	if err := os.WriteFile(tempHTML, []byte(r.body), 0644); err != nil {
+		return false, fmt.Errorf("failed to write temp HTML: %w", err)
+	}
+
+	wkhtmlDir := os.Getenv("WKHTMLTOPDF_PATH")
+	if wkhtmlDir == "" {
+		return false, fmt.Errorf("WKHTMLTOPDF_PATH is not set")
+	}
+
+	wkhtmlPath := filepath.Join(wkhtmlDir, "wkhtmltopdf.exe")
+	wkhtmlPath = filepath.ToSlash(wkhtmlPath)
+
+	tempPDF := "temp.pdf"
+
+	cmd := exec.Command(
+		wkhtmlPath,
+		"--enable-local-file-access",
+		"--header-html", r.HeaderFile,
+		"--footer-html", r.FooterFile,
+		"--margin-top", "40mm",
+		"--margin-bottom", "50mm",
+		tempHTML,
+		filepath.ToSlash(tempPDF),
+	)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return false, fmt.Errorf("wkhtmltopdf failed: %s, %w", stderr.String(), err)
+	}
+
+	// Password protect PDF
+	protectedFile := "protected.pdf"
+	if err := EncryptPDF(tempPDF, protectedFile, ipassword, opassword); err != nil {
+		return false, fmt.Errorf("failed to protect PDF: %w", err)
+	}
+
+	protectedData, err := os.ReadFile(protectedFile)
+	if err != nil {
+		return false, fmt.Errorf("failed to read protected PDF: %w", err)
+	}
+	if _, err := output.Write(protectedData); err != nil {
+		return false, fmt.Errorf("failed to write final PDF: %w", err)
+	}
+
+	os.Remove(tempHTML)
+	os.Remove(tempPDF)
+	os.Remove(protectedFile)
+
+	return true, nil
+}
+
+func EmailTriggerM(icommunication models.Communication, pdfData []byte, txn *gorm.DB) error {
+	var client models.Client
+	result := txn.First(&client, "id = ?", icommunication.ClientID)
+	if result.Error != nil {
+		return fmt.Errorf("failed to read Client")
+	}
+	if client.ClientEmail == "" {
+		return fmt.Errorf("Email is not Found")
+	}
+
+	iTemplate := icommunication.TemplateName
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	err := GetItemD(int(icommunication.CompanyID), "P0033", iTemplate, icommunication.EffectiveDate, &extradatap0033)
+	if err != nil {
+		return err
+	}
+
+	sender := icommunication.CompanyEmail
+	receiver := client.ClientEmail
+	password := p0033data.SenderPassword
+	smtpServer := p0033data.SMTPServer
+	smtpPort := p0033data.SMTPPort
+	emailBody := p0033data.Body
+	iDateTime := time.Now().Format("20060102150405")
+	fileName := fmt.Sprintf("%s_%s.pdf", icommunication.TemplateName, iDateTime)
+
+	// Send email asynchronously
+	go func() {
+		m := gomail.NewMessage()
+		m.SetHeader("From", sender)
+		m.SetHeader("To", receiver)
+		m.SetHeader("Subject", p0033data.Subject)
+		m.SetBody("text/plain", emailBody)
+
+		// Attach PDF file
+		m.Attach(fileName, gomail.SetCopyFunc(func(w io.Writer) error {
+			_, err := w.Write(pdfData)
+			return err
+		}))
+
+		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+		d.SSL = true
+
+		sendStart := time.Now()
+		if err := d.DialAndSend(m); err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			log.Printf("Email sent successfully to %s in %v", receiver, time.Since(sendStart))
+		}
+	}()
+
+	// Send Agent Email asynchronously if allowed
+	if icommunication.AgentEmailAllowed == "Y" {
+		var agntenq models.Agency
+		result := txn.First(&agntenq, "id = ?", icommunication.AgencyID)
+		if result.Error != nil {
+			return fmt.Errorf("failed to read Agency")
+		}
+		var agclient models.Client
+		result = txn.First(&agclient, "id = ?", agntenq.ClientID)
+		if result.Error != nil {
+			return fmt.Errorf("failed to read Client")
+		}
+
+		if agclient.ClientEmail != "" {
+			go func() {
+				agentReceiver := agclient.ClientEmail
+				iName := GetName(client.CompanyID, client.ID)
+				agentEmailBody := fmt.Sprintf(
+					"Hi Sir/Madam,\n\nFollowing Email was sent to your Customer %d %s\n\n"+
+						"I am from Futura Instech..\n\nThank you!",
+					client.ID, iName,
+				)
+
+				m := gomail.NewMessage()
+				m.SetHeader("From", sender)
+				m.SetHeader("To", agentReceiver)
+				m.SetHeader("Subject", "Mail Sent to Your Customer")
+				m.SetBody("text/plain", agentEmailBody)
+
+				d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+				d.SSL = true
+
+				sendStart := time.Now()
+				if err := d.DialAndSend(m); err != nil {
+					log.Printf("Failed to send email to Agent: %v", err)
+				} else {
+					log.Printf("Email sent successfully to agent %s in %v", agentReceiver, time.Since(sendStart))
+				}
+			}()
+		}
+	}
+
+	log.Println("Email sent successfully with attachment via office SMTP")
+	return nil
+}
+
+func createhtml(gohtmlContent string, jsonContent map[string]interface{}, imgFolder string, outFile string) (err error) {
+	// Read the HTML file
+	jsonContentData, err := json.Marshal(jsonContent)
+
+	// Parse JSON into a map
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(jsonContentData), &data)
+	if err != nil {
+		return err
+	}
+
+	// Parse and execute template
+	funcMap := CreateFuncMap()
+	tmpl, err := template.New(gohtmlContent).Funcs(funcMap).Parse(gohtmlContent)
+	if err != nil {
+		return err
+	}
+
+	// Execute template into a buffer first
+	var buf bytes.Buffer
+	err = tmpl.Execute(&buf, data)
+	if err != nil {
+		return err
+	}
+
+	// Check for <!DOCTYPE html> and insert if missing
+	rendered := buf.String()
+	if !strings.HasPrefix(strings.TrimSpace(rendered), "<!DOCTYPE") {
+		rendered = "<!DOCTYPE html>\n" + rendered
+	}
+
+	// Write final HTML to output file
+	err = os.WriteFile(outFile, []byte(rendered), 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func EncryptPDF(inputFile, outputFile, userPassword, ownerPassword string) error {

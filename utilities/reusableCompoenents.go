@@ -7122,6 +7122,50 @@ func ValidateBank(bankval models.Bank, userco uint, userlan uint, iKey string) (
 	return
 }
 
+// Reference Validate Bank v3 function for txn rollback changes
+// Note: after the txn rollback changes are completed in full in GoLife, GoLifeBatch this function is not needed to maintain
+//
+//	as this is only a reference program during work in progress.
+func ValidateBankV2(bankval models.Bank, userco uint, userlan uint, iKey string) models.TxnError {
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	// Fetch validation rules
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iKey}
+	}
+
+	// Loop through validation fields
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(bankval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			errcode := p0065data.FieldList[i].ErrorCode
+			return models.TxnError{
+				ErrorCode: errcode,
+			}
+		}
+	}
+
+	// Special date check
+	if bankval.StartDate > bankval.EndDate {
+		return models.TxnError{
+			ErrorCode: "GL563",
+		}
+	}
+
+	return models.TxnError{} // no error
+}
+
 // # 138
 //
 // # GetIlpFundUnits - To return the current available Units in a Fund

@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -1606,4 +1607,44 @@ func ColaSurrenderCalc(iCompany uint, iPolicy uint, iCoverage string) (oTotalPre
 
 	return RoundFloat(oTotalPrem, 2), RoundFloat(oTotalPaidPrem, 2)
 
+}
+
+func GetSearchableFields(model interface{}) []string {
+	t := reflect.TypeOf(model)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	fields := []string{}
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+
+		// get gorm:"..." tag
+		gormTag := f.Tag.Get("gorm")
+
+		// only consider fields that map to DB columns
+		if gormTag != "" && !strings.Contains(gormTag, "-") {
+			// gorm:"type:varchar(50)" → take actual field name
+			// fallback: convert struct field name to snake_case
+			colName := f.Tag.Get("column")
+			if colName == "" {
+				colName = ToSnakeCase(f.Name)
+			}
+			fields = append(fields, colName)
+		}
+	}
+	return fields
+}
+
+// simple snake_case converter
+func ToSnakeCase(str string) string {
+	var result []rune
+	for i, r := range str {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result = append(result, '_', r+32)
+		} else {
+			result = append(result, r)
+		}
+	}
+	return string(result)
 }

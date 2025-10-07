@@ -12,3 +12,11 @@ type Error struct {
 	LongCode   string `gorm:"type:varchar(80)"`
 	LanguageID uint
 }
+
+type TxnError struct {
+	ErrorCode string `gorm:"type:varchar(05)"`
+	ParamName string `gorm:"type:varchar(20)"`
+	ParamItem string `gorm:"type:varchar(20)"`
+	DB        string `gorm:"type:varchar(20)"`
+	DbError   string `gorm:"type:varchar(50)"`
+}

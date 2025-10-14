@@ -1,0 +1,151 @@
+// Program Name: dir2excel.go
+// Description : List all files (with optional extension filter) in a given subfolder of the current directory
+//               and save the structure into an Excel file with a sheet name based on arg[1].
+// Usage       : go run dir2excel.go <subfolder_name> [extension]
+// Example     : go run dir2excel.go reports go
+//                 -> Scans ./reports and saves reports.xlsx with sheet name "reports"
+//                 -> Only lists .go files
+//
+//               go run dir2excel.go reports
+//                 -> Scans ./reports and saves reports.xlsx with sheet name "reports"
+//                 -> Lists all files
+//
+//               go run dir2excel.go
+//                 -> Scans current folder and saves directory_list.xlsx with sheet name "Sheet1"
+//                 -> Lists all files
+
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/xuri/excelize/v2"
+)
+
+func main() {
+	if len(os.Args) > 3 {
+		fmt.Printf("Usage   : %s [<subfolder_name> <extension>]\n", os.Args[0])
+
+		fmt.Printf("Example 1 : %s reports go\n", os.Args[0])
+		fmt.Printf("              -> Scans ./reports folder path and saves reports.xlsx with sheet name as reports\n")
+		fmt.Printf("              -> Only lists .go files\n")
+		fmt.Printf("\n")
+		fmt.Printf("Example 2 : %s reports\n", os.Args[0])
+		fmt.Printf("              -> Scans ./reports and saves reports.xlsx with sheet name reports\n")
+		fmt.Printf("              -> Lists all files\n")
+		fmt.Printf("\n")
+		fmt.Printf("Example 3 : %s \n", os.Args[0])
+		fmt.Printf("              -> Scans current folder and saves dirList.xlsx with sheet name dirList\n")
+		fmt.Printf("              -> Lists all files\n")
+		os.Exit(0)
+	}
+
+	cwd, _ := os.Getwd()
+	var root, output, sheet, filterExt string
+
+	if len(os.Args) == 3 {
+		// Case: subfolder + extension
+		filterExt = strings.ToLower(os.Args[2])
+		root = filepath.Join(cwd, os.Args[1])
+		output = os.Args[1] + ".xlsx"
+		sheet = os.Args[1]
+	} else if len(os.Args) == 2 {
+		// Case: only subfolder
+		root = filepath.Join(cwd, os.Args[1])
+		output = os.Args[1] + ".xlsx"
+		sheet = os.Args[1]
+	} else if len(os.Args) == 1 {
+		// Case: no args — ask for confirmation before using defaults
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf("%s\n", os.Args[0])
+		fmt.Printf("  -> No arguments provided...\n")
+		fmt.Printf("  -> Scans current folder and saves a list of all files in dirList.xlsx with sheet name as dirList\n")
+		fmt.Print(" Do you want to continue? (y/n): ")
+		confirm, _ := reader.ReadString('\n')
+		confirm = strings.ToLower(strings.TrimSpace(confirm))
+
+		if confirm == "y" || confirm == "yes" {
+			root = cwd
+			output = "dirList.xlsx"
+			sheet = "dirList"
+		} else {
+			fmt.Println("Command Execution Terminated...")
+			os.Exit(0)
+		}
+	}
+
+	fmt.Println("Root:", root)
+	fmt.Println("Output:", output)
+	fmt.Println("Sheet:", sheet)
+	fmt.Println("Filter:", filterExt)
+	// Verify folder exists
+	info, err := os.Stat(root)
+	if os.IsNotExist(err) {
+		log.Fatalf("Folder %s does not exist\n", root)
+	}
+	if !info.IsDir() {
+		log.Fatalf("%s is not a folder\n", root)
+	}
+
+	// Create a new Excel file
+	f := excelize.NewFile()
+
+	// Delete default sheet ("Sheet1") if we want a custom name
+	defaultSheet := f.GetSheetName(0)
+	if sheet != defaultSheet {
+		f.NewSheet(sheet)
+		f.DeleteSheet(defaultSheet)
+	}
+
+	// Write header row
+	headers := []string{"Path", "Name"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheet, cell, h)
+	}
+
+	row := 2 // Start from row 2
+
+	// Walk through directories
+	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+
+		// For files, check extension filter
+		ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(info.Name())), ".")
+		if filterExt == "" || ext == filterExt {
+			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), path)
+			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), info.Name())
+			row++
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Save Excel file
+	if err := f.SaveAs(output); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Scanned folder: %s\n", root)
+	if filterExt != "" {
+		fmt.Printf("Only files with extension .%s are listed\n", filterExt)
+	} else {
+		fmt.Printf("All files are listed\n")
+	}
+	fmt.Printf("Directory structure exported to %s (sheet: %s)\n", output, sheet)
+}

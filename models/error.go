@@ -18,5 +18,5 @@ type TxnError struct {
 	ParamName string `gorm:"type:varchar(20)"`
 	ParamItem string `gorm:"type:varchar(20)"`
 	DB        string `gorm:"type:varchar(20)"`
-	DbError   string `gorm:"type:varchar(50)"`
+	DbError   error
 }

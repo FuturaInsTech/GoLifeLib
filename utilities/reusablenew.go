@@ -911,6 +911,37 @@ func UpdateGlBalNNew(iCompany uint, iGlRldgAcct string, iGlAccountCode string, i
 
 }
 
+func TDFLoanDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate string, txn *gorm.DB) (string, models.TxnError) {
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = iTranno
+		tdfpolicy.Seqno = tdfrule.Seqno
+		txn.Create(&tdfpolicy)
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+	} else {
+		txn.Delete(&tdfpolicy)
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = iDate
+		tdfpolicy.Tranno = iTranno
+
+		txn.Create(&tdfpolicy)
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+	}
+}
+
 // 2025-10-15 Changes done by Divya Ends....
 
 // 2025-10-15 Changes done by Laxmi Begins...

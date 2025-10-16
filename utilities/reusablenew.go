@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -22,9 +23,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// 2025-10-15 Changes done by Diva Begins...
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Divyalakshmi Changes
+// 2025-10-15
 
-// ////////////
 func TDFCollDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate string, txn *gorm.DB) (string, models.TxnError) {
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy
@@ -74,8 +76,6 @@ func TDFCollDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 	}
 }
 
-//////////////
-
 func TdfhUpdateNNew(iCompany uint, iPolicy uint, txn *gorm.DB) models.TxnError {
 	var tdfhupd models.Tdfh
 	var tdfpolicyenq []models.TDFPolicy
@@ -118,7 +118,6 @@ func TdfhUpdateNNew(iCompany uint, iPolicy uint, txn *gorm.DB) models.TxnError {
 	return models.TxnError{}
 }
 
-// ///////
 func CreateCommunicationsMNew(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint) models.TxnError {
 
 	var communication models.Communication
@@ -508,7 +507,6 @@ func CreateCommunicationsMNew(iCompany uint, iHistoryCode string, iTranno uint, 
 	return models.TxnError{}
 }
 
-// //////////////////////
 func GetReportforOnlineV3New(icommunication models.Communication, itempName string, txn *gorm.DB) models.TxnError {
 	defaultpath := os.Getenv("PDF_SAVE_PATH")
 	parts := strings.Split(icommunication.TemplatePath, "/")
@@ -616,8 +614,6 @@ func GetReportforOnlineV3New(icommunication models.Communication, itempName stri
 	return models.TxnError{}
 }
 
-//////////////////////
-
 func (r *RequestPdfV3) GeneratePDFPV3New(output io.Writer, iUserco, iClientid uint, txn *gorm.DB) (bool, models.TxnError) {
 	opassword := "FuturaInsTech"
 	var clntenq models.Client
@@ -690,7 +686,6 @@ func (r *RequestPdfV3) GeneratePDFPV3New(output io.Writer, iUserco, iClientid ui
 	return true, models.TxnError{}
 }
 
-// /////
 func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *gorm.DB) models.TxnError {
 	var client models.Client
 	result := txn.First(&client, "id = ?", icommunication.ClientID)
@@ -789,10 +784,10 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 	return models.TxnError{}
 }
 
-// //////////
 func PostGlMoveNNew(iCompany uint, iContractCurry string, iEffectiveDate string,
 	iTranno int, iGlAmount float64, iAccAmount float64, iAccountCodeID uint, iGlRdocno uint,
-	iGlRldgAcct string, iSeqnno uint64, iGlSign string, iAccountCode string, iHistoryCode string, iRevInd string, iCoverage string, txn *gorm.DB) models.TxnError {
+	iGlRldgAcct string, iSeqnno uint64, iGlSign string, iAccountCode string, iHistoryCode string,
+	iRevInd string, iCoverage string, txn *gorm.DB) models.TxnError {
 
 	iAccAmount = RoundFloat(iAccAmount, 2)
 
@@ -864,7 +859,6 @@ func PostGlMoveNNew(iCompany uint, iContractCurry string, iEffectiveDate string,
 	return models.TxnError{}
 }
 
-// //////////////
 func UpdateGlBalNNew(iCompany uint, iGlRldgAcct string, iGlAccountCode string, iContCurry string, iAmount float64, iGLSign string, iGlRdocno string, txn *gorm.DB) (models.TxnError, float64) {
 	var glbal models.GlBal
 	var temp float64
@@ -942,11 +936,50 @@ func TDFLoanDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 	}
 }
 
-// 2025-10-15 Changes done by Divya Ends....
+// 2025-10-16 Changes
+func ValidateBankNew(bankval models.Bank, userco uint, userlan uint, iKey string) models.TxnError {
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
 
-// 2025-10-15 Changes done by Laxmi Begins...
-/////////////////GetReportforOnlineNew///////////////
+	// Fetch validation rules
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iKey}
+	}
 
+	// Loop through validation fields
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(bankval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			errcode := p0065data.FieldList[i].ErrorCode
+			return models.TxnError{
+				ErrorCode: errcode,
+			}
+		}
+	}
+
+	// Special date check
+	if bankval.StartDate > bankval.EndDate {
+		return models.TxnError{
+			ErrorCode: "GL563",
+		}
+	}
+
+	return models.TxnError{} // no error
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Lakshmi Muppidathi Changes
+// 2025-10-15
 func GetReportforOnlineNew(icommuncation models.Communication, itempName string, txn *gorm.DB) models.TxnError {
 	defaultpath := os.Getenv("REPORTPDF_SAVE_PATH")
 	parts := strings.Split(icommuncation.TemplatePath, "/")
@@ -1018,8 +1051,6 @@ func GetReportforOnlineNew(icommuncation models.Communication, itempName string,
 	return models.TxnError{}
 }
 
-/////////////////SendSMSTwilioNew///////////////
-
 func SendSMSTwilioNew(iCompany, iclientID uint, itempName, iEffDate string, message string, txn *gorm.DB) models.TxnError {
 	// Fetch client details
 	var client models.Client
@@ -1080,8 +1111,6 @@ func SendSMSTwilioNew(iCompany, iclientID uint, itempName, iEffDate string, mess
 	log.Println("SMS sending initiated asynchronously")
 	return models.TxnError{}
 }
-
-////////////////////////CreateCommunicationsNNew/////////
 
 func CreateCommunicationsNNew(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint) models.TxnError {
 
@@ -1384,8 +1413,6 @@ func CreateCommunicationsNNew(iCompany uint, iHistoryCode string, iTranno uint, 
 	return models.TxnError{}
 }
 
-////////////////GetMaxTrannoNNew////////////////
-
 func GetMaxTrannoNNew(iCompany uint, iPolicy uint, iMethod string, iEffDate string, iuser uint64, historyMap map[string]interface{}, txn *gorm.DB) (string, uint, models.TxnError) {
 	var permission models.Permission
 	var result *gorm.DB
@@ -1437,4 +1464,5 @@ func GetMaxTrannoNNew(iCompany uint, iPolicy uint, iMethod string, iEffDate stri
 	return phistory.HistoryCode, phistory.Tranno, models.TxnError{}
 }
 
-// 2025-10-15 Changes done by Laxmi Ends...
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// End of Changes

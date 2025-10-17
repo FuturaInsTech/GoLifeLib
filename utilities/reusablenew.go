@@ -533,9 +533,9 @@ func GetReportforOnlineV3New(icommunication models.Communication, itempName stri
 	templateFileWithHeaderPath := filepath.Join(remainingPath, basePath+"-h.gohtml")
 	templateFileWithFooterPath := filepath.Join(remainingPath, basePath+"-f.gohtml")
 
+	iFile := filepath.Base(strings.TrimSuffix(templateFileWithPath, ".gohtml"))
 	hFile := filepath.Base(strings.TrimSuffix(templateFileWithHeaderPath, ".gohtml"))
 	fFile := filepath.Base(strings.TrimSuffix(templateFileWithFooterPath, ".gohtml"))
-	iFile := filepath.Base(templateFileWithPath)
 
 	cwdPath, _ := os.Getwd()
 	iPath := filepath.Join(cwdPath, "reportTemplates", "static")
@@ -586,9 +586,10 @@ func GetReportforOnlineV3New(icommunication models.Communication, itempName stri
 
 	pdffileName := fmt.Sprintf("%s_%d_%d_%s.pdf", icommunication.TemplateName, icommunication.ClientID, icommunication.PolicyID, time.Now().Format("20060102150405"))
 
-	success, err := r.GeneratePDFPV3(&pdfBuf, icommunication.CompanyID, icommunication.ClientID, txn)
-	if err != nil || !success {
-		return models.TxnError{ErrorCode: "GL731"}
+	_, funcErr := r.GeneratePDFPV3New(&pdfBuf, icommunication.CompanyID, icommunication.ClientID, txn)
+	if funcErr.ErrorCode != "" {
+		return funcErr
+
 	}
 
 	pdfFilePath := filepath.Join(defaultpath, pdffileName)
@@ -602,8 +603,9 @@ func GetReportforOnlineV3New(icommunication models.Communication, itempName stri
 	}
 
 	if icommunication.EmailAllowed == "Y" {
-		if err := EmailTriggerM(icommunication, pdfBuf.Bytes(), txn); err != nil {
-			return models.TxnError{ErrorCode: "GL733"}
+		funcErr := EmailTriggerMNew(icommunication, pdfBuf.Bytes(), txn)
+		if funcErr.ErrorCode != "" {
+			return funcErr
 		}
 	}
 

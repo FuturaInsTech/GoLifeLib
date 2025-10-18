@@ -16,14 +16,15 @@ func LoadEnvVariables() {
 }
 
 func LoadAndExpandEnvVariables() {
-	localFile := ".env.local"
+	localFile := ".env_local"
 	mainFile := ".env"
 
 	envMap := make(map[string]string)
 
-	if _, err := os.Stat(localFile); err == nil {
-		loadEnvFile(localFile, envMap)
+	if _, err := os.Stat(localFile); os.IsNotExist(err) {
+		log.Fatal(".env_local file not found")
 	}
+	loadEnvFile(localFile, envMap)
 
 	if _, err := os.Stat(mainFile); os.IsNotExist(err) {
 		log.Fatal(".env file not found")
@@ -40,7 +41,7 @@ func LoadAndExpandEnvVariables() {
 func loadEnvFile(filename string, envMap map[string]string) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("Error reading %s: ", filename)
+		log.Fatalf("Error reading .env or .env_local file")
 	}
 
 	lines := strings.Split(string(data), "\n")

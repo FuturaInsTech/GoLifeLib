@@ -15,30 +15,40 @@ func LoadEnvVariables() {
 	}
 }
 
-// Expand all ${VAR} variable values and and set the env values
-// Part of Standard usage of .env file within the application
 func LoadAndExpandEnvVariables() {
-	filename := ".env"
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		log.Fatal(".env file not found")
+	localFile := ".env.local"
+	mainFile := ".env"
+
+	envMap := make(map[string]string)
+
+	if _, err := os.Stat(localFile); err == nil {
+		loadEnvFile(localFile, envMap)
 	}
 
+	if _, err := os.Stat(mainFile); os.IsNotExist(err) {
+		log.Fatal(".env file not found")
+	}
+	loadEnvFile(mainFile, envMap)
+
+	for key, val := range envMap {
+		val = expandInline(val, envMap)
+		envMap[key] = val
+		_ = os.Setenv(key, val)
+	}
+}
+
+func loadEnvFile(filename string, envMap map[string]string) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("Error reading .env file")
+		log.Fatalf("Error reading %s: ", filename)
 	}
 
 	lines := strings.Split(string(data), "\n")
-	envMap := make(map[string]string)
-
-	// Step 1: parse all lines into key=value pairs
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-
-		// Split only at the first '='
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
 			continue
@@ -46,12 +56,6 @@ func LoadAndExpandEnvVariables() {
 		key := strings.TrimSpace(parts[0])
 		val := strings.TrimSpace(parts[1])
 		envMap[key] = val
-	}
-
-	for key, val := range envMap {
-		val = expandInline(val, envMap)
-		envMap[key] = val
-		_ = os.Setenv(key, val)
 	}
 }
 
@@ -71,6 +75,8 @@ func expandInline(value string, envMap map[string]string) string {
 		repl := ""
 		if v, ok := envMap[varName]; ok {
 			repl = v
+		} else {
+			repl = os.Getenv(varName) // fallback to OS environment
 		}
 		value = value[:start] + repl + value[end+1:]
 	}

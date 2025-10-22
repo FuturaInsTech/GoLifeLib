@@ -18,7 +18,6 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
@@ -1749,70 +1748,6 @@ func EmailTriggerforReportNew(iCompany uint, iReference uint, iClient uint, iEma
 	}()
 	log.Printf("EmailTrigger function executed in %v", time.Since(sendStart))
 	return models.TxnError{}
-}
-
-func (r *RequestPdf) GeneratePDFPN(inputFile io.Writer, iUserco uint, iClientid uint, txn *gorm.DB) (bool, models.TxnError) {
-
-	opassword := "FuturaInsTech"
-	var clntenq models.Client
-	ipassword := ""
-
-	result := txn.First(&clntenq, "company_id = ? and id = ?", iUserco, iClientid)
-	// In case no record found, use owner password as user password
-	if result.RowsAffected == 0 {
-		ipassword = opassword
-	} else {
-		ipassword = strconv.Itoa(int(iClientid)) + clntenq.ClientMobile
-	}
-	// Step 1: Generate the PDF
-	pdfg, err := wkhtmltopdf.NewPDFGenerator()
-	if err != nil {
-		return false, models.TxnError{ErrorCode: "GL754", DbError: err}
-	}
-
-	page := wkhtmltopdf.NewPageReader(strings.NewReader(r.body))
-	page.EnableLocalFileAccess.Set(true)
-	pdfg.AddPage(page)
-	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
-	//pdfg.Orientation.Set(wkhtmltopdf.)
-	pdfg.Dpi.Set(300)
-
-	// Save to temporary file
-	tempFile := "temp.pdf"
-	outFile, err := os.Create(tempFile)
-	if err != nil {
-		return false, models.TxnError{ErrorCode: "GL755", DbError: err}
-	}
-	defer outFile.Close()
-
-	pdfg.SetOutput(outFile)
-	err = pdfg.Create()
-	if err != nil {
-		return false, models.TxnError{ErrorCode: "GL712", DbError: err}
-	}
-
-	// Step 2: Protect the PDF using Python script
-	protectedFile := "protected.pdf"
-	err = EncryptPDF(tempFile, protectedFile, ipassword, opassword)
-	if err != nil {
-		return false, models.TxnError{ErrorCode: "GL756", DbError: err}
-	}
-
-	// Step 3: Write the password-protected PDF to the writer
-	protectedData, err := os.ReadFile(protectedFile)
-	if err != nil {
-		return false, models.TxnError{ErrorCode: "GL715", DbError: err}
-	}
-	_, err = inputFile.Write(protectedData)
-	if err != nil {
-		return false, models.TxnError{ErrorCode: "GL757", DbError: err}
-	}
-
-	// Cleanup temporary files
-	os.Remove(tempFile)
-	os.Remove(protectedFile)
-
-	return true, models.TxnError{}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

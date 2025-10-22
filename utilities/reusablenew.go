@@ -18,6 +18,7 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
@@ -1464,6 +1465,354 @@ func GetMaxTrannoNNew(iCompany uint, iPolicy uint, iMethod string, iEffDate stri
 	}
 
 	return phistory.HistoryCode, phistory.Tranno, models.TxnError{}
+}
+
+// 2025-10-21 Changes
+func ValidateClientWorkNNew(clientwork models.ClientWork, userco uint, userlan uint, iDate string, iKey string, txn *gorm.DB) models.TxnError {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: "P0027", ParamItem: iKey}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(clientwork)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			return models.TxnError{ErrorCode: "GL756"}
+		}
+
+	}
+
+	var client models.Client
+	clientid := clientwork.ClientID
+	result1 := initializers.DB.Find(&client, "company_id = ? and id = ?", userco, clientid)
+	if result1.RowsAffected == 0 {
+		return models.TxnError{
+			ErrorCode: "GL050",
+			DbError:   result1.Error,
+		}
+	}
+
+	if client.ClientStatus != "AC" {
+		return models.TxnError{ErrorCode: "GL221", DbError: result1.Error}
+	}
+	var employer models.Client
+	employerid := clientwork.EmployerID
+	result2 := initializers.DB.Find(&employer, "company_id = ? and id = ?", userco, employerid)
+	if result2.RowsAffected == 0 {
+		return models.TxnError{
+			ErrorCode: "GL050",
+			DbError:   result2.Error,
+		}
+	}
+
+	if employer.ClientStatus != "AC" {
+		return models.TxnError{ErrorCode: "GL221", DbError: result2.Error}
+	}
+
+	if clientwork.StartDate > iDate {
+		return models.TxnError{ErrorCode: "GL656"}
+	}
+
+	if clientwork.EndDate < iDate {
+		return models.TxnError{ErrorCode: "GL657"}
+	}
+	return models.TxnError{}
+}
+
+func AutoPayCreateNew(iCompany uint, iPolicy uint, iClient uint, iAddress uint, iBank uint, iAccCurr string, iAmount float64, iDate string, iDrAcc string, iCrAcc string, iTypeofPayment string, iUserID uint, iReason string, iHistoryCode string, iTranno uint, iPayStatus string, iCoverage string, txn *gorm.DB) (oPayno uint, txnerr models.TxnError) {
+	if iPayStatus == "PN" {
+		var payosbal models.PayOsBal
+		result := txn.Find(&payosbal, "company_id = ? and gl_accountno = ? and gl_rldg_acct =? and contract_curry = ?", iCompany, iDrAcc, iPolicy, iAccCurr)
+		//	iErr := "Payment Already Processed"
+		if result.RowsAffected > 0 {
+			txnerr = models.TxnError{ErrorCode: "GL709", DbError: result.Error}
+			return 0, txnerr
+		}
+	}
+
+	oPayno = 0
+	var bankenq models.Bank
+	result := txn.Find(&bankenq, "id = ?", iBank)
+	if result.RowsAffected == 0 {
+		txnerr = models.TxnError{ErrorCode: "GL058", DbError: result.Error}
+		return oPayno, txnerr
+	}
+	iDrSign := "+"
+	iCrSign := "-"
+
+	// Following change has been commented. It is not required.  This entry is handled through
+	// P0027 parameter set up
+	// if iHistoryCode == "H0211" {
+	// 	iDrSign = "-"
+	// 	iCrSign = "+"
+	// }
+	// Get Payment Type Accounting Code for Creation
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
+
+	err := GetItemD(int(iCompany), "P0055", iTypeofPayment, iDate, &extradatap0055)
+	if err != nil {
+		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iTypeofPayment}
+		return oPayno, txnerr
+	}
+	iCrBank := p0055data.GlAccount
+	iFSC := p0055data.BankCode
+	iCrAccount := iCrAcc + "-" + iCrBank // BankAccount-KVB
+	iEffectiveDate := iDate
+	// Create Payment First.  Then when it is Auto Approved Payment write accounting entries
+	// Write Payment
+
+	var paycrt models.Payment
+	paycrt.AccAmount = iAmount
+	paycrt.AccCurry = iAccCurr
+	paycrt.AddressID = iAddress
+	paycrt.BankAccountNo = bankenq.BankAccountNo
+	paycrt.BankIFSC = bankenq.BankCode
+	paycrt.Branch = "HO"
+	paycrt.CheckerUserID = 1
+	paycrt.ClientID = iClient
+	paycrt.CompanyID = iCompany
+	paycrt.CurrentDate = iEffectiveDate
+	paycrt.DateOfPayment = iEffectiveDate
+	paycrt.InsurerBankAccNo = iCrAccount
+	paycrt.InsurerBankIFSC = iFSC
+	paycrt.PaymentAccount = iDrAcc + iCoverage
+	paycrt.PolicyID = iPolicy
+	paycrt.TypeOfPayment = iTypeofPayment
+	paycrt.UpdatedID = 1
+	paycrt.MakerUserID = 2
+	paycrt.Reason = iReason
+	paycrt.Status = iPayStatus
+	result = txn.Save(&paycrt)
+
+	if result.Error != nil {
+		txnerr = models.TxnError{
+			ErrorCode: "DBERR",
+			DbError:   result.Error,
+		}
+		return oPayno, txnerr
+	}
+
+	oPayno = paycrt.ID
+	oPolicy := strconv.Itoa(int(iPolicy))
+	if iPayStatus == "PN" {
+		var payosbalcrt models.PayOsBal
+		payosbalcrt.CompanyID = iCompany
+		payosbalcrt.GlRldgAcct = oPolicy
+		payosbalcrt.GlRdocno = oPolicy
+		payosbalcrt.GlAccountno = iDrAcc
+		payosbalcrt.ContractCurry = iAccCurr
+		payosbalcrt.PaymentNo = oPayno
+		payosbalcrt.ContractAmount = iAmount
+		result = txn.Create(&payosbalcrt)
+		if result.Error != nil {
+			txnerr = models.TxnError{
+				ErrorCode: "DBERR",
+				DbError:   result.Error,
+			}
+			return 0, txnerr
+		}
+
+	}
+	if iPayStatus == "AP" {
+		// Debit
+		glcode := iDrAcc
+		var acccode models.AccountCode
+		result = txn.First(&acccode, "company_id = ? and account_code = ? ", iCompany, glcode)
+		if result.Error != nil {
+			txnerr = models.TxnError{
+				ErrorCode: "DBERR",
+				DbError:   result.Error,
+			}
+			return oPayno, txnerr
+		}
+		var iSequenceno uint64
+		iSequenceno++
+		iAccountCodeID := acccode.ID
+		iAccAmount := iAmount
+		iAccCurry := iAccCurr
+		iAccountCode := glcode + iCoverage
+
+		iGlAmount := iAmount
+
+		iGlRdocno := int(iPolicy)
+		var iGlRldgAcct string
+		//iGlRldgAcct := strconv.Itoa(int(iClient))
+		// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+		iGlRldgAcct = strconv.Itoa(int(iPolicy))
+		iGlSign := iDrSign
+
+		funcErr := PostGlMoveNNew(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+			iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
+
+		if funcErr.ErrorCode != "" {
+			txnerr = funcErr
+			return oPayno, txnerr
+		}
+		// Credit
+
+		glcode = iCrAcc
+		var acccode1 models.AccountCode
+		result = txn.First(&acccode1, "company_id = ? and account_code = ? ", iCompany, glcode)
+		if result.Error != nil {
+			txnerr = models.TxnError{
+				ErrorCode: "DBERR",
+				DbError:   result.Error,
+			}
+			return oPayno, txnerr
+		}
+
+		iSequenceno++
+		iAccountCodeID = acccode1.ID
+		iAccAmount = iAmount
+		iAccCurry = iAccCurr
+		iAccountCode = iCrAccount
+		iEffectiveDate = iDate
+		iGlAmount = iAmount
+
+		//iGlRdocno = int(iPolicy)
+		iGlRdocno = int(oPayno)
+
+		//iGlRldgAcct := strconv.Itoa(int(iClient))
+		// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+		iGlRldgAcct = strconv.Itoa(int(iPolicy))
+		iGlSign = iCrSign
+
+		funcErr = PostGlMoveNNew(iCompany, iAccCurry, iEffectiveDate, int(iTranno), iGlAmount,
+			iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iHistoryCode, "", "", txn)
+
+		if funcErr.ErrorCode != "" {
+			txnerr = funcErr
+			return oPayno, txnerr
+		}
+	}
+
+	return oPayno, txnerr
+}
+
+func EmailTriggerforReportNew(iCompany uint, iReference uint, iClient uint, iEmail string, iEffDate string, itempName string, pdfData []byte, txn *gorm.DB) models.TxnError {
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	err := GetItemD(int(iCompany), "P0033", itempName, iEffDate, &extradatap0033)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: "P0033", ParamItem: itempName}
+	}
+
+	sender := p0033data.CompanyEmail
+	receiver := iEmail
+	password := p0033data.SenderPassword
+	smtpServer := p0033data.SMTPServer
+	smtpPort := p0033data.SMTPPort
+
+	emailBody := p0033data.Body
+	m := gomail.NewMessage()
+	m.SetHeader("From", sender)
+	m.SetHeader("To", receiver)
+	m.SetHeader("Subject", p0033data.Subject)
+	m.SetBody("text/plain", emailBody)
+	iTime := time.Now().Format("20060102150405")
+	iClientnumstr := strconv.Itoa(int(iClient))
+
+	m.Attach(itempName+iClientnumstr+iTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
+		_, err := w.Write(pdfData)
+		return err
+	}))
+
+	// Configure SMTP dialer
+	d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+	d.SSL = true      // Enables SSL
+	d.TLSConfig = nil // Use default TLS settings
+
+	// Send email asynchronously with proper logging
+	sendStart := time.Now()
+	go func() {
+		if err := d.DialAndSend(m); err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			log.Printf("Email sent successfully to %s (CC: %s, BCC: %s) in %v",
+				receiver, "", "", time.Since(sendStart))
+		}
+	}()
+	log.Printf("EmailTrigger function executed in %v", time.Since(sendStart))
+	return models.TxnError{}
+}
+
+func (r *RequestPdf) GeneratePDFPN(inputFile io.Writer, iUserco uint, iClientid uint, txn *gorm.DB) (bool, models.TxnError) {
+
+	opassword := "FuturaInsTech"
+	var clntenq models.Client
+	ipassword := ""
+
+	result := txn.First(&clntenq, "company_id = ? and id = ?", iUserco, iClientid)
+	// In case no record found, use owner password as user password
+	if result.RowsAffected == 0 {
+		ipassword = opassword
+	} else {
+		ipassword = strconv.Itoa(int(iClientid)) + clntenq.ClientMobile
+	}
+	// Step 1: Generate the PDF
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL754", DbError: err}
+	}
+
+	page := wkhtmltopdf.NewPageReader(strings.NewReader(r.body))
+	page.EnableLocalFileAccess.Set(true)
+	pdfg.AddPage(page)
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+	//pdfg.Orientation.Set(wkhtmltopdf.)
+	pdfg.Dpi.Set(300)
+
+	// Save to temporary file
+	tempFile := "temp.pdf"
+	outFile, err := os.Create(tempFile)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL755", DbError: err}
+	}
+	defer outFile.Close()
+
+	pdfg.SetOutput(outFile)
+	err = pdfg.Create()
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL712", DbError: err}
+	}
+
+	// Step 2: Protect the PDF using Python script
+	protectedFile := "protected.pdf"
+	err = EncryptPDF(tempFile, protectedFile, ipassword, opassword)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL756", DbError: err}
+	}
+
+	// Step 3: Write the password-protected PDF to the writer
+	protectedData, err := os.ReadFile(protectedFile)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL715", DbError: err}
+	}
+	_, err = inputFile.Write(protectedData)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL757", DbError: err}
+	}
+
+	// Cleanup temporary files
+	os.Remove(tempFile)
+	os.Remove(protectedFile)
+
+	return true, models.TxnError{}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

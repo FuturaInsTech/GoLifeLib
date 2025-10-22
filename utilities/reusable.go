@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -1647,4 +1648,68 @@ func ToSnakeCase(str string) string {
 		}
 	}
 	return string(result)
+}
+
+// Created ValidteClientWorkN - txn implementation Ommission
+// 2025-10-21 txn implemented by Lakshmi
+func ValidateClientWorkN(clientwork models.ClientWork, userco uint, userlan uint, iDate string, iKey string, txn *gorm.DB) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(clientwork)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	var client models.Client
+	clientid := clientwork.ClientID
+	initializers.DB.Find(&client, "company_id = ? and id = ?", userco, clientid)
+
+	if client.ClientStatus != "AC" {
+		shortCode := "GL221" // InValid Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	var employer models.Client
+	employerid := clientwork.EmployerID
+	initializers.DB.Find(&employer, "company_id = ? and id = ?", userco, employerid)
+
+	if employer.ClientStatus != "AC" {
+		shortCode := "GL221" // InValid Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if clientwork.StartDate > iDate {
+		shortCode := "GL656"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if clientwork.EndDate < iDate {
+		shortCode := "GL657"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	return nil
 }

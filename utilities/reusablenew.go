@@ -18,6 +18,7 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
@@ -703,7 +704,7 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 	var extradatap0033 paramTypes.Extradata = &p0033data
 	err := GetItemD(int(icommunication.CompanyID), "P0033", iTemplate, icommunication.EffectiveDate, &extradatap0033)
 	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0027", ParamItem: iTemplate}
+		return models.TxnError{ErrorCode: "PARME", ParamName: "P0033", ParamItem: iTemplate}
 	}
 
 	sender := icommunication.CompanyEmail
@@ -1024,9 +1025,9 @@ func GetReportforOnlineNew(icommuncation models.Communication, itempName string,
 	pdffileName := fmt.Sprintf("%s_%d_%d_%s.pdf", icommuncation.TemplateName, icommuncation.ClientID, icommuncation.PolicyID, time.Now().Format("20060102150405"))
 
 	var pdfBuf bytes.Buffer
-	success, err := r.GeneratePDFP(&pdfBuf, icommuncation.CompanyID, icommuncation.ClientID, txn)
-	if err != nil || !success {
-		return models.TxnError{ErrorCode: "GL704"}
+	success, funcErr := r.GeneratePDFPN(&pdfBuf, icommuncation.CompanyID, icommuncation.ClientID, txn)
+	if funcErr.ErrorCode != "" || !success {
+		return funcErr
 	}
 
 	// Save the PDF to the file system if needed
@@ -1474,7 +1475,7 @@ func ValidateClientWorkNNew(clientwork models.ClientWork, userco uint, userlan u
 
 	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
 	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0027", ParamItem: iKey}
+		return models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iKey}
 	}
 
 	for i := 0; i < len(p0065data.FieldList); i++ {
@@ -1564,7 +1565,7 @@ func AutoPayCreateNew(iCompany uint, iPolicy uint, iClient uint, iAddress uint, 
 
 	err := GetItemD(int(iCompany), "P0055", iTypeofPayment, iDate, &extradatap0055)
 	if err != nil {
-		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iTypeofPayment}
+		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: "P0055", ParamItem: iTypeofPayment}
 		return oPayno, txnerr
 	}
 	iCrBank := p0055data.GlAccount
@@ -1748,6 +1749,72 @@ func EmailTriggerforReportNew(iCompany uint, iReference uint, iClient uint, iEma
 	}()
 	log.Printf("EmailTrigger function executed in %v", time.Since(sendStart))
 	return models.TxnError{}
+}
+
+// Lakshmi Muppidathi Changes for TXN Rollback Project
+// 2025-10-22
+func (r *RequestPdf) GeneratePDFPN(inputFile io.Writer, iUserco uint, iClientid uint, txn *gorm.DB) (bool, models.TxnError) {
+
+	opassword := "FuturaInsTech"
+	var clntenq models.Client
+	ipassword := ""
+
+	result := txn.First(&clntenq, "company_id = ? and id = ?", iUserco, iClientid)
+	// In case no record found, use owner password as user password
+	if result.RowsAffected == 0 {
+		ipassword = opassword
+	} else {
+		ipassword = strconv.Itoa(int(iClientid)) + clntenq.ClientMobile
+	}
+	// Step 1: Generate the PDF
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL754", DbError: err}
+	}
+
+	page := wkhtmltopdf.NewPageReader(strings.NewReader(r.body))
+	page.EnableLocalFileAccess.Set(true)
+	pdfg.AddPage(page)
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+	//pdfg.Orientation.Set(wkhtmltopdf.)
+	pdfg.Dpi.Set(300)
+
+	// Save to temporary file
+	tempFile := "temp.pdf"
+	outFile, err := os.Create(tempFile)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL755", DbError: err}
+	}
+	defer outFile.Close()
+
+	pdfg.SetOutput(outFile)
+	err = pdfg.Create()
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL712", DbError: err}
+	}
+
+	// Step 2: Protect the PDF using Python script
+	protectedFile := "protected.pdf"
+	err = EncryptPDF(tempFile, protectedFile, ipassword, opassword)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL756", DbError: err}
+	}
+
+	// Step 3: Write the password-protected PDF to the writer
+	protectedData, err := os.ReadFile(protectedFile)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL715", DbError: err}
+	}
+	_, err = inputFile.Write(protectedData)
+	if err != nil {
+		return false, models.TxnError{ErrorCode: "GL757", DbError: err}
+	}
+
+	// Cleanup temporary files
+	os.Remove(tempFile)
+	os.Remove(protectedFile)
+
+	return true, models.TxnError{}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

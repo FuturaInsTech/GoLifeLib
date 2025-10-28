@@ -1,0 +1,175 @@
+// Developer Tool crtxldefnames
+// This is to build an excel file with defined names which shall be used as Input xlsx for goPro BI printing via macro
+// Values given in angled brackets like <sampledata> in an excel workbook are set as defined names of same cell in outfile.
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"regexp"
+	"strings"
+
+	"github.com/xuri/excelize/v2"
+)
+
+// makeAbsolute converts a cell name (e.g., K5) to "$K$5"
+func makeAbsolute(cell string) (string, error) {
+	col, row, err := excelize.CellNameToCoordinates(cell)
+	if err != nil {
+		return "", err
+	}
+	colName, err := excelize.ColumnNumberToName(col)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("$%s$%d", colName, row), nil
+}
+
+// getMergedRange returns the absolute merged range for a given cell, if any.
+// If not merged, returns just the absolute cell reference.
+func getMergedRange(f *excelize.File, sheet, cell string) (string, error) {
+	merged, err := f.GetMergeCells(sheet)
+	if err != nil {
+		return "", err
+	}
+
+	for _, mc := range merged {
+		startCol, startRow, _ := excelize.CellNameToCoordinates(mc.GetStartAxis())
+		endCol, endRow, _ := excelize.CellNameToCoordinates(mc.GetEndAxis())
+		col, row, _ := excelize.CellNameToCoordinates(cell)
+
+		// Check if cell falls inside merged range
+		if col >= startCol && col <= endCol && row >= startRow && row <= endRow {
+			startAbs, _ := makeAbsolute(mc.GetStartAxis())
+			endAbs, _ := makeAbsolute(mc.GetEndAxis())
+			if mc.GetStartAxis() == mc.GetEndAxis() {
+				return startAbs, nil
+			}
+			return fmt.Sprintf("%s:%s", startAbs, endAbs), nil
+		}
+	}
+
+	// not merged
+	absCell, err := makeAbsolute(cell)
+	return absCell, err
+}
+
+func checkInputFileExist(arg string) {
+
+	iFile := arg + ".xlsx"
+
+	// Check if XLSX files Exists
+	if _, err := os.Stat(iFile); os.IsNotExist(err) {
+		fmt.Printf("Error: File '%s' does not exist.\n", iFile)
+		os.Exit(1)
+	}
+	// Continue processing...
+	fmt.Printf("File '%s' exist... Start Processing...\n", iFile)
+}
+
+func main() {
+	var inFile string
+	var outFile string
+
+	// Check the number of command-line arguments
+	if len(os.Args) > 2 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> ...")
+		fmt.Println("Usage: cmd <basefilename> ...")
+	} else if len(os.Args) == 2 {
+		inFile = os.Args[1] + ".xlsx"
+		outFile = os.Args[1] + "-out.xlsx"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	checkInputFileExist(inFile)
+
+	// Open input file
+	f, err := excelize.OpenFile(inFile)
+	if err != nil {
+		log.Fatalf("open file: %v", err)
+	}
+	defer f.Close()
+
+	re := regexp.MustCompile(`^<([A-Za-z0-9_]+)>$`)
+
+	for _, sheet := range f.GetSheetList() {
+		rows, err := f.GetRows(sheet)
+		if err != nil {
+			log.Printf("warning: cannot read rows for sheet %s: %v", sheet, err)
+			continue
+		}
+		if len(rows) == 0 {
+			continue
+		}
+		maxCols := 0
+		for _, r := range rows {
+			if len(r) > maxCols {
+				maxCols = len(r)
+			}
+		}
+
+		for rIdx := 0; rIdx < len(rows); rIdx++ {
+			for cIdx := 1; cIdx <= maxCols; cIdx++ {
+				cellName, _ := excelize.CoordinatesToCellName(cIdx, rIdx+1)
+				val, err := f.GetCellValue(sheet, cellName)
+				if err != nil {
+					continue
+				}
+				val = strings.TrimSpace(val)
+				if val == "" {
+					continue
+				}
+
+				matches := re.FindStringSubmatch(val)
+				if len(matches) != 2 {
+					continue
+				}
+
+				name := matches[1]
+				rangeAbs, err := getMergedRange(f, sheet, cellName)
+				if err != nil {
+					log.Printf("could not get merged range for %s: %v", cellName, err)
+					continue
+				}
+
+				refersTo := fmt.Sprintf("'%s'!%s", sheet, rangeAbs)
+
+				// Check if name already exists
+				existing := false
+				for _, dn := range f.GetDefinedName() {
+					if dn.Name == name {
+						existing = true
+						break
+					}
+				}
+
+				if existing {
+					// silently skip duplicates
+					continue
+				}
+
+				if err := f.SetDefinedName(&excelize.DefinedName{
+					Name:     name,
+					RefersTo: refersTo,
+				}); err != nil {
+					if !strings.Contains(strings.ToLower(err.Error()), "already exists") {
+						log.Printf("error creating defined name %s -> %s : %v", name, refersTo, err)
+					}
+					continue
+				}
+
+				fmt.Printf("Created defined name '%s' -> %s (sheet %s, cell %s)\n",
+					name, refersTo, sheet, cellName)
+			}
+		}
+	}
+
+	if err := f.SaveAs(outFile); err != nil {
+		log.Fatalf("save as: %v", err)
+	}
+	fmt.Println("Saved Defined Names in...:", outFile)
+}

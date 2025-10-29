@@ -2911,47 +2911,5 @@ func TDFBillDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 	}
 }
 
-func TdfhUpdateNNew(iCompany uint, iPolicy uint, txn *gorm.DB) models.TxnError {
-	var tdfhupd models.Tdfh
-	var tdfpolicyenq []models.TDFPolicy
-
-	iDate := "29991231"
-
-	results := txn.Find(&tdfpolicyenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
-	if results.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL003", DbError: results.Error}
-	}
-	for i := 0; i < len(tdfpolicyenq); i++ {
-		if tdfpolicyenq[i].EffectiveDate <= iDate {
-			iDate = tdfpolicyenq[i].EffectiveDate
-		}
-	}
-	result := txn.Find(&tdfhupd, "company_id =? and policy_id = ?", iCompany, iPolicy)
-	if result.Error == nil {
-		if result.RowsAffected == 0 {
-			tdfhupd.CompanyID = iCompany
-			tdfhupd.PolicyID = iPolicy
-			tdfhupd.EffectiveDate = iDate
-			result = txn.Create(&tdfhupd)
-			if result.Error != nil {
-				return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
-			}
-		} else {
-			result = txn.Delete(&tdfhupd)
-			var tdfhupd models.Tdfh
-			tdfhupd.CompanyID = iCompany
-			tdfhupd.PolicyID = iPolicy
-			tdfhupd.EffectiveDate = iDate
-			tdfhupd.ID = 0
-			result = txn.Create(&tdfhupd)
-			if result.Error != nil {
-				return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
-			}
-		}
-
-	}
-	return models.TxnError{}
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

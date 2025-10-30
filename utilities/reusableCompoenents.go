@@ -696,6 +696,60 @@ func GetAnnualRate(iCompany uint, iCoverage string, iAge uint, iGender string, i
 	return prem, nil
 }
 
+// 2025-10-30 Lakshmi enabled txn to GetAnnualRate Function
+func GetAnnualRateN(iCompany uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string, txn *gorm.DB) (float64, error) {
+
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
+	GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
+
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
+	var q0010key string
+	var prem float64
+	//term := strconv.FormatUint(uint64(iTerm), 10)
+	//premTerm := strconv.FormatUint(uint64(iPremTerm), 10)
+
+	term := fmt.Sprintf("%02d", iTerm)
+	premTerm := fmt.Sprintf("%02d", iPremTerm)
+
+	//fmt.Println("****************", iCompany, iCoverage, iAge, iGender, iTerm, iPremMethod, iDate, iMortality)
+	if q0006data.PremCalcType == "A" || q0006data.PremCalcType == "U" {
+		if q0006data.PremiumMethod == "PM002" {
+			// END1 + Male
+			q0010key = iCoverage + iGender
+		}
+	} else if q0006data.PremCalcType == "P" {
+		// END1 + Male + Term + Premium Term
+		if q0006data.PremiumMethod == "PM001" || q0006data.PremiumMethod == "PM003" {
+			q0010key = iCoverage + iGender + term + premTerm
+
+		}
+
+	} else if q0006data.PremCalcType == "H" {
+		// HIP1 + Male
+		if q0006data.PremiumMethod == "PM005" {
+			q0010key = iCoverage + iGender
+		}
+	}
+	fmt.Println("Premium Key ******", iCoverage, iGender, term, premTerm, q0006data.PremCalcType, q0010key)
+	err := GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)
+	if err != nil {
+		return 0, err
+
+	}
+	fmt.Println("************", iCompany, iAge, q0010key, iDate)
+
+	for i := 0; i < len(q0010data.Rates); i++ {
+		if q0010data.Rates[i].Age == uint(iAge) {
+			prem = q0010data.Rates[i].Rate
+			break
+		}
+	}
+	fmt.Println("************", iCompany, iAge, q0010key, iDate, prem)
+	return prem, nil
+}
+
 // # 23
 // ValidateCoverageQ0011 - Rider is Allowed for Product or Not Validation
 //

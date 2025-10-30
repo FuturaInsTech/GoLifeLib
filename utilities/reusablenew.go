@@ -937,49 +937,6 @@ func TDFLoanDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 	}
 }
 
-// 2025-10-16 Divya Changes
-func ValidateBankNew(bankval models.Bank, userco uint, userlan uint, iKey string) models.TxnError {
-	var p0065data paramTypes.P0065Data
-	var extradatap0065 paramTypes.Extradata = &p0065data
-
-	// Fetch validation rules
-	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
-	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iKey}
-	}
-
-	// Loop through validation fields
-	for i := 0; i < len(p0065data.FieldList); i++ {
-		var fv interface{}
-		r := reflect.ValueOf(bankval)
-		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
-
-		if f.IsValid() {
-			fv = f.Interface()
-		} else {
-			continue
-		}
-
-		if isFieldZero(fv) {
-			errcode := p0065data.FieldList[i].ErrorCode
-			return models.TxnError{
-				ErrorCode: errcode,
-			}
-		}
-	}
-
-	// Special date check
-	if bankval.StartDate > bankval.EndDate {
-		return models.TxnError{
-			ErrorCode: "GL563",
-		}
-	}
-
-	return models.TxnError{} // no error
-}
-
-////////////////////////////////////////////////////////////////
-
 // 2025-10-15 Lakshmi Changes
 func GetReportforOnlineNew(icommuncation models.Communication, itempName string, txn *gorm.DB) models.TxnError {
 	defaultpath := os.Getenv("REPORTPDF_SAVE_PATH")
@@ -1463,6 +1420,47 @@ func GetMaxTrannoNNew(iCompany uint, iPolicy uint, iMethod string, iEffDate stri
 	}
 
 	return phistory.HistoryCode, phistory.Tranno, models.TxnError{}
+}
+
+// 2025-10-16 Divya Changes
+func ValidateBankNew(bankval models.Bank, userco uint, userlan uint, iKey string) models.TxnError {
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	// Fetch validation rules
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iKey}
+	}
+
+	// Loop through validation fields
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(bankval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			errcode := p0065data.FieldList[i].ErrorCode
+			return models.TxnError{
+				ErrorCode: errcode,
+			}
+		}
+	}
+
+	// Special date check
+	if bankval.StartDate > bankval.EndDate {
+		return models.TxnError{
+			ErrorCode: "GL563",
+		}
+	}
+
+	return models.TxnError{} // no error
 }
 
 // 2025-10-21 Lakshmi Changes
@@ -2909,6 +2907,528 @@ func TDFBillDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 		}
 		return "", models.TxnError{}
 	}
+}
+
+// 2025-10-30 Divya Changes
+func PostUlpDeductionByUnitsNNew(iCompany uint, iPolicy uint, iBenefit uint, iSurrPercentage float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string, txn *gorm.DB) (txnErr models.TxnError) {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.RowsAffected == 0 {
+		txnErr = models.TxnError{ErrorCode: "GL003", DbError: result.Error}
+		return
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode + iallocType
+	errparam := "P0059"
+	err := GetItemD(int(iCompany), errparam, iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		txnErr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		return
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.RowsAffected == 0 {
+		txnErr = models.TxnError{ErrorCode: "GL746", DbError: result.Error}
+		return
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.RowsAffected == 0 {
+		txnErr = models.TxnError{ErrorCode: "GL747", DbError: result.Error}
+		return
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, "", iEffDate)
+
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iEffDate)
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		errparam = "P0061"
+		err := GetItemD(int(iCompany), "P0061", iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			txnErr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+			return
+		}
+
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ibidprice, _, ipriceuseddate := GetFundCPrice(iCompany, ilpsumenq[j].FundCode, iBusinessDate)
+		ilptrancrt.FundPrice = ibidprice
+		ilptrancrt.FundEffDate = ipriceuseddate
+		iUnits, _ := GetIlpFundUnits(iCompany, iPolicy, iBenefit, iFundCode)
+		// Full Withdrawl is -100% and Part Withdrawl is -20% or -30% etc
+		iSurrUnits := iUnits * iSurrPercentage / 100
+		ilptrancrt.FundUnits = RoundFloat(iSurrUnits, 5)
+		//utilities.RoundFloat(ilptrancrt.FundAmount/ibidprice, 5)
+		ilptrancrt.FundAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+		ilptrancrt.FundCurr = p0061data.FundCurr
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat((iSurrUnits * ibidprice), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.SurrenderPercentage = RoundFloat(((ilptrancrt.FundAmount / iFundValue) * 100), 2)
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = RoundFloat(((ilptrancrt.FundAmount / iTotalFundValue) * 100), 2)
+		ilptrancrt.AccountCode = p0059data.AccountCode
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		//ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "C"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			return
+		}
+		//update ilpsummary
+		var ilpsummupd models.IlpSummary
+		result = txn.Find(&ilpsummupd, "company_id = ? and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, ilptrancrt.BenefitID, ilptrancrt.FundCode)
+
+		if result.RowsAffected != 0 {
+			ilpsummupd.FundUnits = RoundFloat(ilptrancrt.FundUnits+ilpsummupd.FundUnits, 5)
+			txn.Save(&ilpsummupd)
+		} else if result.Error != nil {
+			txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			return
+		}
+	}
+	return models.TxnError{}
+}
+
+func CreateCommunicationsNew(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, iBenefit uint, iPa uint, iClientWork uint, txn *gorm.DB) models.TxnError {
+
+	var communication models.Communication
+	var iP0033Key string
+	var iP0034Key string
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+	txn = initializers.DB.Begin()
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+
+	var policy models.Policy
+	if iPolicy != 0 {
+		result := txn.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+		if result.RowsAffected == 0 {
+			return models.TxnError{ErrorCode: "GL037", DbError: result.Error}
+		}
+	}
+	var payingauth models.PayingAuthority
+	if iPa != 0 {
+		result := txn.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+		if result.RowsAffected == 0 {
+			return models.TxnError{ErrorCode: "GL671", DbError: result.Error}
+		}
+	}
+
+	iReceiptTranCode := "H0034"
+	iReceiptFor := ""
+	if iHistoryCode == iReceiptTranCode {
+		var receipt models.Receipt
+		result := txn.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+		if result.RowsAffected == 0 {
+			return models.TxnError{ErrorCode: "GL014", DbError: result.Error}
+		}
+		iReceiptFor = receipt.ReceiptFor
+		iP0034Key = iHistoryCode + iReceiptFor
+	}
+	if iReceiptFor == "" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+		iP0034Key = iHistoryCode + policy.PProduct
+	}
+
+	if iReceiptFor == "01" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+	}
+
+	if iReceiptFor == "02" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = payingauth.ClientID
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPa
+	}
+
+	if iReceiptFor == "03" {
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = iClient
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iClient
+	}
+
+	err1 := GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
+	if err1 != nil {
+		iP0034Key = iHistoryCode
+		errparam := "P0034"
+		err1 = GetItemD(int(iCompany), errparam, iP0034Key, iDate, &extradatap0034)
+		if err1 != nil {
+			return models.TxnError{ErrorCode: "PARME", ParamName: "P0034", ParamItem: iP0034Key}
+		}
+	}
+
+	for i := 0; i < len(p0034data.Letters); i++ {
+		if p0034data.Letters[i].Templates != "" {
+			iP0033Key = p0034data.Letters[i].Templates
+			errparam := "P0033"
+			err := GetItemD(int(iCompany), errparam, iP0033Key, iDate, &extradatap0033)
+			if err != nil {
+				return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iP0033Key}
+			}
+
+			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
+			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
+			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
+			communication.EmailAllowed = p0033data.EmailAllowed
+			communication.SMSAllowed = p0033data.SMSAllowed
+			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
+			communication.DepartmentHead = p0033data.DepartmentHead
+			communication.DepartmentName = p0033data.DepartmentName
+			communication.CompanyPhone = p0033data.CompanyPhone
+			communication.CompanyEmail = p0033data.CompanyEmail
+
+			communication.TemplateName = iP0033Key
+			oLetType := ""
+
+			signData := make([]interface{}, 0)
+			resultOut := map[string]interface{}{
+				"Department":     p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentHead,
+				"CoEmail":        p0033data.CompanyEmail,
+				"CoPhone":        p0033data.CompanyPhone,
+			}
+
+			signData = append(signData, resultOut)
+
+			batchData := make([]interface{}, 0)
+			resultOut = map[string]interface{}{
+				"Date":     DateConvert(iDate),
+				"FromDate": DateConvert(iFromDate),
+				"ToDate":   DateConvert(iToDate),
+			}
+
+			batchData = append(batchData, resultOut)
+
+			resultMap := make(map[string]interface{})
+
+			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
+			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
+				oLetType = p0034data.Letters[i].LetType[n]
+				switch {
+				case oLetType == "1":
+					oData := GetCompanyData(iCompany, iDate, txn)
+					resultMap["CompanyData"] = oData
+				case oLetType == "2":
+					oData := GetClientData(iCompany, iClient, txn)
+					resultMap["ClientData"] = oData
+				case oLetType == "3":
+					oData := GetAddressData(iCompany, iAddress, txn)
+					resultMap["AddressData"] = oData
+				case oLetType == "4":
+					oData := GetPolicyData(iCompany, iPolicy, txn)
+					resultMap["PolicyData"] = oData
+				case oLetType == "5":
+					oData := GetBenefitData(iCompany, iPolicy, txn)
+					resultMap["BenefitData"] = oData
+				case oLetType == "6":
+					oData := GetSurBData(iCompany, iPolicy, txn)
+					resultMap["SurBData"] = oData
+				case oLetType == "7":
+					oData := GetMrtaData(iCompany, iPolicy, txn)
+					resultMap["MRTAData"] = oData
+				case oLetType == "8":
+					oData := GetReceiptData(iCompany, iReceipt, txn)
+					resultMap["ReceiptData"] = oData
+				case oLetType == "9":
+					oData := GetSaChangeData(iCompany, iPolicy, txn)
+					resultMap["SAChangeData"] = oData
+				case oLetType == "10":
+					oData := GetCompAddData(iCompany, iPolicy, txn)
+					resultMap["ComponantAddData"] = oData
+				case oLetType == "11":
+					oData := GetSurrHData(iCompany, iPolicy, txn)
+					resultMap["SurrData"] = oData
+					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["SurrDData"] = oData
+				case oLetType == "12":
+					oData := GetDeathData(iCompany, iPolicy, txn)
+					resultMap["DeathData"] = oData
+				case oLetType == "13":
+					oData := GetMatHData(iCompany, iPolicy, txn)
+					resultMap["MaturityData"] = oData
+					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["MatDData"] = oData
+				case oLetType == "14":
+					oData := GetSurvBPay(iCompany, iPolicy, iTranno, txn)
+					resultMap["SurvbPay"] = oData
+				case oLetType == "15":
+					oData := GetExpi(iCompany, iPolicy, iTranno, txn)
+					resultMap["ExpiryData"] = oData
+				case oLetType == "16":
+					oData := GetBonusVals(iCompany, iPolicy, txn)
+					resultMap["BonusData"] = oData
+				case oLetType == "17":
+					oData := GetAgency(iCompany, iAgency, txn)
+					resultMap["Agency"] = oData
+				case oLetType == "18":
+					oData := GetNomiData(iCompany, iPolicy, txn)
+					resultMap["Nominee"] = oData
+				case oLetType == "19":
+					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					resultMap["GLData"] = oData
+				case oLetType == "20":
+					oData := GetIlpSummaryData(iCompany, iPolicy, txn)
+					resultMap["IlPSummaryData"] = oData
+				case oLetType == "21":
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode, txn)
+					resultMap["ILPANNSummaryData"] = oData
+				case oLetType == "22":
+					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					resultMap["ILPTransactionData"] = oData
+				case oLetType == "23":
+					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate, txn)
+					resultMap["GLData"] = oData
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno, txn)
+					resultMap["SwitchData"] = oData
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate, txn)
+					resultMap["IlpFundData"] = oData
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					resultMap["PrevBenefit"] = oData
+				case oLetType == "29":
+					oData := GetPayingAuthorityData(iCompany, iPa, txn)
+					resultMap["PaData"] = oData
+				case oLetType == "30":
+					oData := GetClientWorkData(iCompany, iClientWork, txn)
+					resultMap["ClientWork"] = oData
+				// case oLetType == "36":
+				// 	oData := GetReqData(iCompany, iPolicy)
+				// 	resultMap["ReqWork"] = oData
+				case oLetType == "98":
+					resultMap["BatchData"] = batchData
+				case oLetType == "99":
+					resultMap["SignData"] = signData
+				default:
+
+				}
+			}
+
+			communication.ExtractedData = resultMap
+			communication.PDFPath = p0034data.Letters[i].PdfLocation
+			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
+
+			results := initializers.DB.Create(&communication)
+
+			if results.Error != nil {
+				return models.TxnError{
+					ErrorCode: "DBERR",
+					DbError:   results.Error,
+				}
+			}
+
+		}
+	}
+	return models.TxnError{}
+}
+
+func ValidateBillTypeNNew(policyenq models.Policy, userco uint, userlan uint, iDate string, iBillType string, iPayingAuthority uint, txn *gorm.DB) (txnErr models.TxnError) {
+
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
+
+	errparam := "P0055"
+
+	err := GetItemD(int(userco), "errparam", iBillType, iDate, &extradatap0055)
+	if err != nil {
+		txnErr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iBillType}
+		return
+	}
+	// Validate SSI Bill Type
+
+	if p0055data.PayingAuthority == "N" &&
+		iBillType == policyenq.BillingType {
+		txnErr = models.TxnError{ErrorCode: "GL637"}
+		return
+	}
+
+	if p0055data.PayingAuthority == "Y" &&
+		iBillType == policyenq.BillingType &&
+		iPayingAuthority == policyenq.PayingAuthority {
+		txnErr = models.TxnError{ErrorCode: "GL638"}
+		return
+	}
+
+	if p0055data.PayingAuthority == "N" {
+		if iPayingAuthority != 0 {
+			txnErr = models.TxnError{ErrorCode: "GL700"}
+			return
+
+		}
+	}
+
+	if p0055data.PayingAuthority == "Y" {
+		if iPayingAuthority == 0 {
+			txnErr = models.TxnError{ErrorCode: "GL701"}
+			return
+
+		}
+	}
+
+	// validate Paying authority
+	funcErr := ValidatePayingAuthorityNNew(userco, userlan, iDate, iPayingAuthority, txn)
+	if funcErr.ErrorCode != "" {
+		txnErr = funcErr
+		return
+	}
+
+	// P0055 Bank Extration Types like cBank,DBank,NEFT,UPI validation are to be added
+
+	return models.TxnError{}
+}
+
+func ValidatePayingAuthorityNNew(userco uint, userlan uint, iDate string, iPayingAuthority uint, txn *gorm.DB) (txnErr models.TxnError) {
+
+	var payingauth models.PayingAuthority
+	result := txn.First(&payingauth, "company_id = ? and id = ?", userco, iPayingAuthority)
+	if result.Error != nil {
+		txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return
+	}
+
+	if payingauth.PaStatus != "AC" {
+		txnErr = models.TxnError{ErrorCode: "GL640"}
+		return
+	}
+
+	if payingauth.StartDate > iDate {
+		txnErr = models.TxnError{ErrorCode: "GL641"}
+		return
+	}
+
+	if payingauth.EndDate < iDate {
+		txnErr = models.TxnError{ErrorCode: "GL642"}
+		return
+	}
+
+	return models.TxnError{}
+}
+
+// 2025-10-30 Lakshmi Changes
+func GetAnnualRateNNew(iCompany uint, iCoverage string, iAge uint, iGender string, iTerm uint, iPremTerm uint, iPremMethod string, iDate string, iMortality string, txn *gorm.DB) (float64, models.TxnError) {
+
+	var q0006data paramTypes.Q0006Data
+	var extradata paramTypes.Extradata = &q0006data
+	errparam := "Q0006"
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
+	if err != nil {
+		return 0, models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iCoverage}
+
+	}
+
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
+	var q0010key string
+	var prem float64
+	//term := strconv.FormatUint(uint64(iTerm), 10)
+	//premTerm := strconv.FormatUint(uint64(iPremTerm), 10)
+
+	term := fmt.Sprintf("%02d", iTerm)
+	premTerm := fmt.Sprintf("%02d", iPremTerm)
+
+	//fmt.Println("****************", iCompany, iCoverage, iAge, iGender, iTerm, iPremMethod, iDate, iMortality)
+	if q0006data.PremCalcType == "A" || q0006data.PremCalcType == "U" {
+		if q0006data.PremiumMethod == "PM002" {
+			// END1 + Male
+			q0010key = iCoverage + iGender
+		}
+	} else if q0006data.PremCalcType == "P" {
+		// END1 + Male + Term + Premium Term
+		if q0006data.PremiumMethod == "PM001" || q0006data.PremiumMethod == "PM003" {
+			q0010key = iCoverage + iGender + term + premTerm
+
+		}
+
+	} else if q0006data.PremCalcType == "H" {
+		// HIP1 + Male
+		if q0006data.PremiumMethod == "PM005" {
+			q0010key = iCoverage + iGender
+		}
+	}
+	errparam = "Q0010"
+	fmt.Println("Premium Key ******", iCoverage, iGender, term, premTerm, q0006data.PremCalcType, q0010key)
+	err = GetItemD(int(iCompany), errparam, q0010key, iDate, &extradataq0010)
+	if err != nil {
+		return 0, models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: q0010key}
+
+	}
+	fmt.Println("************", iCompany, iAge, q0010key, iDate)
+
+	for i := 0; i < len(q0010data.Rates); i++ {
+		if q0010data.Rates[i].Age == uint(iAge) {
+			prem = q0010data.Rates[i].Rate
+			break
+		}
+	}
+	fmt.Println("************", iCompany, iAge, q0010key, iDate, prem)
+	return prem, models.TxnError{}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

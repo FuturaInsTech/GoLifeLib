@@ -2,6 +2,7 @@ package utilities
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -18,7 +19,9 @@ import (
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
+	"github.com/FuturaInsTech/GoLifeLib/types"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
@@ -3522,8 +3525,6 @@ func SBCreateNNew(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string
 }
 
 // 2025-10-31 Lakshmi Changes
-////////////////////CheckPendingILPNew///////////////////
-
 func CheckPendingILPNew(iCompany uint, iPolicy uint, iLanguage uint, txn *gorm.DB) models.TxnError {
 
 	var ilptransenq models.IlpTransaction
@@ -3699,6 +3700,137 @@ func GetAnnualRateNNew(iCompany uint, iCoverage string, iAge uint, iGender strin
 	}
 	fmt.Println("************", iCompany, iAge, q0010key, iDate, prem)
 	return prem, models.TxnError{}
+}
+
+// 2025-11-03 Lakshmi Changes
+func GetVersionIdN(iCompany uint, lockedType types.LockedType, lockedTypeKey string, txn *gorm.DB) (string, error) {
+	var tranLock models.TransactionLock
+	result := txn.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if !recordNotFound && result.Error != nil {
+		return "", result.Error
+	}
+
+	if recordNotFound {
+		fmt.Println("creating the entity as it does not exist:" + lockedTypeKey + ":" + lockedTypeKey)
+		versionid, err := CreateTheEntityN(iCompany, lockedType, lockedTypeKey, txn)
+		if err != nil {
+			return "", errors.New("entity did not exist,error while trying to create :" + err.Error())
+		} else {
+			return versionid, nil
+		}
+	}
+
+	if !tranLock.IsValid {
+		return "", errors.New("entity is not valid")
+	}
+
+	/*if tranLock.IsLocked {
+		return "", errors.New("entity is locked")
+
+	} */
+	return tranLock.VersionId, nil
+
+}
+
+func GetVersionIdNNew(iCompany uint, lockedType types.LockedType, lockedTypeKey string, txn *gorm.DB) (string, models.TxnError) {
+	var tranLock models.TransactionLock
+	result := txn.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if !recordNotFound && result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+
+	if recordNotFound {
+		fmt.Println("creating the entity as it does not exist:" + lockedTypeKey + ":" + lockedTypeKey)
+		versionid, funcErr := CreateTheEntityNNew(iCompany, lockedType, lockedTypeKey, txn)
+		if funcErr.ErrorCode != "" {
+			return "", funcErr
+		} else {
+			return versionid, models.TxnError{}
+		}
+	}
+
+	if !tranLock.IsValid {
+		return "", models.TxnError{ErrorCode: "GL783"}
+	}
+
+	/*if tranLock.IsLocked {
+		return "", errors.New("entity is locked")
+
+	} */
+	return tranLock.VersionId, models.TxnError{}
+
+}
+
+func CreateTheEntityN(iCompany uint, lockedType types.LockedType, lockedTypeKey string, txn *gorm.DB) (string, error) {
+
+	var tranLock models.TransactionLock
+	result := txn.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if !recordNotFound && result.Error != nil {
+		return "", result.Error
+	}
+
+	if !recordNotFound {
+		return "", errors.New("entity already exists")
+	}
+
+	tranLock.CompanyID = iCompany
+	tranLock.LockedTypeKey = lockedTypeKey
+	tranLock.LockedType = lockedType
+	tranLock.IsLocked = false
+	tranLock.IsValid = true
+	tranLock.CreatedAt = time.Now()
+	tranLock.VersionId = uuid.New().String()
+
+	result = txn.Create(&tranLock)
+
+	if result.Error != nil {
+		return "", result.Error
+	}
+
+	return tranLock.VersionId, nil
+
+}
+
+func CreateTheEntityNNew(iCompany uint, lockedType types.LockedType, lockedTypeKey string, txn *gorm.DB) (string, models.TxnError) {
+
+	var tranLock models.TransactionLock
+	result := txn.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if !recordNotFound && result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+
+	if !recordNotFound {
+		return "", models.TxnError{ErrorCode: "GL782"}
+	}
+
+	tranLock.CompanyID = iCompany
+	tranLock.LockedTypeKey = lockedTypeKey
+	tranLock.LockedType = lockedType
+	tranLock.IsLocked = false
+	tranLock.IsValid = true
+	tranLock.CreatedAt = time.Now()
+	tranLock.VersionId = uuid.New().String()
+
+	result = txn.Create(&tranLock)
+
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+
+	return tranLock.VersionId, models.TxnError{}
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

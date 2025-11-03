@@ -1,7 +1,6 @@
 package utilities
 
 import (
-	"_/C_/Go/GoLifeLib/utilities"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -30,7 +29,7 @@ func HandleTxn(c *gin.Context, txn *gorm.DB, method string, txnErr *models.TxnEr
 		fmt.Println("PANIC TRACE:", string(debug.Stack()))
 
 		// Map to APERR
-		longDesc, _ := utilities.GetErrorDesc(*userco, *userlan, "APERR")
+		longDesc, _ := GetErrorDesc(*userco, *userlan, "APERR")
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": fmt.Sprintf("APERR : %s - %s (in %s)", longDesc, errMsg, method),
 		})
@@ -53,7 +52,7 @@ func HandleTxn(c *gin.Context, txn *gorm.DB, method string, txnErr *models.TxnEr
 			return
 		}
 		if code == "PARME" {
-			longDesc, _ := utilities.GetErrorDesc(*userco, *userlan, code)
+			longDesc, _ := GetErrorDesc(*userco, *userlan, code)
 
 			errMsg = fmt.Sprintf(
 				"%s : %s - %s | ParamName: %s | ParamItem: %s",
@@ -70,7 +69,7 @@ func HandleTxn(c *gin.Context, txn *gorm.DB, method string, txnErr *models.TxnEr
 		}
 		if code == "DBERR" {
 
-			longDesc, _ := utilities.GetErrorDesc(*userco, *userlan, code)
+			longDesc, _ := GetErrorDesc(*userco, *userlan, code)
 
 			dbErrMsg := txnErr.DbError.Error()
 			cleanErr := dbErrMsg
@@ -92,7 +91,7 @@ func HandleTxn(c *gin.Context, txn *gorm.DB, method string, txnErr *models.TxnEr
 		}
 
 		if txnErr.DbError != nil {
-			longDesc, _ := utilities.GetErrorDesc(*userco, *userlan, code)
+			longDesc, _ := GetErrorDesc(*userco, *userlan, code)
 			dbErrMsg := txnErr.DbError.Error()
 			cleanErr := dbErrMsg
 			if strings.HasPrefix(dbErrMsg, "Error") {
@@ -107,7 +106,7 @@ func HandleTxn(c *gin.Context, txn *gorm.DB, method string, txnErr *models.TxnEr
 			})
 			return
 		} else {
-			longDesc, _ := utilities.GetErrorDesc(*userco, *userlan, code)
+			longDesc, _ := GetErrorDesc(*userco, *userlan, code)
 			errMsg = fmt.Sprintf("%s : %s - %s", code, longDesc, method)
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": errMsg,

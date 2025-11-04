@@ -3833,5 +3833,346 @@ func CreateTheEntityNNew(iCompany uint, lockedType types.LockedType, lockedTypeK
 
 }
 
+// 2025-11-04 Divya Changes
+func CreateCommunicationsLNew(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint, iAmount1 float64, iAmount2 float64, iNo1 uint, iNo2 uint) models.TxnError {
+
+	var communication models.Communication
+	var iKey string
+
+	var p0034data paramTypes.P0034Data
+	var extradatap0034 paramTypes.Extradata = &p0034data
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+
+	//utilities.LetterCreate(int(iCompany), uint(iPolicy), iHistoryCode, createreceipt.CurrentDate, idata)
+	iTransaction := iHistoryCode
+	iReceiptTranCode := "H0034"
+	iReceiptFor := ""
+
+	if iReceipt != 0 {
+		var receipt models.Receipt
+		result := txn.Find(&receipt, "company_id = ? and id = ?", iCompany, iReceipt)
+		if result.RowsAffected == 0 {
+			return models.TxnError{ErrorCode: "GL014", DbError: result.Error}
+		}
+		iReceiptFor = receipt.ReceiptFor
+	}
+
+	if iPolicy != 0 {
+		var policy models.Policy
+		result := txn.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+		if result.RowsAffected == 0 {
+			return models.TxnError{ErrorCode: "GL003", DbError: result.Error}
+		}
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = policy.AgencyID
+		communication.ClientID = policy.ClientID
+		communication.PolicyID = policy.ID
+		communication.Tranno = policy.Tranno
+		communication.EffectiveDate = policy.PRCD
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPolicy
+		if iTransaction == iReceiptTranCode {
+			iKey = iTransaction + iReceiptFor
+		} else {
+			iKey = iTransaction + policy.PProduct
+		}
+	}
+
+	if iPolicy == 0 && iTransaction == iReceiptTranCode && iPa != 0 {
+		var payingauth models.PayingAuthority
+		result := txn.Find(&payingauth, "company_id = ? and id = ?", iCompany, iPa)
+		if result.RowsAffected == 0 {
+			return models.TxnError{ErrorCode: "GL671", DbError: result.Error}
+		}
+
+		communication.CompanyID = uint(iCompany)
+		communication.AgencyID = 0
+		communication.ClientID = payingauth.ClientID
+		communication.PolicyID = 0
+		communication.Tranno = 0
+		communication.EffectiveDate = iDate
+		communication.ReceiptFor = iReceiptFor
+		communication.ReceiptRefNo = iPa
+		iKey = iTransaction + iReceiptFor
+	}
+	errparam := "P0034"
+
+	err1 := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0034)
+	if err1 != nil {
+		iKey = iTransaction
+		err1 = GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0034)
+		if err1 != nil {
+			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		}
+	}
+
+	for i := 0; i < len(p0034data.Letters); i++ {
+		if p0034data.Letters[i].Templates != "" {
+			iKey = p0034data.Letters[i].Templates
+			errparam := "P0033"
+			err := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0033)
+			if err != nil {
+				return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+			}
+
+			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
+			communication.AgentSMSAllowed = p0033data.AgentSMSAllowed
+			communication.AgentWhatsAppAllowed = p0033data.AgentWhatsAppAllowed
+			communication.EmailAllowed = p0033data.EmailAllowed
+			communication.SMSAllowed = p0033data.SMSAllowed
+			communication.WhatsAppAllowed = p0033data.WhatsAppAllowed
+			communication.DepartmentHead = p0033data.DepartmentHead
+			communication.DepartmentName = p0033data.DepartmentName
+			communication.CompanyPhone = p0033data.CompanyPhone
+			communication.CompanyEmail = p0033data.CompanyEmail
+
+			communication.TemplateName = iKey
+			oLetType := ""
+
+			signData := make([]interface{}, 0)
+			resultOut := map[string]interface{}{
+				"Department":     p0033data.DepartmentName,
+				"DepartmentHead": p0033data.DepartmentHead,
+				"CoEmail":        p0033data.CompanyEmail,
+				"CoPhone":        p0033data.CompanyPhone,
+			}
+
+			signData = append(signData, resultOut)
+
+			batchData := make([]interface{}, 0)
+			resultOut = map[string]interface{}{
+				"Date":     DateConvert(iDate),
+				"FromDate": DateConvert(iFromDate),
+				"ToDate":   DateConvert(iToDate),
+			}
+
+			batchData = append(batchData, resultOut)
+
+			resultMap := make(map[string]interface{})
+
+			//	iCompany uint, iPolicy uint, iAddress uint, iClient uint, iLanguage uint, iBankcode uint, iReceipt uint, iCommunciation uint, iQuotation uint
+			for n := 0; n < len(p0034data.Letters[i].LetType); n++ {
+				oLetType = p0034data.Letters[i].LetType[n]
+				switch {
+				case oLetType == "1":
+					oData := GetCompanyData(iCompany, iDate, txn)
+					resultMap["CompanyData"] = oData
+				case oLetType == "2":
+					oData := GetClientData(iCompany, iClient, txn)
+					resultMap["ClientData"] = oData
+				case oLetType == "3":
+					oData := GetAddressData(iCompany, iAddress, txn)
+					resultMap["AddressData"] = oData
+				case oLetType == "4":
+					oData := GetPolicyData(iCompany, iPolicy, txn)
+					resultMap["PolicyData"] = oData
+				case oLetType == "5":
+					oData := GetBenefitData(iCompany, iPolicy, txn)
+					resultMap["BenefitData"] = oData
+				case oLetType == "6":
+					oData := GetSurBData(iCompany, iPolicy, txn)
+					resultMap["SurBData"] = oData
+				case oLetType == "7":
+					oData := GetMrtaData(iCompany, iPolicy, txn)
+					resultMap["MRTAData"] = oData
+				case oLetType == "8":
+					oData := GetReceiptData(iCompany, iReceipt, txn)
+					resultMap["ReceiptData"] = oData
+				case oLetType == "9":
+					oData := GetSaChangeData(iCompany, iPolicy, txn)
+					resultMap["SAChangeData"] = oData
+				case oLetType == "10":
+					oData := GetCompAddData(iCompany, iPolicy, txn)
+					resultMap["ComponantAddData"] = oData
+				case oLetType == "11":
+					oData := GetSurrHData(iCompany, iPolicy, txn)
+					resultMap["SurrData"] = oData
+					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["SurrDData"] = oData
+				case oLetType == "12":
+					oData := GetDeathData(iCompany, iPolicy, txn)
+					resultMap["DeathData"] = oData
+				case oLetType == "13":
+					oData := GetMatHData(iCompany, iPolicy, txn)
+					resultMap["MaturityData"] = oData
+					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
+					// resultMap["MatDData"] = oData
+				case oLetType == "14":
+					oData := GetSurvBPay(iCompany, iPolicy, iTranno, txn)
+					resultMap["SurvbPay"] = oData
+				case oLetType == "15":
+					oData := GetExpi(iCompany, iPolicy, iTranno, txn)
+					resultMap["ExpiryData"] = oData
+				case oLetType == "16":
+					oData := GetBonusVals(iCompany, iPolicy, txn)
+					resultMap["BonusData"] = oData
+				case oLetType == "17":
+					oData := GetAgency(iCompany, iAgency, txn)
+					resultMap["Agency"] = oData
+				case oLetType == "18":
+					oData := GetNomiData(iCompany, iPolicy, txn)
+					resultMap["Nominee"] = oData
+				case oLetType == "19":
+					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					resultMap["GLData"] = oData
+				case oLetType == "20":
+					oData := GetIlpSummaryData(iCompany, iPolicy, txn)
+					resultMap["IlPSummaryData"] = oData
+				case oLetType == "21":
+					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode, txn)
+					resultMap["ILPANNSummaryData"] = oData
+				case oLetType == "22":
+					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					resultMap["ILPTransactionData"] = oData
+				case oLetType == "23":
+					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate, txn)
+					resultMap["GLData"] = oData
+
+				case oLetType == "24":
+					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno, txn)
+					resultMap["SwitchData"] = oData
+
+				case oLetType == "25":
+					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					resultMap["PolicyHistoryData"] = oData
+				case oLetType == "26":
+					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate, txn)
+					resultMap["IlpFundData"] = oData
+				case oLetType == "27":
+					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					resultMap["PrevPolicy"] = oData
+				case oLetType == "28":
+					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					fmt.Println(oData) // Dummy to avoid compilation error
+				case oLetType == "29":
+					oData := GetPayingAuthorityData(iCompany, iPa, txn)
+					resultMap["PrevBenefit"] = oData
+				case oLetType == "30":
+					oData := GetClientWorkData(iCompany, iClientWork, txn)
+					resultMap["ClientWork"] = oData
+				case oLetType == "31":
+					oData := GetLoanData(iCompany, iPolicy, iDate, iAmount1, txn)
+					resultMap["LoanData"] = oData
+				case oLetType == "32":
+					oData := GetAllLoanInterestData(iCompany, iPolicy, iDate, txn)
+					resultMap["LoanInterestData"] = oData
+				case oLetType == "33":
+					oData := LoanCapData(iCompany, iPolicy, iDate, iFromDate, iToDate, iAmount1, iAmount2, iNo1, txn)
+					resultMap["LoanCap"] = oData
+				case oLetType == "34":
+					oData := LoanBillData(iCompany, iPolicy, iDate, txn)
+					resultMap["LoanBillData"] = oData
+				case oLetType == "35":
+					oData := LoanBillsInterestData(iCompany, iPolicy, iNo1, iAmount1, txn)
+					resultMap["LoanBillsInterest"] = oData
+				case oLetType == "98":
+					resultMap["BatchData"] = batchData
+
+				case oLetType == "99":
+					resultMap["SignData"] = signData
+				default:
+
+				}
+			}
+
+			if p0033data.Online == "Y" {
+				err := GetReportforOnline(communication, p0033data.TemplateName, txn)
+				if err != nil {
+					log.Fatalf("Failed to generate report: %v", err)
+				}
+			}
+			if p0033data.SMSAllowed == "Y" {
+				err := SendSMSTwilio(communication.CompanyID, communication.ClientID, p0033data.TemplateName, communication.EffectiveDate, p0033data.SMSBody, txn)
+				if err != nil {
+					log.Fatalf("Failed to send SMS: %v", err)
+				}
+			}
+			communication.Print = "Y"
+			communication.PrintDate = iDate
+			communication.UpdatedID = 1
+
+			communication.ExtractedData = resultMap
+			communication.PDFPath = p0034data.Letters[i].PdfLocation
+			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
+			communication.ID = 0
+			results := txn.Create(&communication)
+			if results.Error != nil {
+				return models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+
+			}
+
+		}
+	}
+	return models.TxnError{}
+}
+
+func GetMaxLoanSeqNoNNew(iCompany uint, iPolicy uint, txn *gorm.DB) (models.TxnError, uint) {
+	var result *gorm.DB
+	result1 := txn.Table("loans").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(loan_seq_number)")
+
+	if result1.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL750", DbError: result.Error}, 0
+	}
+
+	var loanseqno uint = 0
+	var newloanseqno uint = 0
+	err := result1.Row().Scan(&loanseqno)
+	fmt.Println("Error ", err)
+	newloanseqno = uint(loanseqno) + 1
+	return models.TxnError{}, newloanseqno
+}
+
+func EmailTriggerforReportNNew(iCompany uint, iReference uint, iClient uint, iEmail string, iEffDate string, itempName string, pdfData []byte, txn *gorm.DB) models.TxnError {
+
+	var p0033data paramTypes.P0033Data
+	var extradatap0033 paramTypes.Extradata = &p0033data
+	errparam := "P0033"
+	err := GetItemD(int(iCompany), "P0033", itempName, iEffDate, &extradatap0033)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: itempName}
+
+	}
+
+	sender := p0033data.CompanyEmail
+	receiver := iEmail
+	password := p0033data.SenderPassword
+	smtpServer := p0033data.SMTPServer
+	smtpPort := p0033data.SMTPPort
+
+	emailBody := p0033data.Body
+	m := gomail.NewMessage()
+	m.SetHeader("From", sender)
+	m.SetHeader("To", receiver)
+	m.SetHeader("Subject", p0033data.Subject)
+	m.SetBody("text/plain", emailBody)
+	iTime := time.Now().Format("20060102150405")
+	iClientnumstr := strconv.Itoa(int(iClient))
+
+	m.Attach(itempName+iClientnumstr+iTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
+		_, err := w.Write(pdfData)
+		return err
+	}))
+
+	// Configure SMTP dialer
+	d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+	d.SSL = true      // Enables SSL
+	d.TLSConfig = nil // Use default TLS settings
+
+	// Send email asynchronously with proper logging
+	sendStart := time.Now()
+	go func() {
+		if err := d.DialAndSend(m); err != nil {
+			log.Printf("Failed to send email: %v", err)
+		} else {
+			log.Printf("Email sent successfully to %s (CC: %s, BCC: %s) in %v",
+				receiver, "", "", time.Since(sendStart))
+		}
+	}()
+	log.Printf("EmailTrigger function executed in %v", time.Since(sendStart))
+	return models.TxnError{}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

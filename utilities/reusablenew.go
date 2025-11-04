@@ -3833,6 +3833,883 @@ func CreateTheEntityNNew(iCompany uint, lockedType types.LockedType, lockedTypeK
 
 }
 
+// 2025-11-04 Lakshmi Changes
+func CalcSwitchFeeN(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDate string, txn *gorm.DB) (oError error, oAmount float64, oPercentage float64) {
+
+	var p0070data paramTypes.P0070Data
+	var extradatap0070 paramTypes.Extradata = &p0070data
+	iKey := iFeeMethod
+	err := GetItemD(int(iCompany), "P0070", iKey, iEffectiveDate, &extradatap0070)
+
+	if err != nil {
+		shortCode := "GL535"
+		longDesc, _ := GetErrorDesc(iCompany, 1, shortCode)
+		return errors.New(shortCode + " : " + longDesc), 0, 0
+
+	}
+	// Get Next Policy Anniversary
+	iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+	iPolicyAnniversary := iEffectiveDate
+	// 20200328
+	// a = 2024:03:28:00:00:00:00:00:00
+	// 20230328
+	//
+
+	for {
+
+		a := GetNextDue(iPolicyAnniversary, "Y", "")
+		iPolicyAnniversary = Date2String(a)
+
+		if iPolicyAnniversary >= iBusinessDate {
+			break
+		}
+
+	}
+	b := GetNextDue(iPolicyAnniversary, "Y", "R")
+	iPolicyAnniversary = Date2String(b)
+	// Get No of Free Done in Policy Anniversary
+	var policyhistory []models.PHistory
+	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
+	switchcount := 0
+	if results.Error != nil {
+		switchcount = 0
+	} else {
+		switchcount = len(policyhistory)
+
+	}
+	// Percentage
+	if p0070data.SwitchFeeBasis == "P" {
+		if uint(switchcount) <= p0070data.FreeSwitches {
+			return nil, 0, 0
+		} else {
+			return nil, 0, p0070data.FeePercentage
+		}
+	}
+	// Fixed Amount
+	if p0070data.SwitchFeeBasis == "F" {
+		if uint(switchcount) <= p0070data.FreeSwitches {
+			return nil, 0, 0
+		} else {
+			return nil, p0070data.FeeAmount, 0
+		}
+	}
+
+	return oError, 0, 0
+}
+
+func CalcSwitchFeeNNew(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDate string, txn *gorm.DB) (txnerr models.TxnError, oAmount float64, oPercentage float64) {
+
+	var p0070data paramTypes.P0070Data
+	var extradatap0070 paramTypes.Extradata = &p0070data
+	iKey := iFeeMethod
+	errparam := "P0070"
+	err := GetItemD(int(iCompany), errparam, iKey, iEffectiveDate, &extradatap0070)
+
+	if err != nil {
+		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		return txnerr, 0, 0
+
+	}
+	// Get Next Policy Anniversary
+	iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+	iPolicyAnniversary := iEffectiveDate
+	// 20200328
+	// a = 2024:03:28:00:00:00:00:00:00
+	// 20230328
+	//
+
+	for {
+
+		a := GetNextDue(iPolicyAnniversary, "Y", "")
+		iPolicyAnniversary = Date2String(a)
+
+		if iPolicyAnniversary >= iBusinessDate {
+			break
+		}
+
+	}
+	b := GetNextDue(iPolicyAnniversary, "Y", "R")
+	iPolicyAnniversary = Date2String(b)
+	// Get No of Free Done in Policy Anniversary
+	var policyhistory []models.PHistory
+	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
+	switchcount := 0
+	if results.Error != nil {
+		switchcount = 0
+	} else {
+		switchcount = len(policyhistory)
+
+	}
+	// Percentage
+	if p0070data.SwitchFeeBasis == "P" {
+		if uint(switchcount) <= p0070data.FreeSwitches {
+			return models.TxnError{}, 0, 0
+		} else {
+			return models.TxnError{}, 0, p0070data.FeePercentage
+		}
+	}
+	// Fixed Amount
+	if p0070data.SwitchFeeBasis == "F" {
+		if uint(switchcount) <= p0070data.FreeSwitches {
+			return models.TxnError{}, 0, 0
+		} else {
+			return models.TxnError{}, p0070data.FeeAmount, 0
+		}
+	}
+
+	return txnerr, 0, 0
+}
+
+func ValidateBenefitFieldsN(benefitval models.Benefit, userco uint, userlan uint, iHistoryCode string, iCoverage string, txn *gorm.DB) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	iKey := iHistoryCode + iCoverage
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		iKey = iHistoryCode
+		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(benefitval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	return
+}
+
+func ValidateBenefitFieldsNNew(benefitval models.Benefit, userco uint, userlan uint, iHistoryCode string, iCoverage string, txn *gorm.DB) (string models.TxnError) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	iKey := iHistoryCode + iCoverage
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		iKey = iHistoryCode
+		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		if err != nil {
+			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(benefitval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			// longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			// return errors.New(shortCode + " : " + longDesc)
+			return models.TxnError{ErrorCode: shortCode}
+		}
+
+	}
+
+	return
+}
+
+func ValidateMrtaFieldsN(mrtaval models.Mrta, userco uint, userlan uint, iHistoryCode string, iCoverage string, txn *gorm.DB) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	iKey := iHistoryCode + iCoverage
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		iKey = iHistoryCode
+		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		if err != nil {
+			return errors.New(err.Error())
+		}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(mrtaval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	return
+}
+
+func ValidateMrtaFieldsNNew(mrtaval models.Mrta, userco uint, userlan uint, iHistoryCode string, iCoverage string, txn *gorm.DB) (string models.TxnError) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	iKey := iHistoryCode + iCoverage
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		iKey = iHistoryCode
+		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		if err != nil {
+			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(mrtaval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			// longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			// return errors.New(shortCode + " : " + longDesc)
+			return models.TxnError{ErrorCode: shortCode}
+		}
+
+	}
+
+	return
+}
+
+func CalcILPSAN(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string, iDate string, iAge uint, iPrem float64, iFreq string, iSA float64, txn *gorm.DB) (oErr error, oSA float64) {
+	var p0068data paramTypes.P0068Data
+	var extradatap0068 paramTypes.Extradata = &p0068data
+	iKey := iHistoryCD + iCoverage
+	prem := 0.0
+	switch iFreq {
+	case "M":
+		prem = iPrem * 12
+	case "Q":
+		prem = iPrem * 4
+	case "H":
+		prem = iPrem * 2
+	case "Y":
+		prem = iPrem * 1
+	case "S":
+		prem = iPrem * 1
+	}
+	err := GetItemD(int(iCompany), "P0068", iKey, iDate, &extradatap0068)
+	if err != nil {
+		return err, 0
+
+	}
+	err = errors.New("In Valid SA")
+	// Multiplier Logic
+	for i := 0; i < len(p0068data.RangeArray); i++ {
+		if p0068data.RangeArray[i].P0068Basis == "M" {
+			if iAge <= p0068data.RangeArray[i].Age {
+				oSA = p0068data.RangeArray[i].Factor * prem
+				return nil, oSA
+			}
+		}
+		if p0068data.RangeArray[i].P0068Basis == "R" {
+			if iAge <= p0068data.RangeArray[i].Age {
+				if iSA < p0068data.RangeArray[i].FromSA {
+					oSA = p0068data.RangeArray[i].FromSA
+					return nil, oSA
+				}
+				if iSA > p0068data.RangeArray[i].ToSA {
+					oSA = p0068data.RangeArray[i].ToSA
+					return nil, oSA
+				}
+				return nil, iSA
+			}
+		}
+	}
+
+	return err, oSA
+}
+
+func CalcILPSANNew(iCompany uint, iPolicy uint, iCoverage string, iHistoryCD string, iDate string, iAge uint, iPrem float64, iFreq string, iSA float64, txn *gorm.DB) (txnerr models.TxnError, oSA float64) {
+	var p0068data paramTypes.P0068Data
+	var extradatap0068 paramTypes.Extradata = &p0068data
+	iKey := iHistoryCD + iCoverage
+	prem := 0.0
+	switch iFreq {
+	case "M":
+		prem = iPrem * 12
+	case "Q":
+		prem = iPrem * 4
+	case "H":
+		prem = iPrem * 2
+	case "Y":
+		prem = iPrem * 1
+	case "S":
+		prem = iPrem * 1
+	}
+	errparam := "P0068"
+	err := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0068)
+	if err != nil {
+		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		return txnerr, 0
+
+	}
+	// err = errors.New("In Valid SA")
+	// Multiplier Logic
+	for i := 0; i < len(p0068data.RangeArray); i++ {
+		if p0068data.RangeArray[i].P0068Basis == "M" {
+			if iAge <= p0068data.RangeArray[i].Age {
+				oSA = p0068data.RangeArray[i].Factor * prem
+				return txnerr, oSA
+			}
+		}
+		if p0068data.RangeArray[i].P0068Basis == "R" {
+			if iAge <= p0068data.RangeArray[i].Age {
+				if iSA < p0068data.RangeArray[i].FromSA {
+					oSA = p0068data.RangeArray[i].FromSA
+					return txnerr, oSA
+				}
+				if iSA > p0068data.RangeArray[i].ToSA {
+					oSA = p0068data.RangeArray[i].ToSA
+					return txnerr, oSA
+				}
+				return txnerr, iSA
+			}
+		}
+	}
+
+	return txnerr, oSA
+}
+
+func GetMrtaPremN(iCompany uint, iCoverage string, iSA float64, iAge uint, iGender string, iTerm uint, iPremTerm uint, iInterest float64, iInterimPeriod uint, iDate string, txn *gorm.DB) (float64, error) {
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		return 0, err
+	}
+
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
+	var q0010key string
+	var prem float64
+	prem = 0
+	var prem1 float64
+	prem1 = 0
+	oSA := iSA
+	term := strconv.FormatUint(uint64(iTerm), 10)
+	premTerm := strconv.FormatUint(uint64(iTerm), 10)
+
+	if q0006data.PremCalcType == "A" {
+		q0010key = iCoverage + iGender
+	} else if q0006data.PremCalcType == "P" {
+		q0010key = iCoverage + iGender + term + premTerm
+		// END1 + Male + Term + Premium Term
+	}
+	err = GetItemD(int(iCompany), "Q0010", q0010key, iDate, &extradataq0010)
+	if err != nil {
+		return 0, err
+	}
+
+	for x := 0; x < int(iTerm); x++ {
+		rSA := GetMRTABen(float64(oSA), float64(iInterest), float64(x+1), float64(iInterimPeriod), float64(iTerm))
+		for i := 0; i < len(q0010data.Rates); i++ {
+			if q0010data.Rates[i].Age == uint(iAge) {
+				prem = q0010data.Rates[i].Rate / 10000
+				prem1 = (prem * rSA) + prem1
+				iAge = iAge + 1
+				break
+			}
+		}
+		oSA = rSA
+	}
+	prem = prem1
+
+	return prem, nil
+
+}
+
+func GetMrtaPremNNew(iCompany uint, iCoverage string, iSA float64, iAge uint, iGender string, iTerm uint, iPremTerm uint, iInterest float64, iInterimPeriod uint, iDate string, txn *gorm.DB) (float64, models.TxnError) {
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	errparam := "Q0006"
+	err := GetItemD(int(iCompany), errparam, iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		return 0, models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iCoverage}
+	}
+
+	var q0010data paramTypes.Q0010Data
+	var extradataq0010 paramTypes.Extradata = &q0010data
+	var q0010key string
+	var prem float64
+	prem = 0
+	var prem1 float64
+	prem1 = 0
+	oSA := iSA
+	term := strconv.FormatUint(uint64(iTerm), 10)
+	premTerm := strconv.FormatUint(uint64(iTerm), 10)
+
+	if q0006data.PremCalcType == "A" {
+		q0010key = iCoverage + iGender
+	} else if q0006data.PremCalcType == "P" {
+		q0010key = iCoverage + iGender + term + premTerm
+		// END1 + Male + Term + Premium Term
+	}
+	errparam = "Q0010"
+	err = GetItemD(int(iCompany), errparam, q0010key, iDate, &extradataq0010)
+	if err != nil {
+		return 0, models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: q0010key}
+	}
+
+	for x := 0; x < int(iTerm); x++ {
+		rSA := GetMRTABen(float64(oSA), float64(iInterest), float64(x+1), float64(iInterimPeriod), float64(iTerm))
+		for i := 0; i < len(q0010data.Rates); i++ {
+			if q0010data.Rates[i].Age == uint(iAge) {
+				prem = q0010data.Rates[i].Rate / 10000
+				prem1 = (prem * rSA) + prem1
+				iAge = iAge + 1
+				break
+			}
+		}
+		oSA = rSA
+	}
+	prem = prem1
+
+	return prem, models.TxnError{}
+
+}
+
+func ValidateBenefitDataN(benefitenq models.Benefit, langid uint, iHistoryCode string, txn *gorm.DB) (string error) {
+	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
+	var clientenq models.Client
+	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
+	if result.Error != nil {
+		shortCode := "GL212" // Client Not Found
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	err := GetItemD(int(benefitenq.CompanyID), "Q0006", benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
+	if err != nil {
+		shortCode := "GL172" // Failed to Get Q0006
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#001 Age Not Allowed
+	var iAllowedAge bool = false
+	for i := 0; i < len(q0006data.AgeRange); i++ {
+		if benefitenq.BAge == q0006data.AgeRange[i] {
+			iAllowedAge = true
+			break
+		}
+	}
+	if !iAllowedAge {
+		shortCode := "GL548" // Age Not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#002 Policy Term not Allowed
+	var iAllowedPolTerm bool = false
+	for i := 0; i < len(q0006data.TermRange); i++ {
+		if benefitenq.BTerm == q0006data.TermRange[i] {
+			iAllowedPolTerm = true
+			break
+		}
+	}
+	if !iAllowedPolTerm {
+		shortCode := "GL549" // Policy Term not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#003 Premium Paying Term not Allowed
+	var iAllowedPPT bool = false
+	for i := 0; i < len(q0006data.PptRange); i++ {
+		if benefitenq.BPTerm == q0006data.PptRange[i] {
+			iAllowedPPT = true
+			break
+		}
+	}
+	if !iAllowedPPT {
+		shortCode := "GL550" // Premium Paying Term not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#004 Risk cess Age not Allowed
+	benriskcessage := benefitenq.BAge + benefitenq.BTerm
+	if benriskcessage < q0006data.MinRiskCessAge ||
+		benriskcessage > q0006data.MaxRiskCessAge {
+		shortCode := "GL551" // Risk cess Age not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#005 Premium cess Age not Allowed
+	benpremcessage := benefitenq.BAge + benefitenq.BPTerm
+	if benpremcessage < q0006data.MinPremCessAge ||
+		benpremcessage > q0006data.MaxPremCessAge {
+		shortCode := "GL552" // Premium cess Age not Allowed
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#006 Min Sum Assured not met
+	if uint(benefitenq.BSumAssured) < q0006data.MinSA {
+		shortCode := "GL553" // Min Sum Assured not met
+		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	return nil
+}
+
+func ValidateBenefitDataNNew(benefitenq models.Benefit, langid uint, iHistoryCode string, txn *gorm.DB) (string models.TxnError) {
+	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
+	var clientenq models.Client
+	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	errparam := "Q0006"
+	err := GetItemD(int(benefitenq.CompanyID), errparam, benefitenq.BCoverage, benefitenq.BStartDate, &extradataq0006)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: benefitenq.BCoverage}
+	}
+
+	//#001 Age Not Allowed
+	var iAllowedAge bool = false
+	for i := 0; i < len(q0006data.AgeRange); i++ {
+		if benefitenq.BAge == q0006data.AgeRange[i] {
+			iAllowedAge = true
+			break
+		}
+	}
+	if !iAllowedAge {
+		return models.TxnError{ErrorCode: "GL548"} // Age Not Allowed
+	}
+
+	//#002 Policy Term not Allowed
+	var iAllowedPolTerm bool = false
+	for i := 0; i < len(q0006data.TermRange); i++ {
+		if benefitenq.BTerm == q0006data.TermRange[i] {
+			iAllowedPolTerm = true
+			break
+		}
+	}
+	if !iAllowedPolTerm {
+		return models.TxnError{ErrorCode: "GL548"} // Policy Term not Allowed
+	}
+
+	//#003 Premium Paying Term not Allowed
+	var iAllowedPPT bool = false
+	for i := 0; i < len(q0006data.PptRange); i++ {
+		if benefitenq.BPTerm == q0006data.PptRange[i] {
+			iAllowedPPT = true
+			break
+		}
+	}
+	if !iAllowedPPT {
+		return models.TxnError{ErrorCode: "GL550"} // Premium Paying Term not Allowed
+	}
+
+	//#004 Risk cess Age not Allowed
+	benriskcessage := benefitenq.BAge + benefitenq.BTerm
+	if benriskcessage < q0006data.MinRiskCessAge ||
+		benriskcessage > q0006data.MaxRiskCessAge {
+		return models.TxnError{ErrorCode: "GL551"} // Risk cess Age not Allowed
+	}
+
+	//#005 Premium cess Age not Allowed
+	benpremcessage := benefitenq.BAge + benefitenq.BPTerm
+	if benpremcessage < q0006data.MinPremCessAge ||
+		benpremcessage > q0006data.MaxPremCessAge {
+		return models.TxnError{ErrorCode: "GL552"} // Premium cess Age not Allowed
+	}
+
+	//#006 Min Sum Assured not met
+	if uint(benefitenq.BSumAssured) < q0006data.MinSA {
+		return models.TxnError{ErrorCode: "GL553"} // Min Sum Assured not met
+	}
+
+	return models.TxnError{}
+}
+
+func ValidatePolicyDataN(policyenq models.Policy, langid uint, iHistoryCode string, txn *gorm.DB) (string error) {
+	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
+	var clientenq models.Client
+	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
+	if result.Error != nil {
+		shortCode := "GL212" // Client Not Found
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+
+	}
+
+	var agencyenq models.Agency
+	result = initializers.DB.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
+	if result.Error != nil {
+		shortCode := "GL275" // Agent Not Found
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+	err := GetItemD(int(policyenq.CompanyID), "Q0005", policyenq.PProduct, policyenq.PRCD, &extradataq0005)
+	if err != nil {
+		shortCode := "GL385" // Q0005 not configured
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#001 RCD is less than PropsalDate
+	if q0005data.BackDateAllowed == "N" {
+		if policyenq.PRCD < policyenq.ProposalDate {
+			shortCode := "GL539" // RCD is less than PropsalDate
+			longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+		}
+	}
+
+	//#002 UW Date is less than PropsalDate
+	if policyenq.PUWDate != "" {
+		if policyenq.PUWDate < policyenq.ProposalDate {
+			shortCode := "GL540" // UW Date is less than PropsalDate
+			longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+		}
+	}
+
+	//#003 Frequency is Inalid
+	var iFreqFound bool = false
+	for i := 0; i < len(q0005data.Frequencies); i++ {
+		if policyenq.PFreq == q0005data.Frequencies[i] {
+			iFreqFound = true
+			break
+		}
+	}
+	if !iFreqFound {
+		shortCode := "GL541" // Frequency is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#004 Contract Curr is Inalid
+	var iCCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PContractCurr == q0005data.ContractCurr[i] {
+			iCCurrFound = true
+			break
+		}
+	}
+	if !iCCurrFound {
+		shortCode := "GL542" // Contract Curr is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#005 Billing Curr is Inalid
+	var iBCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PBillCurr == q0005data.BillingCurr[i] {
+			iBCurrFound = true
+			break
+		}
+	}
+	if !iBCurrFound {
+		shortCode := "GL543" // Billing Curr is Inalid
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#006 Backdataing not Allowed
+	if policyenq.PRCD < businessdate &&
+		q0005data.BackDateAllowed == "N" {
+		shortCode := "GL544" // Backdataing not Allowed
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#007 Agency Channel Not Allowed
+	var iAgencyChannelFound bool = false
+	for i := 0; i < len(q0005data.AgencyChannel); i++ {
+		if agencyenq.AgencyChannel == q0005data.AgencyChannel[i] {
+			iAgencyChannelFound = true
+			break
+		}
+	}
+	if !iAgencyChannelFound {
+		shortCode := "GL545" // Agency Channel Not Allowed
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#008 Client is Invalid
+	if clientenq.ClientStatus != "AC" {
+		shortCode := "GL546" // Invalid Client
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	//#009 Deceased Client
+	if !isFieldZero(clientenq.ClientDod) {
+		shortCode := "GL547" // Deceased Client
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if policyenq.PRCD > businessdate {
+		shortCode := "GL568" // RCD is greter than businessdate
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	return nil
+}
+
+func ValidatePolicyDataNNew(policyenq models.Policy, langid uint, iHistoryCode string, txn *gorm.DB) (string models.TxnError) {
+	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
+	var clientenq models.Client
+	result := txn.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+
+	var agencyenq models.Agency
+	result = txn.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+	errparam := "Q0005"
+	err := GetItemD(int(policyenq.CompanyID), errparam, policyenq.PProduct, policyenq.PRCD, &extradataq0005)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: policyenq.PProduct}
+	}
+
+	//#001 RCD is less than PropsalDate
+	if q0005data.BackDateAllowed == "N" {
+		if policyenq.PRCD < policyenq.ProposalDate {
+			return models.TxnError{ErrorCode: "GL539"} // RCD is less than PropsalDate
+		}
+	}
+
+	//#002 UW Date is less than PropsalDate
+	if policyenq.PUWDate != "" {
+		if policyenq.PUWDate < policyenq.ProposalDate {
+			return models.TxnError{ErrorCode: "GL540"} // UW Date is less than PropsalDate
+		}
+	}
+
+	//#003 Frequency is Inalid
+	var iFreqFound bool = false
+	for i := 0; i < len(q0005data.Frequencies); i++ {
+		if policyenq.PFreq == q0005data.Frequencies[i] {
+			iFreqFound = true
+			break
+		}
+	}
+	if !iFreqFound {
+		return models.TxnError{ErrorCode: "GL541"} // Frequency is Inalid
+	}
+
+	//#004 Contract Curr is Inalid
+	var iCCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PContractCurr == q0005data.ContractCurr[i] {
+			iCCurrFound = true
+			break
+		}
+	}
+	if !iCCurrFound {
+		return models.TxnError{ErrorCode: "GL542"} // Contract Curr is Inalid
+	}
+
+	//#005 Billing Curr is Inalid
+	var iBCurrFound bool = false
+	for i := 0; i < len(q0005data.ContractCurr); i++ {
+		if policyenq.PBillCurr == q0005data.BillingCurr[i] {
+			iBCurrFound = true
+			break
+		}
+	}
+	if !iBCurrFound {
+		return models.TxnError{ErrorCode: "GL543"} // Billing Curr is Inalid
+	}
+
+	//#006 Backdataing not Allowed
+	if policyenq.PRCD < businessdate &&
+		q0005data.BackDateAllowed == "N" {
+		return models.TxnError{ErrorCode: "GL544"} // Backdataing not Allowed
+	}
+
+	//#007 Agency Channel Not Allowed
+	var iAgencyChannelFound bool = false
+	for i := 0; i < len(q0005data.AgencyChannel); i++ {
+		if agencyenq.AgencyChannel == q0005data.AgencyChannel[i] {
+			iAgencyChannelFound = true
+			break
+		}
+	}
+	if !iAgencyChannelFound {
+		return models.TxnError{ErrorCode: "GL545"} // Agency Channel Not Allowed
+	}
+
+	//#008 Client is Invalid
+	if clientenq.ClientStatus != "AC" {
+		return models.TxnError{ErrorCode: "GL546"} // Invalid Client
+	}
+
+	//#009 Deceased Client
+	if !isFieldZero(clientenq.ClientDod) {
+		return models.TxnError{ErrorCode: "GL547"} // Deceased Client
+	}
+
+	if policyenq.PRCD > businessdate {
+		return models.TxnError{ErrorCode: "GL548"} // RCD is greter than businessdate
+	}
+
+	return models.TxnError{}
+}
+
 // 2025-11-04 Divya Changes
 func CreateCommunicationsLNew(iCompany uint, iHistoryCode string, iTranno uint, iDate string, iPolicy uint, iClient uint, iAddress uint, iReceipt uint, iQuotation uint, iAgency uint, iFromDate string, iToDate string, iGlHistoryCode string, iGlAccountCode string, iGlSign string, txn *gorm.DB, iBenefit uint, iPa uint, iClientWork uint, iAmount1 float64, iAmount2 float64, iNo1 uint, iNo2 uint) models.TxnError {
 
@@ -4172,6 +5049,116 @@ func EmailTriggerforReportNNew(iCompany uint, iReference uint, iClient uint, iEm
 	}()
 	log.Printf("EmailTrigger function executed in %v", time.Since(sendStart))
 	return models.TxnError{}
+}
+
+func ValidateNomineeNNew(nomineeval models.Nominee, userco uint, userlan uint, iKey string, txn *gorm.DB) (string models.TxnError) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(nomineeval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			return models.TxnError{ErrorCode: "GL894"}
+		}
+	}
+	var clientenq models.Client
+	result := txn.First(&clientenq, "company_id  = ? and id = ?", nomineeval.CompanyID, nomineeval.ClientID)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+
+	if clientenq.ClientStatus != "AC" ||
+		clientenq.ClientDod != "" {
+		return models.TxnError{ErrorCode: "GL546"}
+	}
+
+	var p0045data paramTypes.P0045Data
+	var extradatap0045 paramTypes.Extradata = &p0045data
+	errparam = "P0045"
+	err = GetItemD(int(nomineeval.CompanyID), errparam, nomineeval.NomineeRelationship, "0", &extradatap0045)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: nomineeval.NomineeRelationship}
+
+	}
+
+	var iGender bool = false
+	for i := 0; i < len(p0045data.Gender); i++ {
+		if clientenq.Gender == p0045data.Gender {
+			iGender = true
+			break
+		}
+	}
+	if !iGender {
+		return models.TxnError{ErrorCode: "GL572"}
+	}
+
+	// Owner cannot be Nominee
+	var policyenq models.Policy
+	result = txn.First(&policyenq, "company_id  = ? and id = ?", nomineeval.CompanyID, nomineeval.PolicyID)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+
+	if nomineeval.ClientID == policyenq.ClientID {
+		return models.TxnError{ErrorCode: "GL589"}
+	}
+
+	return
+}
+
+func GetAllowedFundsNNew(iCompany uint, iCoverage string, iDate string, txn *gorm.DB) ([]interface{}, models.TxnError) {
+
+	fundlist := make([]interface{}, 0)
+
+	var q0006data paramTypes.Q0006Data
+	var extradataq0006 paramTypes.Extradata = &q0006data
+	errparam := "Q0006"
+	err := GetItemD(int(iCompany), errparam, iCoverage, iDate, &extradataq0006)
+	if err != nil {
+		return fundlist, models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iCoverage}
+
+	}
+	if q0006data.FUNDCODE == nil {
+		return nil, models.TxnError{ErrorCode: "GL881"}
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	for i := 0; i < len(q0006data.FUNDCODE); i++ {
+		errparam = "P0061"
+		err = GetItemD(int(iCompany), errparam, q0006data.FUNDCODE[i], iDate, &extradatap0061)
+		if err != nil {
+			return fundlist, models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: q0006data.FUNDCODE[i]}
+
+		}
+		resultOut := map[string]interface{}{
+			"FundCode":     p0061data.FundCode,
+			"FundCategory": p0061data.FundCategory,
+			"FundCurr":     p0061data.FundCurr,
+			"FundType":     p0061data.FundType,
+		}
+		fmt.Print(fundlist)
+		fundlist = append(fundlist, resultOut)
+	}
+	return fundlist, models.TxnError{}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

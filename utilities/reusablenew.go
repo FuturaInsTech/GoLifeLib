@@ -5161,5 +5161,130 @@ func GetAllowedFundsNNew(iCompany uint, iCoverage string, iDate string, txn *gor
 	return fundlist, models.TxnError{}
 }
 
+// 2025-11-05 Lakshmi Changes
+func GetParamPlanBenefitN(iCompany uint, iBCoverage, iBenefitPlan, iDate string, txn *gorm.DB) (error, []interface{}) {
+	resp := make([]interface{}, 0)
+
+	iKey := iBCoverage + iBenefitPlan
+
+	var p0075data paramTypes.P0075Data
+	var extradatap0075 paramTypes.Extradata = &p0075data
+	err := GetItemD(int(iCompany), "P0075", iKey, iDate, &extradatap0075)
+	if err != nil {
+		return err, nil
+
+	}
+
+	var p0077data paramTypes.P0077Data
+	var extradatap0077 paramTypes.Extradata = &p0077data
+	err = GetItemD(int(iCompany), "P0077", iKey, iDate, &extradatap0077)
+	if err != nil {
+		return err, nil
+
+	}
+
+	for _, planBenefit := range p0075data.PlanBenefits {
+
+		for _, planMaxBenefit := range p0077data.PlanMaxBenefits {
+
+			if err != nil {
+				return err, nil
+			}
+
+			benefitCodeDesc := GetP0050ItemCodeDesc(iCompany, "BenefitCode", 1, planBenefit.BenefitCode)
+			benefitBasisDesc := GetP0050ItemCodeDesc(iCompany, "BenefitBasis", 1, planBenefit.BenefitBasis)
+			benefitPlanCover := GetP0050ItemCodeDesc(iCompany, "BenefitPlanCover", 1, planBenefit.BenefitPlanCover)
+			planBenefitGroup := GetP0050ItemCodeDesc(iCompany, "PlanBenefitGroup", 1, planBenefit.PlanBenefitGroup)
+			maxBenefitBasis := GetP0050ItemCodeDesc(iCompany, "MaxBenefitBasis", 1, planMaxBenefit.MaxBenefitBasis)
+
+			if planBenefit.BenefitCode == planMaxBenefit.BenefitCode {
+
+				paramOut := map[string]interface{}{
+					"BenefitCode":          planBenefit.BenefitCode,
+					"BenefitCodeDesc":      benefitCodeDesc,
+					"BenefitUnit":          planBenefit.BenefitUnit,
+					"BenefitBasis":         planBenefit.BenefitBasis,
+					"BenefitBasisDesc":     benefitBasisDesc,
+					"BenefitPlanCover":     planBenefit.BenefitPlanCover,
+					"BenefitPlanCoverDesc": benefitPlanCover,
+					"PlanBenefitGroup":     planBenefit.PlanBenefitGroup,
+					"PlanBenefitGroupDesc": planBenefitGroup,
+					"MaxBenefitAmount":     planMaxBenefit.MaxBenefitAmount,
+					"MaxBenefitUnit":       planMaxBenefit.MaxBenefitUnit,
+					"MaxBenefitBasis":      planMaxBenefit.MaxBenefitBasis,
+					"MaxBenefitBasisDesc":  maxBenefitBasis,
+				}
+				resp = append(resp, paramOut)
+			}
+
+		}
+	}
+
+	return nil, resp
+}
+
+func GetParamPlanBenefitNNew(iCompany uint, iBCoverage, iBenefitPlan, iDate string, txn *gorm.DB) (models.TxnError, []interface{}) {
+	resp := make([]interface{}, 0)
+
+	iKey := iBCoverage + iBenefitPlan
+
+	var p0075data paramTypes.P0075Data
+	var extradatap0075 paramTypes.Extradata = &p0075data
+	errparam := "P0075"
+	err := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0075)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}, nil
+
+	}
+
+	var p0077data paramTypes.P0077Data
+	var extradatap0077 paramTypes.Extradata = &p0077data
+	errparam = "P0077"
+	err = GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0077)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}, nil
+
+	}
+
+	for _, planBenefit := range p0075data.PlanBenefits {
+
+		for _, planMaxBenefit := range p0077data.PlanMaxBenefits {
+
+			if err != nil {
+				return models.TxnError{}, nil
+			}
+
+			benefitCodeDesc := GetP0050ItemCodeDesc(iCompany, "BenefitCode", 1, planBenefit.BenefitCode)
+			benefitBasisDesc := GetP0050ItemCodeDesc(iCompany, "BenefitBasis", 1, planBenefit.BenefitBasis)
+			benefitPlanCover := GetP0050ItemCodeDesc(iCompany, "BenefitPlanCover", 1, planBenefit.BenefitPlanCover)
+			planBenefitGroup := GetP0050ItemCodeDesc(iCompany, "PlanBenefitGroup", 1, planBenefit.PlanBenefitGroup)
+			maxBenefitBasis := GetP0050ItemCodeDesc(iCompany, "MaxBenefitBasis", 1, planMaxBenefit.MaxBenefitBasis)
+
+			if planBenefit.BenefitCode == planMaxBenefit.BenefitCode {
+
+				paramOut := map[string]interface{}{
+					"BenefitCode":          planBenefit.BenefitCode,
+					"BenefitCodeDesc":      benefitCodeDesc,
+					"BenefitUnit":          planBenefit.BenefitUnit,
+					"BenefitBasis":         planBenefit.BenefitBasis,
+					"BenefitBasisDesc":     benefitBasisDesc,
+					"BenefitPlanCover":     planBenefit.BenefitPlanCover,
+					"BenefitPlanCoverDesc": benefitPlanCover,
+					"PlanBenefitGroup":     planBenefit.PlanBenefitGroup,
+					"PlanBenefitGroupDesc": planBenefitGroup,
+					"MaxBenefitAmount":     planMaxBenefit.MaxBenefitAmount,
+					"MaxBenefitUnit":       planMaxBenefit.MaxBenefitUnit,
+					"MaxBenefitBasis":      planMaxBenefit.MaxBenefitBasis,
+					"MaxBenefitBasisDesc":  maxBenefitBasis,
+				}
+				resp = append(resp, paramOut)
+			}
+
+		}
+	}
+
+	return models.TxnError{}, resp
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

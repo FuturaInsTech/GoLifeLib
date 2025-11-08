@@ -5286,5 +5286,449 @@ func GetParamPlanBenefitNNew(iCompany uint, iBCoverage, iBenefitPlan, iDate stri
 	return models.TxnError{}, resp
 }
 
+// 2025-11-07 Divya Changes
+func ValidatePolicyFieldsN(policyval models.Policy, userco uint, userlan uint, iKey string, txn *gorm.DB) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(policyval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	return
+}
+
+func ValidatePolicyFieldsNNew(policyval models.Policy, userco uint, userlan uint, iKey string, txn *gorm.DB) (string models.TxnError) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(policyval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			//longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return models.TxnError{ErrorCode: shortCode}
+		}
+
+	}
+
+	return
+}
+
+func LockTheEntityN(iCompany uint, lockedType types.LockedType, lockedTypeKey string, versionID string, iUserId uint64, txn *gorm.DB) error {
+
+	var tranLock models.TransactionLock
+	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if recordNotFound {
+		return errors.New("entity does not exist")
+	}
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if !tranLock.IsValid {
+		return errors.New("entity does not exist")
+	}
+
+	if tranLock.IsLocked {
+		return errors.New("entity is already locked")
+
+	}
+
+	if versionID != tranLock.VersionId {
+		return errors.New("entity version mismatch")
+
+	}
+
+	tranLock.IsLocked = true
+	tranLock.UpdatedID = iUserId
+	tranLock.UpdatedAt = time.Now()
+
+	//result = initializers.DB.Save(&tranLock)
+	result = initializers.DB.Model(&tranLock).Updates(tranLock)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+
+}
+
+func LockTheEntityNNew(iCompany uint, lockedType types.LockedType, lockedTypeKey string, versionID string, iUserId uint64, txn *gorm.DB) models.TxnError {
+
+	var tranLock models.TransactionLock
+	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if recordNotFound {
+		return models.TxnError{ErrorCode: "GL683"}
+	}
+
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+
+	if !tranLock.IsValid {
+		return models.TxnError{ErrorCode: "GL683"}
+	}
+
+	if tranLock.IsLocked {
+		return models.TxnError{ErrorCode: "GL684"}
+
+	}
+
+	if versionID != tranLock.VersionId {
+		return models.TxnError{ErrorCode: "GL685"}
+
+	}
+
+	tranLock.IsLocked = true
+	tranLock.UpdatedID = iUserId
+	tranLock.UpdatedAt = time.Now()
+
+	//result = initializers.DB.Save(&tranLock)
+	result = initializers.DB.Model(&tranLock).Updates(tranLock)
+
+	if result.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL685", DbError: result.Error}
+
+	}
+
+	return models.TxnError{}
+
+}
+
+func UnLockTheEntityNew(iCompany uint, lockedType types.LockedType, lockedTypeKey string, iUserId uint64, changeVersion bool, txn *gorm.DB) models.TxnError {
+
+	var tranLock models.TransactionLock
+	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if recordNotFound {
+		return models.TxnError{ErrorCode: "GL878"}
+	}
+
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+
+	if !tranLock.IsValid {
+		return models.TxnError{ErrorCode: "GL878"}
+	}
+
+	if !tranLock.IsLocked {
+		return models.TxnError{ErrorCode: "GL879"}
+
+	}
+
+	dataMap := make(map[string]interface{})
+
+	dataMap["is_locked"] = false
+	dataMap["updated_id"] = iUserId
+	if changeVersion {
+		dataMap["version_id"] = uuid.New().String()
+	}
+
+	result = initializers.DB.Model(&tranLock).Updates(dataMap)
+
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+
+	return models.TxnError{}
+
+}
+
+func ValidateAgencyN(agencyenq models.Agency, userco uint, userlan uint, iDate string, txn *gorm.DB) (string error) {
+
+	if agencyenq.AgencySt != "AC" {
+		shortCode := "GL221" // InValid Status
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if agencyenq.LicenseStartDate > iDate {
+		shortCode := "GL577"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if agencyenq.LicenseEndDate < iDate {
+		shortCode := "GL578"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	return nil
+}
+
+func ValidateAgencyNNew(agencyenq models.Agency, userco uint, userlan uint, iDate string, txn *gorm.DB) (string models.TxnError) {
+
+	if agencyenq.AgencySt != "AC" {
+		return models.TxnError{ErrorCode: "GL221"}
+	}
+
+	if agencyenq.LicenseStartDate > iDate {
+		return models.TxnError{ErrorCode: "GL577"}
+
+	}
+
+	if agencyenq.LicenseEndDate < iDate {
+		return models.TxnError{ErrorCode: "GL578"}
+
+	}
+	return models.TxnError{}
+}
+
+func PostAllocationNNew(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iFrequency string, iStartDate string, iEffDate string, iGender string, iAllocMethod string, iTranno uint, txn *gorm.DB) models.TxnError {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL017", DbError: result.Error}
+
+	}
+
+	var p0060data paramTypes.P0060Data
+	var extradatap0060 paramTypes.Extradata = &p0060data
+	iDate := iStartDate
+	iKey := iAllocMethod + iGender
+	errparam := "P0060"
+	err := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0060)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+
+	}
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey = iHistoryCode + iBenefitCode
+	errparam = "P0059"
+	err = GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0059)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+
+	}
+	iAllocationDate := ""
+	if iEffDate == iStartDate {
+		a := GetNextDue(iStartDate, iFrequency, "")
+		iAllocationDate = Date2String(a)
+	}
+	iNoofMonths := NewNoOfInstalments(iStartDate, iAllocationDate)
+	iAllocPercentage := 0.00
+	for i := 0; i < len(p0060data.AlBand); i++ {
+		if uint(iNoofMonths) <= p0060data.AlBand[i].Months {
+			iAllocPercentage = p0060data.AlBand[i].Percentage
+			break
+		}
+	}
+	iInvested := RoundFloat(iAmount*(iAllocPercentage/100), 2)
+	iNonInvested := RoundFloat(iAmount*((100-iAllocPercentage)/100), 2)
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL443", DbError: result.Error}
+	}
+
+	for j := 0; j < len(ilpfundenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+
+		var ilptrancrt models.IlpTransaction
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpfundenq[j].FundCode
+		ilptrancrt.FundType = ilpfundenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		ilptrancrt.FundAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.FundCurr = ilpfundenq[j].FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+		ilptrancrt.OriginalAmount = RoundFloat(((iInvested * ilpfundenq[j].FundPercentage) / 100), 2)
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.InvNonInvPercentage = ilpfundenq[j].FundPercentage
+		ilptrancrt.AccountCode = "Invested" // ranga
+
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+		}
+	}
+	// Non Invested Amount Updation
+
+	var ilptrancrt models.IlpTransaction
+	// Move Variables
+	ilptrancrt.CompanyID = iCompany
+	ilptrancrt.PolicyID = iPolicy
+	ilptrancrt.BenefitID = iBenefit
+	ilptrancrt.FundCode = "NONIN"
+	ilptrancrt.FundType = "NI"
+	ilptrancrt.TransactionDate = iEffDate
+	ilptrancrt.FundEffDate = iEffDate
+	ilptrancrt.FundAmount = iNonInvested
+	ilptrancrt.FundCurr = ""
+	ilptrancrt.FundUnits = 0
+	ilptrancrt.FundPrice = 0
+	ilptrancrt.CurrentOrFuture = "C"
+	ilptrancrt.OriginalAmount = iNonInvested
+	ilptrancrt.ContractCurry = policyenq.PContractCurr
+	ilptrancrt.HistoryCode = iHistoryCode
+	ilptrancrt.InvNonInvFlag = "NI"
+	ilptrancrt.AllocationCategory = "NI"
+	ilptrancrt.InvNonInvPercentage = 0
+	ilptrancrt.Tranno = iTranno
+
+	ilptrancrt.AccountCode = "NonInvested"
+
+	ilptrancrt.CurrencyRate = 1.00
+	ilptrancrt.MortalityIndicator = ""
+	ilptrancrt.SurrenderPercentage = 0
+	ilptrancrt.Seqno = uint(p0059data.SeqNo)
+	ilptrancrt.UlProcessFlag = "C"
+	result = txn.Create(&ilptrancrt)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+	return models.TxnError{}
+}
+
+func TDFCOLADNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iRevFlag string, txn *gorm.DB) (string, models.TxnError) {
+	var policy models.Policy
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	var q0005data paramTypes.Q0005Data
+	var extradataq0005 paramTypes.Extradata = &q0005data
+
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+	result = txn.First(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+	errparam := "Q0005"
+	err := GetItemD(int(iCompany), errparam, policy.PProduct, policy.PRCD, &extradataq0005)
+	if err != nil {
+		return "", models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: policy.PProduct}
+
+	}
+
+	iNewDate := AddLeadDays(policy.AnnivDate, (-1 * q0005data.BillingLeadDays))
+
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+	if results.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = iNewDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+		}
+
+		return "", models.TxnError{}
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+		}
+
+		iNxtAnnDate := GetNextYr(policy.AnnivDate)
+		oAnnivDate := AddLeadDays(iNxtAnnDate, (-1 * q0005data.BillingLeadDays))
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = oAnnivDate
+		tdfpolicy.Tranno = iTranno
+
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+		}
+
+		return "", models.TxnError{}
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

@@ -5730,5 +5730,203 @@ func TDFCOLADNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iR
 	}
 }
 
+func ValidatePolicyBenefitsDataN(policyenq models.Policy, benefitenq []models.Benefit, langid uint, txn *gorm.DB) (string error) {
+
+	var q0011data paramTypes.Q0011Data
+	var extradataq0011 paramTypes.Extradata = &q0011data
+	err := GetItemD(int(policyenq.CompanyID), "Q0011", policyenq.PProduct, policyenq.PRCD, &extradataq0011)
+	if err != nil {
+		shortCode := "GL387" // Q0011 not configured
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// Duplicate Benefits Check
+	duplicatebenefits := false
+	var benefitenq1 []models.Benefit = benefitenq
+	for i := 0; i < len(benefitenq); i++ {
+		duplicatebenefits = false
+		for j := 0; j < len(benefitenq1); j++ {
+			if benefitenq[i].ID != benefitenq1[j].ID &&
+				benefitenq[i].BCoverage == benefitenq1[j].BCoverage &&
+				benefitenq[i].ClientID == benefitenq1[j].ClientID {
+				duplicatebenefits = true
+				break
+			}
+		}
+	}
+	if duplicatebenefits {
+		shortCode := "GL619" // Duplicate Benefits Exist
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// basicbenefit selection
+	var basicbenefit models.Benefit
+	basicbenefit.ID = 0
+	for i := 0; i < len(q0011data.Coverages); i++ {
+		for j := 0; j < len(benefitenq); j++ {
+			if q0011data.Coverages[i].CoverageName == benefitenq[j].BCoverage &&
+				q0011data.Coverages[i].BasicorRider == "B" {
+				basicbenefit = benefitenq[j]
+				break
+			}
+		}
+	}
+
+	// Mandatory Benefits check
+	mandatorybenefits := true
+	for i := 0; i < len(q0011data.Coverages); i++ {
+		if q0011data.Coverages[i].Mandatory == "Y" {
+			mandatorybenefits = false
+			for j := 0; j < len(benefitenq); j++ {
+				if q0011data.Coverages[i].CoverageName == benefitenq[j].BCoverage {
+					mandatorybenefits = true
+					break
+				}
+			}
+		}
+	}
+
+	if !mandatorybenefits {
+		shortCode := "GL621" // Mandatory Coverage(s) not Found
+		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	// Benefits Validation
+	for i := 0; i < len(benefitenq); i++ {
+		//#001 Policy RCD > Benefit Start Date
+		if policyenq.PRCD > benefitenq[i].BStartDate {
+			shortCode := "GL622" // Policy RCD > Benefit Start Date
+			longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+			return errors.New(shortCode + ":" + longDesc)
+		}
+		if benefitenq[i].BCoverage != basicbenefit.BCoverage {
+			for j := 0; j < len(q0011data.Coverages); j++ {
+				if benefitenq[i].BCoverage == q0011data.Coverages[j].CoverageName {
+					//#002 Benefit Term Exceed Basic Benefit Term
+					if q0011data.Coverages[i].TermCanExceed == "N" &&
+						benefitenq[i].BTerm > basicbenefit.BTerm {
+						shortCode := "GL623" // Benefit Term Exceed Basic Benefit Term
+						longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+						return errors.New(shortCode + ":" + longDesc)
+					}
+					//#003 Benefit Prem Term Exceed Basic Benefit Prem Term
+					if q0011data.Coverages[i].PptCanExceed == "N" &&
+						benefitenq[i].BPTerm > basicbenefit.BPTerm {
+						shortCode := "GL624" // Benefit Prem Term Exceed Basic Benefit Prem Term
+						longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+						return errors.New(shortCode + ":" + longDesc)
+					}
+					//#004 Benefit SA Exceed Basic Benefit SA
+					if q0011data.Coverages[i].SaCanExceed == "N" &&
+						benefitenq[i].BSumAssured > basicbenefit.BSumAssured {
+						shortCode := "GL625" // Benefit SA Exceed Basic Benefit SA
+						longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
+						return errors.New(shortCode + ":" + longDesc)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func ValidatePolicyBenefitsDataNNew(policyenq models.Policy, benefitenq []models.Benefit, langid uint, txn *gorm.DB) (string models.TxnError) {
+
+	var q0011data paramTypes.Q0011Data
+	var extradataq0011 paramTypes.Extradata = &q0011data
+	errparam := "Q0011"
+	err := GetItemD(int(policyenq.CompanyID), errparam, policyenq.PProduct, policyenq.PRCD, &extradataq0011)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: policyenq.PProduct}
+
+	}
+
+	// Duplicate Benefits Check
+	duplicatebenefits := false
+	var benefitenq1 []models.Benefit = benefitenq
+	for i := 0; i < len(benefitenq); i++ {
+		duplicatebenefits = false
+		for j := 0; j < len(benefitenq1); j++ {
+			if benefitenq[i].ID != benefitenq1[j].ID &&
+				benefitenq[i].BCoverage == benefitenq1[j].BCoverage &&
+				benefitenq[i].ClientID == benefitenq1[j].ClientID {
+				duplicatebenefits = true
+				break
+			}
+		}
+	}
+	if duplicatebenefits {
+
+		return models.TxnError{ErrorCode: "GL619"}
+	}
+
+	// basicbenefit selection
+	var basicbenefit models.Benefit
+	basicbenefit.ID = 0
+	for i := 0; i < len(q0011data.Coverages); i++ {
+		for j := 0; j < len(benefitenq); j++ {
+			if q0011data.Coverages[i].CoverageName == benefitenq[j].BCoverage &&
+				q0011data.Coverages[i].BasicorRider == "B" {
+				basicbenefit = benefitenq[j]
+				break
+			}
+		}
+	}
+
+	// Mandatory Benefits check
+	mandatorybenefits := true
+	for i := 0; i < len(q0011data.Coverages); i++ {
+		if q0011data.Coverages[i].Mandatory == "Y" {
+			mandatorybenefits = false
+			for j := 0; j < len(benefitenq); j++ {
+				if q0011data.Coverages[i].CoverageName == benefitenq[j].BCoverage {
+					mandatorybenefits = true
+					break
+				}
+			}
+		}
+	}
+
+	if !mandatorybenefits {
+
+		return models.TxnError{ErrorCode: "GL621"}
+	}
+
+	// Benefits Validation
+	for i := 0; i < len(benefitenq); i++ {
+		//#001 Policy RCD > Benefit Start Date
+		if policyenq.PRCD > benefitenq[i].BStartDate {
+			return models.TxnError{ErrorCode: "GL622"}
+		}
+		if benefitenq[i].BCoverage != basicbenefit.BCoverage {
+			for j := 0; j < len(q0011data.Coverages); j++ {
+				if benefitenq[i].BCoverage == q0011data.Coverages[j].CoverageName {
+					//#002 Benefit Term Exceed Basic Benefit Term
+					if q0011data.Coverages[i].TermCanExceed == "N" &&
+						benefitenq[i].BTerm > basicbenefit.BTerm {
+						return models.TxnError{ErrorCode: "GL623"}
+					}
+					//#003 Benefit Prem Term Exceed Basic Benefit Prem Term
+					if q0011data.Coverages[i].PptCanExceed == "N" &&
+						benefitenq[i].BPTerm > basicbenefit.BPTerm {
+						return models.TxnError{ErrorCode: "GL624"}
+					}
+					//#004 Benefit SA Exceed Basic Benefit SA
+					if q0011data.Coverages[i].SaCanExceed == "N" &&
+						benefitenq[i].BSumAssured > basicbenefit.BSumAssured {
+						return models.TxnError{ErrorCode: "GL625"}
+					}
+				}
+			}
+		}
+	}
+
+	return models.TxnError{}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

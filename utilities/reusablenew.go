@@ -5928,5 +5928,68 @@ func ValidatePolicyBenefitsDataNNew(policyenq models.Policy, benefitenq []models
 	return models.TxnError{}
 }
 
+// 2025-11-10 Lakshmi Changes
+func ValidateAddressN(addressval models.Address, userco uint, userlan uint, iKey string, txn *gorm.DB) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(addressval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) == true {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	return
+}
+
+func ValidateAddressNNew(addressval models.Address, userco uint, userlan uint, iKey string, txn *gorm.DB) (string models.TxnError) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+		var fv interface{}
+		r := reflect.ValueOf(addressval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) == true {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			// longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return models.TxnError{ErrorCode: shortCode}
+		}
+
+	}
+
+	return
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

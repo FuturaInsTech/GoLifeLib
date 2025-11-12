@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
@@ -1610,46 +1611,6 @@ func ColaSurrenderCalc(iCompany uint, iPolicy uint, iCoverage string) (oTotalPre
 
 }
 
-func GetSearchableFields(model interface{}) []string {
-	t := reflect.TypeOf(model)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	fields := []string{}
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-
-		// get gorm:"..." tag
-		gormTag := f.Tag.Get("gorm")
-
-		// only consider fields that map to DB columns
-		if gormTag != "" && !strings.Contains(gormTag, "-") {
-			// gorm:"type:varchar(50)" → take actual field name
-			// fallback: convert struct field name to snake_case
-			colName := f.Tag.Get("column")
-			if colName == "" {
-				colName = ToSnakeCase(f.Name)
-			}
-			fields = append(fields, colName)
-		}
-	}
-	return fields
-}
-
-// simple snake_case converter
-func ToSnakeCase(str string) string {
-	var result []rune
-	for i, r := range str {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			result = append(result, '_', r+32)
-		} else {
-			result = append(result, r)
-		}
-	}
-	return string(result)
-}
-
 // Created ValidteClientWorkN - txn implementation Ommission
 // 2025-10-21 txn implemented by Lakshmi
 func ValidateClientWorkN(clientwork models.ClientWork, userco uint, userlan uint, iDate string, iKey string, txn *gorm.DB) (string error) {
@@ -1712,4 +1673,57 @@ func ValidateClientWorkN(clientwork models.ClientWork, userco uint, userlan uint
 		return errors.New(shortCode + ":" + longDesc)
 	}
 	return nil
+}
+
+func GetSearchableFields(model interface{}) []string {
+	t := reflect.TypeOf(model)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	var fields []string
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+
+		// ✅ Handle embedded structs recursively
+		if f.Anonymous {
+			embeddedFields := GetSearchableFields(reflect.New(f.Type).Interface())
+			fields = append(fields, embeddedFields...)
+			continue
+		}
+
+		gormTag := f.Tag.Get("gorm")
+		if gormTag != "" && !strings.Contains(gormTag, "-") {
+			colName := f.Tag.Get("column")
+			if colName == "" {
+				colName = ToSnakeCase(f.Name)
+			}
+			fields = append(fields, colName)
+		}
+	}
+
+	return fields
+}
+
+// simple snake_case converter
+func ToSnakeCase(str string) string {
+	if str == "" {
+		return ""
+	}
+	if str == strings.ToUpper(str) {
+		return strings.ToLower(str)
+	}
+
+	var result []rune
+	for i, r := range str {
+		if unicode.IsUpper(r) {
+			if i > 0 && (unicode.IsLower(rune(str[i-1])) || (i+1 < len(str) && unicode.IsLower(rune(str[i+1])))) {
+				result = append(result, '_')
+			}
+			result = append(result, unicode.ToLower(r))
+		} else {
+			result = append(result, r)
+		}
+	}
+	return string(result)
 }

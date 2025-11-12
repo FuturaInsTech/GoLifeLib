@@ -3032,3 +3032,224 @@ func (m *W0016Data) GetFormattedData(datamap map[string]string) map[string]inter
 	return nil
 
 }
+
+// UI PARAMS NEW MODELS FROM SHUBHAM
+// UI001 Paaram Fot Policy Dynamic fields
+type UI001Data struct {
+	DynamicFields []UI001
+}
+type UI001 struct {
+	ID           string
+	Label        string
+	Type         string
+	Capture      string
+	Options      string
+	OptionParam  string
+	OptionItem   string
+	OptionSource string
+	Lookup       string
+	LookupSource string
+}
+
+func (m *UI001Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *UI001Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// UI002 Paaram Fot Benefit Dynamic fields
+type UI002Data struct {
+	DynamicFields []UI002
+}
+type UI002 struct {
+	ID           string
+	Label        string
+	Type         string
+	Capture      string
+	Options      string
+	OptionParam  string
+	OptionItem   string
+	OptionSource string
+	Lookup       string
+	LookupSource string
+}
+
+func (m *UI002Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func (m *UI002Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+	return nil
+}
+
+// UI003 Paaram For Extra Dynamic fields
+type UI003Data struct {
+	DynamicFields []UI003
+}
+type UI003 struct {
+	ID           string
+	Label        string
+	Type         string
+	Capture      string
+	Options      string
+	OptionParam  string
+	OptionItem   string
+	OptionSource string
+	Lookup       string
+	LookupSource string
+}
+
+func (m *UI003Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *UI003Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// UI004 Paaram Fot Annuity Dynamic fields
+type UI004Data struct {
+	DynamicFields []UI004
+}
+type UI004 struct {
+	ID           string
+	Label        string
+	Type         string
+	Capture      string
+	Options      string
+	OptionParam  string
+	OptionItem   string
+	OptionSource string
+	Lookup       string
+	LookupSource string
+}
+
+func (m *UI004Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *UI004Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// UI005 Paaram Fot ILP Fund Dynamic fields
+type UI005Data struct {
+	DynamicFields []UI005
+}
+type UI005 struct {
+	ID           string
+	Label        string
+	Type         string
+	Capture      string
+	Options      string
+	OptionParam  string
+	OptionItem   string
+	OptionSource string
+	Lookup       string
+	LookupSource string
+}
+
+func (m *UI005Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *UI005Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}
+
+// UI006 Paaram Fot ILP Fund Dynamic fields
+type UI006Data struct {
+	DynamicFields []UI006
+}
+
+// UI006 Paaram Fot Single Form Dynamic fields
+type UI006 struct {
+	ID           string
+	Label        string
+	Type         string
+	Capture      string
+	Options      string
+	OptionParam  string
+	OptionItem   string
+	OptionSource string
+	Lookup       string
+	LookupSource string
+}
+
+func (m *UI006Data) ParseData(datamap map[string]interface{}) {
+	jsonStr, err := json.Marshal(datamap)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	// Convert json string to struct
+
+	if err := json.Unmarshal(jsonStr, &m); err != nil {
+		fmt.Println(err)
+	}
+
+}
+
+func (m *UI006Data) GetFormattedData(datamap map[string]string) map[string]interface{} {
+
+	return nil
+
+}

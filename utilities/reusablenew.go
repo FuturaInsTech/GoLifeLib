@@ -5991,5 +5991,289 @@ func ValidateAddressNNew(addressval models.Address, userco uint, userlan uint, i
 	return
 }
 
+// 2025-11-11 Divya Changes
+func ValidateClientN(clientval models.Client, userco uint, userlan uint, iKey string, txn *gorm.DB) (string error) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	iClientType := clientval.ClientType
+	if iClientType == "I" || iClientType == "C" {
+		iKey = iKey + iClientType
+	}
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(clientval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+
+	}
+
+	validemail := isValidEmail(clientval.ClientEmail)
+	if !validemail {
+		shortCode := "GL477" // Email Format is invalid
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	_, err = strconv.Atoi(clientval.ClientMobile)
+	if err != nil {
+		shortCode := "GL478" // MobileNumber is not Numeric
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	ibusinessdate := GetBusinessDate(userco, 0, 0)
+	if clientval.ClientDob > ibusinessdate {
+		shortCode := ""
+		if clientval.ClientType == "C" {
+			shortCode = "GL586" // Incorrect Date of Incorporation
+		} else {
+			shortCode = "GL566" // Incorrect Date of Birth
+		}
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	if clientval.ClientDod != "" {
+		if clientval.ClientDod <= clientval.ClientDob {
+			shortCode := ""
+			if clientval.ClientType == "C" {
+				shortCode = "GL587" // Incorrect Date of Termination
+			} else {
+				shortCode = "GL567" // Date of Birth/Death Incorrect
+			}
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+
+	return
+}
+
+func ValidateClientNNew(clientval models.Client, userco uint, userlan uint, iKey string, txn *gorm.DB) (string models.TxnError) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	iClientType := clientval.ClientType
+	if iClientType == "I" || iClientType == "C" {
+		iKey = iKey + iClientType
+	}
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(clientval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+			return models.TxnError{
+				ErrorCode: shortCode + " : " + longDesc,
+			}
+		}
+
+	}
+
+	validemail := isValidEmail(clientval.ClientEmail)
+	if !validemail {
+		return models.TxnError{ErrorCode: "GL477"}
+	}
+
+	_, err = strconv.Atoi(clientval.ClientMobile)
+	if err != nil {
+		return models.TxnError{ErrorCode: "GL478"}
+	}
+
+	ibusinessdate := GetBusinessDate(userco, 0, 0)
+	if clientval.ClientDob > ibusinessdate {
+		shortCode := ""
+		if clientval.ClientType == "C" {
+			shortCode = "GL586" // Incorrect Date of Incorporation
+		} else {
+			shortCode = "GL566" // Incorrect Date of Birth
+		}
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return models.TxnError{
+			ErrorCode: shortCode + " : " + longDesc,
+		}
+	}
+
+	if clientval.ClientDod != "" {
+		if clientval.ClientDod <= clientval.ClientDob {
+			shortCode := ""
+			if clientval.ClientType == "C" {
+				shortCode = "GL587" // Incorrect Date of Termination
+			} else {
+				shortCode = "GL567" // Date of Birth/Death Incorrect
+			}
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+			return models.TxnError{
+				ErrorCode: shortCode + " : " + longDesc,
+			}
+		}
+	}
+
+	return
+}
+
+func ValidateFieldsN(iFunction string, iFieldName string, iFieldVal string, iUserId uint64, iFieldType string, txn *gorm.DB) error {
+	var fieldvalidators models.FieldValidator
+	var getUser models.User
+	results := initializers.DB.First(&getUser, "id = ?", iUserId)
+
+	if results.Error != nil {
+		return errors.New(results.Error.Error())
+	} else {
+		oLanguageId := getUser.LanguageID
+		oCompanyId := getUser.CompanyID
+		results := initializers.DB.First(&fieldvalidators, "function_name = ? and company_id = ? and language_id =? and field_name = ?", iFunction, oCompanyId, oLanguageId, iFieldName)
+
+		if results.Error != nil {
+			return nil
+		} else {
+			if fieldvalidators.ParamName != "" {
+				fmt.Println("I am here Ranga")
+				//	fmt.Println(iFieldName, iFieldVal, fieldvalidators.ParamName, fieldvalidators.ErrorDescription)
+				// fmt.Println("I am inside ", fieldvalidators.ParamName, iFieldVal, iFieldName)
+				err := ValidateItem(iUserId, fieldvalidators.ParamName, iFieldVal, iFieldName, fieldvalidators.ErrorDescription)
+				if err != nil {
+					fmt.Println("Error inside Validator ", err)
+					return err
+				}
+			} else if iFieldType == "string" {
+				if fieldvalidators.BlankAllowed == "N" && iFieldVal == "" {
+					return errors.New(fieldvalidators.ErrorDescription + "-" + iFieldName)
+				}
+
+			} else if iFieldType != "string" {
+				fmt.Println("Field Type is ", iFieldType, iFieldVal)
+
+				if fieldvalidators.ZeroAllowed == "N" && iFieldVal == "0" {
+					return errors.New(fieldvalidators.ErrorDescription + "-" + iFieldName)
+				}
+			}
+
+		}
+		return nil
+	}
+
+}
+
+func ValidateFieldsNNew(iFunction string, iFieldName string, iFieldVal string, iUserId uint64, iFieldType string, txn *gorm.DB) models.TxnError {
+	var fieldvalidators models.FieldValidator
+	var getUser models.User
+	results := txn.First(&getUser, "id = ?", iUserId)
+
+	if results.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+
+	} else {
+		oLanguageId := getUser.LanguageID
+		oCompanyId := getUser.CompanyID
+		results := txn.First(&fieldvalidators, "function_name = ? and company_id = ? and language_id =? and field_name = ?", iFunction, oCompanyId, oLanguageId, iFieldName)
+
+		if results.Error != nil {
+			return models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+
+		} else {
+			if fieldvalidators.ParamName != "" {
+				fmt.Println("I am here Ranga")
+				//	fmt.Println(iFieldName, iFieldVal, fieldvalidators.ParamName, fieldvalidators.ErrorDescription)
+				// fmt.Println("I am inside ", fieldvalidators.ParamName, iFieldVal, iFieldName)
+				funcErr := ValidateItemNNew(iUserId, fieldvalidators.ParamName, iFieldVal, iFieldName, fieldvalidators.ErrorDescription, txn)
+				if funcErr.ErrorCode != "" {
+					return funcErr
+
+				}
+			} else if iFieldType == "string" {
+				if fieldvalidators.BlankAllowed == "N" && iFieldVal == "" {
+					return models.TxnError{ErrorCode: "GL906"}
+				}
+
+			} else if iFieldType != "string" {
+				fmt.Println("Field Type is ", iFieldType, iFieldVal)
+
+				if fieldvalidators.ZeroAllowed == "N" && iFieldVal == "0" {
+					return models.TxnError{ErrorCode: "GL906"}
+				}
+			}
+
+		}
+		return models.TxnError{}
+	}
+
+}
+
+func ValidateItemN(iUserId uint64, iName string, iItem string, iFieldName string, iErros string, txn *gorm.DB) error {
+	var getUser models.User
+	results := initializers.DB.First(&getUser, "id = ?", iUserId)
+	if results.Error != nil {
+		fmt.Println(results.Error)
+		return errors.New(results.Error.Error())
+	}
+	var valdiateparam models.ParamDesc
+	oLanguageId := getUser.LanguageID
+	oCompanyId := getUser.CompanyID
+	results = initializers.DB.Where("company_id = ? AND name = ? and item = ? and language_id = ?", oCompanyId, iName, iItem, oLanguageId).Find(&valdiateparam)
+	if results.Error != nil || results.RowsAffected == 0 {
+
+		return errors.New(" -" + strconv.FormatUint(uint64(oCompanyId), 10) + "-" + iName + "-" + strconv.FormatUint(uint64(oLanguageId), 10) + "-" + "-" + iFieldName + iErros + " is missing")
+		//return errors.New(results.Error.Error())
+	}
+	return nil
+}
+
+func ValidateItemNNew(iUserId uint64, iName string, iItem string, iFieldName string, iErros string, txn *gorm.DB) models.TxnError {
+	var getUser models.User
+	results := initializers.DB.First(&getUser, "id = ?", iUserId)
+	if results.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+
+	}
+	var valdiateparam models.ParamDesc
+	oLanguageId := getUser.LanguageID
+	oCompanyId := getUser.CompanyID
+	results = initializers.DB.Where("company_id = ? AND name = ? and item = ? and language_id = ?", oCompanyId, iName, iItem, oLanguageId).Find(&valdiateparam)
+	if results.Error != nil || results.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+		//return errors.New(" -" + strconv.FormatUint(uint64(oCompanyId), 10) + "-" + iName + "-" + strconv.FormatUint(uint64(oLanguageId), 10) + "-" + "-" + iFieldName + iErros + " is missing")
+		//return errors.New(results.Error.Error())
+	}
+	return models.TxnError{}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

@@ -44,6 +44,10 @@ func HandleTxn(c *gin.Context, txn *gorm.DB, method string, txnErr *models.TxnEr
 		}
 
 		var errMsg string
+		if code == "TRLBK" {
+			txn.Rollback()
+			return
+		}
 		if code == "PERME" {
 			errMsg = fmt.Sprintf("%s : Access denied. You are not authorized to perform '%s'.", code, method)
 			c.JSON(http.StatusUnauthorized, gin.H{

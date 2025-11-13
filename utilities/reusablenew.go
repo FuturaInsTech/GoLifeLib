@@ -6451,5 +6451,110 @@ func CreatePHistoryNew(iCompany uint, iPolicy uint, iMethod string, iEffDate str
 	return models.TxnError{}
 }
 
+// 2025-11-13 Lakshmi Changes
+func ValidatePayerN(payerval models.Payer, userco uint, userlan uint, iKey string, txn *gorm.DB) (string error) {
+	businessdate := GetBusinessDate(payerval.CompanyID, 0, 0)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(payerval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return errors.New(shortCode + " : " + longDesc)
+		}
+	}
+
+	iPolicy := payerval.PolicyID
+	var policy models.Policy
+	result := txn.Find(&policy, "company_id = ? and id = ?", userco, iPolicy)
+	if result.Error != nil {
+		shortCode := "GL175"
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+
+	}
+	if payerval.FromDate > businessdate {
+		shortCode := "GL616" // From date is greater than business date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+	if payerval.FromDate < policy.PRCD {
+		shortCode := "GL617" // From Date is lesser than RCD Date
+		longDesc, _ := GetErrorDesc(payerval.CompanyID, userlan, shortCode)
+		return errors.New(shortCode + ":" + longDesc)
+	}
+
+	if payerval.FromDate > payerval.ToDate {
+		shortCode := "GL901" // FromDate greater than ToDate
+		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+	}
+
+	return
+}
+
+func ValidatePayerNNew(payerval models.Payer, userco uint, userlan uint, iKey string, txn *gorm.DB) (string models.TxnError) {
+	businessdate := GetBusinessDate(payerval.CompanyID, 0, 0)
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+	}
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(payerval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			//longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+			return models.TxnError{ErrorCode: shortCode}
+		}
+	}
+
+	iPolicy := payerval.PolicyID
+	var policy models.Policy
+	result := txn.Find(&policy, "company_id = ? and id = ?", userco, iPolicy)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "GL175", DbError: result.Error}
+
+	}
+	if payerval.FromDate > businessdate {
+		return models.TxnError{ErrorCode: "GL616"}
+	}
+	if payerval.FromDate < policy.PRCD {
+		return models.TxnError{ErrorCode: "GL617"}
+	}
+
+	if payerval.FromDate > payerval.ToDate {
+		return models.TxnError{ErrorCode: "GL901"}
+	}
+
+	return
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

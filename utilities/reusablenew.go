@@ -6556,5 +6556,82 @@ func ValidatePayerNNew(payerval models.Payer, userco uint, userlan uint, iKey st
 	return
 }
 
+// 2025-11-17 Lakshmi Changes
+func RevGlMoveN(tranno, userco, ipolicy float64, txn *gorm.DB) error {
+	var glmoveenq []models.GlMove
+	opol := strconv.Itoa(int(ipolicy))
+	results := txn.Where("gl_rldg_acct LIKE ?", "%"+opol+"%").Find(&glmoveenq, "tranno = ? and company_id = ? ", tranno, userco)
+
+	if results.Error != nil {
+		return nil
+	}
+
+	for i := 0; i < len(glmoveenq); i++ {
+		oglamount := glmoveenq[i].GlAmount * -1
+		ocontractamt := glmoveenq[i].ContractAmount * -1
+		iCompany := userco
+		iContractCurry := glmoveenq[i].ContractCurry
+		iEffectiveDate := glmoveenq[i].EffectiveDate
+		iGlAmount := oglamount
+		iAccAmount := ocontractamt
+		iAccountCodeID := glmoveenq[i].AccountCodeID
+
+		iGlRdocno, _ := strconv.Atoi(glmoveenq[i].GlRdocno)
+		iGlRldgAcct := glmoveenq[i].GlRldgAcct
+		iSeqnno := glmoveenq[i].SequenceNo
+		iGlSign := glmoveenq[i].GlSign
+		iAccountCode := glmoveenq[i].AccountCode
+		iHistoryCode := glmoveenq[i].HistoryCode
+		iTranno := tranno
+		iRevInd := "R"
+		iCoverage := glmoveenq[i].BCoverage
+		//glmoveupd.UpdatedID = userid
+		err := PostGlMoveN(uint(iCompany), iContractCurry, iEffectiveDate, int(iTranno), iGlAmount, iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSeqnno, iGlSign, iAccountCode, iHistoryCode, iRevInd, iCoverage, txn)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func RevGlMoveNNew(tranno, userco, ipolicy float64, txn *gorm.DB) models.TxnError {
+	var glmoveenq []models.GlMove
+	opol := strconv.Itoa(int(ipolicy))
+	results := txn.Where("gl_rldg_acct LIKE ?", "%"+opol+"%").Find(&glmoveenq, "tranno = ? and company_id = ? ", tranno, userco)
+
+	if results.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL037", DbError: results.Error}
+	}
+
+	for i := 0; i < len(glmoveenq); i++ {
+		oglamount := glmoveenq[i].GlAmount * -1
+		ocontractamt := glmoveenq[i].ContractAmount * -1
+		iCompany := userco
+		iContractCurry := glmoveenq[i].ContractCurry
+		iEffectiveDate := glmoveenq[i].EffectiveDate
+		iGlAmount := oglamount
+		iAccAmount := ocontractamt
+		iAccountCodeID := glmoveenq[i].AccountCodeID
+
+		iGlRdocno, _ := strconv.Atoi(glmoveenq[i].GlRdocno)
+		iGlRldgAcct := glmoveenq[i].GlRldgAcct
+		iSeqnno := glmoveenq[i].SequenceNo
+		iGlSign := glmoveenq[i].GlSign
+		iAccountCode := glmoveenq[i].AccountCode
+		iHistoryCode := glmoveenq[i].HistoryCode
+		iTranno := tranno
+		iRevInd := "R"
+		iCoverage := glmoveenq[i].BCoverage
+		//glmoveupd.UpdatedID = userid
+		funcErr := PostGlMoveNNew(uint(iCompany), iContractCurry, iEffectiveDate, int(iTranno), iGlAmount, iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSeqnno, iGlSign, iAccountCode, iHistoryCode, iRevInd, iCoverage, txn)
+		if funcErr.ErrorCode != "" {
+			return funcErr
+		}
+	}
+
+	return models.TxnError{}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

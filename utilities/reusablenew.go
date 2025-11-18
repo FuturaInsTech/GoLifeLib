@@ -6068,87 +6068,6 @@ func ValidateClientN(clientval models.Client, userco uint, userlan uint, iKey st
 	return
 }
 
-func ValidateClientNNew(clientval models.Client, userco uint, userlan uint, iKey string, txn *gorm.DB) (string models.TxnError) {
-
-	var p0065data paramTypes.P0065Data
-	var extradatap0065 paramTypes.Extradata = &p0065data
-
-	iClientType := clientval.ClientType
-	if iClientType == "I" || iClientType == "C" {
-		iKey = iKey + iClientType
-	}
-	errparam := "P0065"
-	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
-	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
-
-	}
-
-	for i := 0; i < len(p0065data.FieldList); i++ {
-
-		var fv interface{}
-		r := reflect.ValueOf(clientval)
-		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
-		if f.IsValid() {
-			fv = f.Interface()
-		} else {
-			continue
-		}
-
-		if isFieldZero(fv) {
-			shortCode := p0065data.FieldList[i].ErrorCode
-			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-
-			return models.TxnError{
-				ErrorCode: shortCode + " : " + longDesc,
-			}
-		}
-
-	}
-
-	validemail := isValidEmail(clientval.ClientEmail)
-	if !validemail {
-		return models.TxnError{ErrorCode: "GL477"}
-	}
-
-	_, err = strconv.Atoi(clientval.ClientMobile)
-	if err != nil {
-		return models.TxnError{ErrorCode: "GL478"}
-	}
-
-	ibusinessdate := GetBusinessDate(userco, 0, 0)
-	if clientval.ClientDob > ibusinessdate {
-		shortCode := ""
-		if clientval.ClientType == "C" {
-			shortCode = "GL586" // Incorrect Date of Incorporation
-		} else {
-			shortCode = "GL566" // Incorrect Date of Birth
-		}
-		longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-		return models.TxnError{
-			ErrorCode: shortCode + " : " + longDesc,
-		}
-	}
-
-	if clientval.ClientDod != "" {
-		if clientval.ClientDod <= clientval.ClientDob {
-			shortCode := ""
-			if clientval.ClientType == "C" {
-				shortCode = "GL587" // Incorrect Date of Termination
-			} else {
-				shortCode = "GL567" // Date of Birth/Death Incorrect
-			}
-			longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
-
-			return models.TxnError{
-				ErrorCode: shortCode + " : " + longDesc,
-			}
-		}
-	}
-
-	return
-}
-
 func ValidateFieldsN(iFunction string, iFieldName string, iFieldVal string, iUserId uint64, iFieldType string, txn *gorm.DB) error {
 	var fieldvalidators models.FieldValidator
 	var getUser models.User
@@ -6631,6 +6550,397 @@ func RevGlMoveNNew(tranno, userco, ipolicy float64, txn *gorm.DB) models.TxnErro
 	}
 
 	return models.TxnError{}
+}
+
+// 2025-11-18 Lakshmi Changes
+func CreateReceiptBN(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string, iIFSC string, iBankAc string, txn *gorm.DB) (oreceipt uint, oerror error) {
+	iBusinssdate := GetBusinessDate(iCompany, 1, 2)
+
+	var policyenq models.Policy
+	var receiptupd models.Receipt
+	var result *gorm.DB
+	var clientenq models.Client
+
+	result = txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.Error != nil {
+		return 0, errors.New(result.Error.Error())
+	}
+
+	iClient := policyenq.ClientID
+
+	result = txn.Find(&clientenq, "company_id = ? and Id = ?", iCompany, iClient)
+
+	if result.Error != nil {
+		return 0, errors.New(result.Error.Error())
+	}
+
+	if clientenq.ClientStatus != "AC" {
+		return 0, errors.New(result.Error.Error())
+	}
+
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
+	iKey := iCollType
+	err := GetItemD(int(iCompany), "P0055", iKey, iBusinssdate, &extradatap0055)
+
+	if err != nil {
+		return 0, errors.New(err.Error())
+	}
+
+	var p0027data paramTypes.P0027Data
+	var extradata paramTypes.Extradata = &p0027data
+
+	err = GetItemD(int(iCompany), "P0027", iMethod, iBusinssdate, &extradata)
+
+	if err != nil {
+		return 0, errors.New(err.Error())
+	}
+
+	receiptupd.AccAmount = iAmount
+	receiptupd.AccCurry = iCollCurr
+	receiptupd.AddressID = policyenq.AddressID
+	receiptupd.BankAccountNo = iBankAc
+	receiptupd.BankIFSC = iIFSC
+	receiptupd.InsurerBankAccNo = p0055data.BankAccount
+	receiptupd.InsurerBankIFSC = p0055data.BankCode
+	receiptupd.CurrentDate = iBusinssdate
+	receiptupd.DateOfCollection = iCollDate
+	receiptupd.BankReferenceNo = iRef
+	receiptupd.Branch = "HO"
+	receiptupd.ClientID = policyenq.ClientID
+	receiptupd.ReceiptRefNo = iPolicy
+	receiptupd.ReceiptAmount = policyenq.InstalmentPrem
+	receiptupd.ReceiptDueDate = policyenq.PaidToDate
+	receiptupd.Tranno = policyenq.Tranno
+	receiptupd.TypeOfReceipt = iCollType
+	receiptupd.CompanyID = iCompany
+
+	// Save Receipt
+	result = initializers.DB.Create(&receiptupd)
+
+	// Debit Entry
+	glcode := p0027data.GlMovements[0].AccountCode
+	var acccode models.AccountCode
+	result = txn.First(&acccode, "company_id = ? and account_code = ? ", iCompany, glcode)
+	if result.RowsAffected == 0 {
+		return 0, errors.New(err.Error())
+	}
+	var iSequenceno uint64
+	iSequenceno++
+	iAccountCodeID := acccode.ID
+	iAccAmount := receiptupd.AccAmount
+	iAccountCode := glcode + receiptupd.Branch + p0055data.GlAccount
+	iEffectiveDate := receiptupd.DateOfCollection
+	iGlAmount := receiptupd.AccAmount
+
+	iGlRdocno := receiptupd.ID
+	var iGlRldgAcct string
+	//iGlRldgAcct := strconv.Itoa(int(iClient))
+	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+	iGlRldgAcct = strconv.Itoa(int(iPolicy))
+	iGlSign := p0027data.GlMovements[0].GlSign
+	iTranno := 0
+
+	err = PostGlMove(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iMethod, "", "")
+
+	if err != nil {
+		return 0, errors.New(err.Error())
+	}
+
+	// Credit Entry
+	glcode = p0027data.GlMovements[1].AccountCode
+	var acccode1 models.AccountCode
+	result = txn.First(&acccode1, "company_id = ? and account_code = ? ", iCompany, glcode)
+	if result.RowsAffected == 0 {
+		return 0, errors.New(err.Error())
+	}
+
+	iSequenceno++
+	iAccountCodeID = acccode.ID
+	iAccAmount = receiptupd.AccAmount
+	iAccountCode = glcode
+	iEffectiveDate = receiptupd.DateOfCollection
+	iGlAmount = receiptupd.AccAmount
+	iGlRdocno = iPolicy
+	iGlRldgAcct = strconv.Itoa(int(iPolicy))
+	iGlSign = p0027data.GlMovements[1].GlSign
+	iTranno = 0
+
+	err = PostGlMove(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iMethod, "", "")
+
+	if err != nil {
+		return 0, errors.New(err.Error())
+
+	}
+	if policyenq.PolStatus == "IF" {
+		iNextDueDate := Date2String(GetNextDue(policyenq.PaidToDate, policyenq.PFreq, ""))
+		gstamountneeded := GetTotalGSTAmount(iCompany, iPolicy, policyenq.PaidToDate, iNextDueDate)
+		iPolicyDeposit := GetGlBal(iCompany, iPolicy, "PolicyDeposit")
+		iStampDuty := CalculateStampDutyByPolicy(iCompany, iPolicy)
+		iPayable := policyenq.InstalmentPrem + gstamountneeded + iStampDuty + iPolicyDeposit
+		if iPayable <= 0 {
+			TDFCollD(iCompany, iPolicy, "COLLD", 0, policyenq.PaidToDate)
+			TdfhUpdate(iCompany, iPolicy)
+		}
+	}
+
+	iAgency := policyenq.AgencyID
+
+	err = CreateCommunications(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0, 0, 0)
+	if err != nil {
+		return 0, errors.New(err.Error())
+	}
+
+	return receiptupd.ID, nil
+}
+
+func CreateReceiptBNNew(iCompany uint, iPolicy uint, iAmount float64, iCollDate string, iCollCurr string, iCollType string, iRef string, iMethod string, iIFSC string, iBankAc string, txn *gorm.DB) (oreceipt uint, txnerr models.TxnError) {
+	iBusinssdate := GetBusinessDate(iCompany, 1, 2)
+
+	var policyenq models.Policy
+	var receiptupd models.Receipt
+	var result *gorm.DB
+	var clientenq models.Client
+
+	result = txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+
+	if result.RowsAffected == 0 {
+		txnerr = models.TxnError{ErrorCode: "GL175", DbError: result.Error}
+		return 0, txnerr
+	}
+
+	iClient := policyenq.ClientID
+
+	result = txn.Find(&clientenq, "company_id = ? and Id = ?", iCompany, iClient)
+
+	if result.RowsAffected == 0 {
+		txnerr = models.TxnError{ErrorCode: "GL212", DbError: result.Error}
+		return 0, txnerr
+	}
+
+	if clientenq.ClientStatus != "AC" {
+		txnerr = models.TxnError{ErrorCode: "GL006"}
+		return 0, txnerr
+	}
+
+	var p0055data paramTypes.P0055Data
+	var extradatap0055 paramTypes.Extradata = &p0055data
+	iKey := iCollType
+	errparam := "P0055"
+	err := GetItemD(int(iCompany), errparam, iKey, iBusinssdate, &extradatap0055)
+
+	if err != nil {
+		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		return 0, txnerr
+	}
+
+	var p0027data paramTypes.P0027Data
+	var extradata paramTypes.Extradata = &p0027data
+	errparam = "P0027"
+	err = GetItemD(int(iCompany), errparam, iMethod, iBusinssdate, &extradata)
+
+	if err != nil {
+		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iMethod}
+		return 0, txnerr
+	}
+
+	receiptupd.AccAmount = iAmount
+	receiptupd.AccCurry = iCollCurr
+	receiptupd.AddressID = policyenq.AddressID
+	receiptupd.BankAccountNo = iBankAc
+	receiptupd.BankIFSC = iIFSC
+	receiptupd.InsurerBankAccNo = p0055data.BankAccount
+	receiptupd.InsurerBankIFSC = p0055data.BankCode
+	receiptupd.CurrentDate = iBusinssdate
+	receiptupd.DateOfCollection = iCollDate
+	receiptupd.BankReferenceNo = iRef
+	receiptupd.Branch = "HO"
+	receiptupd.ClientID = policyenq.ClientID
+	receiptupd.ReceiptRefNo = iPolicy
+	receiptupd.ReceiptAmount = policyenq.InstalmentPrem
+	receiptupd.ReceiptDueDate = policyenq.PaidToDate
+	receiptupd.Tranno = policyenq.Tranno
+	receiptupd.TypeOfReceipt = iCollType
+	receiptupd.CompanyID = iCompany
+
+	// Save Receipt
+	result = initializers.DB.Create(&receiptupd)
+	if result.Error != nil {
+		txnerr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return 0, txnerr
+	}
+	// Debit Entry
+	glcode := p0027data.GlMovements[0].AccountCode
+	var acccode models.AccountCode
+	result = txn.First(&acccode, "company_id = ? and account_code = ? ", iCompany, glcode)
+	if result.Error != nil {
+		txnerr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return 0, txnerr
+	}
+	var iSequenceno uint64
+	iSequenceno++
+	iAccountCodeID := acccode.ID
+	iAccAmount := receiptupd.AccAmount
+	iAccountCode := glcode + receiptupd.Branch + p0055data.GlAccount
+	iEffectiveDate := receiptupd.DateOfCollection
+	iGlAmount := receiptupd.AccAmount
+
+	iGlRdocno := receiptupd.ID
+	var iGlRldgAcct string
+	//iGlRldgAcct := strconv.Itoa(int(iClient))
+	// As per our discussion on 22/06/2023, it is decided to use policy no in RLDGACCT
+	iGlRldgAcct = strconv.Itoa(int(iPolicy))
+	iGlSign := p0027data.GlMovements[0].GlSign
+	iTranno := 0
+
+	funcErr := PostGlMoveNNew(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), string(iGlRldgAcct), iSequenceno, iGlSign, iAccountCode, iMethod, "", "", txn)
+
+	if funcErr.ErrorCode != "" {
+		txnerr = funcErr
+		return 0, txnerr
+	}
+
+	// Credit Entry
+	glcode = p0027data.GlMovements[1].AccountCode
+	var acccode1 models.AccountCode
+	result = txn.First(&acccode1, "company_id = ? and account_code = ? ", iCompany, glcode)
+	if result.Error != nil {
+		txnerr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return 0, txnerr
+	}
+	iSequenceno++
+	iAccountCodeID = acccode.ID
+	iAccAmount = receiptupd.AccAmount
+	iAccountCode = glcode
+	iEffectiveDate = receiptupd.DateOfCollection
+	iGlAmount = receiptupd.AccAmount
+	iGlRdocno = iPolicy
+	iGlRldgAcct = strconv.Itoa(int(iPolicy))
+	iGlSign = p0027data.GlMovements[1].GlSign
+	iTranno = 0
+
+	funcErr = PostGlMoveNNew(iCompany, iCollCurr, iEffectiveDate, int(iTranno), iGlAmount,
+		iAccAmount, iAccountCodeID, uint(iGlRdocno), iGlRldgAcct, iSequenceno, iGlSign, iAccountCode, iMethod, "", "", txn)
+
+	if funcErr.ErrorCode != "" {
+		txnerr = funcErr
+		return 0, txnerr
+
+	}
+	if policyenq.PolStatus == "IF" {
+		iNextDueDate := Date2String(GetNextDue(policyenq.PaidToDate, policyenq.PFreq, ""))
+		gstamountneeded := GetTotalGSTAmount(iCompany, iPolicy, policyenq.PaidToDate, iNextDueDate)
+		iPolicyDeposit := GetGlBal(iCompany, iPolicy, "PolicyDeposit")
+		iStampDuty := CalculateStampDutyByPolicy(iCompany, iPolicy)
+		iPayable := policyenq.InstalmentPrem + gstamountneeded + iStampDuty + iPolicyDeposit
+		if iPayable <= 0 {
+			_, funcErr = TDFCollDNNew(iCompany, iPolicy, "COLLD", 0, policyenq.PaidToDate, txn)
+			if funcErr.ErrorCode != "" {
+				txnerr = funcErr
+				return 0, txnerr
+			}
+			funcErr = TdfhUpdateNNew(iCompany, iPolicy, txn)
+			if funcErr.ErrorCode != "" {
+				txnerr = funcErr
+				return 0, txnerr
+			}
+		}
+	}
+
+	iAgency := policyenq.AgencyID
+	//////
+	funcErr = CreateCommunicationsNew(iCompany, iMethod, uint(iTranno), iBusinssdate, iPolicy, receiptupd.ClientID, receiptupd.AddressID, receiptupd.ID, 0, iAgency, "", "", "", "", "", 0, 0, 0, txn)
+	if funcErr.ErrorCode != "" {
+		txnerr = funcErr
+		return 0, txnerr
+	}
+
+	return receiptupd.ID, txnerr
+}
+
+func ValidateClientNNew(clientval models.Client, userco uint, userlan uint, iKey string, txn *gorm.DB) (string models.TxnError) {
+
+	var p0065data paramTypes.P0065Data
+	var extradatap0065 paramTypes.Extradata = &p0065data
+
+	iClientType := clientval.ClientType
+	if iClientType == "I" || iClientType == "C" {
+		iKey = iKey + iClientType
+	}
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+
+	}
+
+	for i := 0; i < len(p0065data.FieldList); i++ {
+
+		var fv interface{}
+		r := reflect.ValueOf(clientval)
+		f := reflect.Indirect(r).FieldByName(p0065data.FieldList[i].Field)
+		if f.IsValid() {
+			fv = f.Interface()
+		} else {
+			continue
+		}
+
+		if isFieldZero(fv) {
+			shortCode := p0065data.FieldList[i].ErrorCode
+			// longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+			return models.TxnError{
+				ErrorCode: shortCode,
+			}
+		}
+
+	}
+
+	validemail := isValidEmail(clientval.ClientEmail)
+	if !validemail {
+		return models.TxnError{ErrorCode: "GL477"}
+	}
+
+	_, err = strconv.Atoi(clientval.ClientMobile)
+	if err != nil {
+		return models.TxnError{ErrorCode: "GL478"}
+	}
+
+	ibusinessdate := GetBusinessDate(userco, 0, 0)
+	if clientval.ClientDob > ibusinessdate {
+		shortCode := ""
+		if clientval.ClientType == "C" {
+			shortCode = "GL586" // Incorrect Date of Incorporation
+		} else {
+			shortCode = "GL566" // Incorrect Date of Birth
+		}
+		// longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+		return models.TxnError{
+			ErrorCode: shortCode,
+		}
+	}
+
+	if clientval.ClientDod != "" {
+		if clientval.ClientDod <= clientval.ClientDob {
+			shortCode := ""
+			if clientval.ClientType == "C" {
+				shortCode = "GL587" // Incorrect Date of Termination
+			} else {
+				shortCode = "GL567" // Date of Birth/Death Incorrect
+			}
+			// longDesc, _ := GetErrorDesc(userco, userlan, shortCode)
+
+			return models.TxnError{
+				ErrorCode: shortCode,
+			}
+		}
+	}
+
+	return
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

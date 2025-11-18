@@ -1,0 +1,136 @@
+// mvfiles command
+// moves files that have given extensions in all folders and subfolder paths
+// after creating the same folders and subfolders in destination path as in source path
+
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+func main() {
+
+	if len(os.Args) < 4 {
+		fmt.Println("Error: At least one extension must be provided.")
+		fmt.Println("Usage: go run main.go <source_path> <destination_path> <ext1> <ext2> ...")
+		return
+	}
+
+	// Resolve paths (relative → absolute)
+	sourceRoot, err := filepath.Abs(os.Args[1])
+	if err != nil {
+		fmt.Println("Error resolving source path:", err)
+		return
+	}
+
+	destRoot, err := filepath.Abs(os.Args[2])
+	if err != nil {
+		fmt.Println("Error resolving destination path:", err)
+		return
+	}
+
+	extensions := os.Args[3:]
+
+	// Validate extensions
+	for _, ext := range extensions {
+		if !strings.HasPrefix(ext, ".") {
+			fmt.Printf("Error: Invalid extension '%s'. All extensions must start with a dot.\n", ext)
+			return
+		}
+	}
+
+	// Normalize extensions to lowercase
+	for i := range extensions {
+		extensions[i] = strings.ToLower(extensions[i])
+	}
+
+	// Ensure source exists
+	if _, err := os.Stat(sourceRoot); os.IsNotExist(err) {
+		fmt.Printf("Source folder does not exist: %s\n", sourceRoot)
+		return
+	}
+
+	// Walk through source folder
+	err = filepath.Walk(sourceRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		// File's extension
+		ext := strings.ToLower(filepath.Ext(path))
+
+		// Check if extension should be moved
+		if !contains(extensions, ext) {
+			return nil
+		}
+
+		// Compute relative path
+		relPath, err := filepath.Rel(sourceRoot, path)
+		if err != nil {
+			return err
+		}
+
+		// Destination path
+		destPath := filepath.Join(destRoot, relPath)
+
+		// Ensure destination folder exists
+		destDir := filepath.Dir(destPath)
+		if err := os.MkdirAll(destDir, os.ModePerm); err != nil {
+			return err
+		}
+
+		// Move file
+		if err := moveFile(path, destPath); err != nil {
+			return err
+		}
+
+		fmt.Printf("Moved: %s -> %s\n", path, destPath)
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Println("Completed successfully.")
+	}
+}
+
+func contains(list []string, item string) bool {
+	for _, v := range list {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
+func moveFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, in); err != nil {
+		return err
+	}
+
+	out.Close()
+	in.Close()
+
+	return os.Remove(src)
+}

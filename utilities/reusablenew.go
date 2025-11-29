@@ -986,7 +986,7 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 	//  CUSTOMER EMAIL WITH CHANNEL RETURN (sync)
 	// -----------------------------------------------
 
-	errChan := make(chan error, 1)
+	errChan := make(chan models.TxnError, 1)
 
 	go func() {
 		m := gomail.NewMessage()
@@ -998,23 +998,32 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 		// Attach PDF
 		m.Attach(fileName, gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := w.Write(pdfData)
-			return models.TxnError{ErrorCode: "GL939", DbError: err}
+			errChan <- models.TxnError{
+				ErrorCode: "GL939",
+				DbError:   err,
+			}
+			return err
+
 		}))
 
 		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
 		d.SSL = true
 
 		if err := d.DialAndSend(m); err != nil {
-			errChan <- err
+			txnErr := models.TxnError{
+				ErrorCode: "GL947",
+				DbError:   err,
+			}
+			errChan <- txnErr
 			return
 		}
-
-		errChan <- nil
+		return
 	}()
 
 	// Wait for email result
-	if emailErr := <-errChan; emailErr != nil {
-		return models.TxnError{ErrorCode: "GL947", DbError: emailErr}
+	emailResult := <-errChan
+	if emailResult.DbError != nil {
+		return emailResult
 	}
 
 	log.Printf("Email sent successfully to %s", receiver)
@@ -1290,7 +1299,7 @@ func GetReportforOnlineNew(icommuncation models.Communication, itempName string,
 	if icommuncation.EmailAllowed == "Y" {
 		err = EmailTrigger(icommuncation, itempName, pdfBuf.Bytes(), txn)
 		if err != nil {
-			return models.TxnError{ErrorCode: "GL706"}
+			return models.TxnError{ErrorCode: "GL706", DbError: err}
 		}
 	}
 
@@ -2126,10 +2135,15 @@ func EmailTriggerforReportNew(iCompany uint, iReference uint, iClient uint, iEma
 	m.SetBody("text/plain", emailBody)
 	iTime := time.Now().Format("20060102150405")
 	iClientnumstr := strconv.Itoa(int(iClient))
-
+	errChan := make(chan models.TxnError, 1)
 	m.Attach(itempName+iClientnumstr+iTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
 		_, err := w.Write(pdfData)
-		return models.TxnError{ErrorCode: "GL939", DbError: err}
+		errChan <- models.TxnError{
+			ErrorCode: "GL939",
+			DbError:   err,
+		}
+		return err
+
 	}))
 
 	// Configure SMTP dialer
@@ -2247,7 +2261,7 @@ func EmailTriggerNNew(icommunication models.Communication, pdfData []byte, txn *
 	fileName := fmt.Sprintf("%s_%s.pdf", icommunication.TemplateName, iDateTime)
 
 	// Send email asynchronously
-	errChan := make(chan error, 1)
+	errChan := make(chan models.TxnError, 1)
 
 	go func() {
 		m := gomail.NewMessage()
@@ -2259,23 +2273,32 @@ func EmailTriggerNNew(icommunication models.Communication, pdfData []byte, txn *
 		// Attach PDF
 		m.Attach(fileName, gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := w.Write(pdfData)
-			return models.TxnError{ErrorCode: "GL939", DbError: err}
+			errChan <- models.TxnError{
+				ErrorCode: "GL939",
+				DbError:   err,
+			}
+			return err
+
 		}))
 
 		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
 		d.SSL = true
 
 		if err := d.DialAndSend(m); err != nil {
-			errChan <- err
+			txnErr := models.TxnError{
+				ErrorCode: "GL947",
+				DbError:   err,
+			}
+			errChan <- txnErr
 			return
 		}
-
-		errChan <- nil
+		return
 	}()
 
 	// Wait for email result
-	if emailErr := <-errChan; emailErr != nil {
-		return models.TxnError{ErrorCode: "GL947", DbError: emailErr}
+	emailResult := <-errChan
+	if emailResult.DbError != nil {
+		return emailResult
 	}
 
 	log.Printf("Email sent successfully to %s", receiver)
@@ -5668,10 +5691,15 @@ func EmailTriggerforReportNNew(iCompany uint, iReference uint, iClient uint, iEm
 	m.SetBody("text/plain", emailBody)
 	iTime := time.Now().Format("20060102150405")
 	iClientnumstr := strconv.Itoa(int(iClient))
-
+	errChan := make(chan models.TxnError, 1)
 	m.Attach(itempName+iClientnumstr+iTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
 		_, err := w.Write(pdfData)
-		return models.TxnError{ErrorCode: "GL939", DbError: err}
+		errChan <- models.TxnError{
+			ErrorCode: "GL939",
+			DbError:   err,
+		}
+		return err
+
 	}))
 
 	// Configure SMTP dialer
@@ -7585,7 +7613,94 @@ func ValidateClientNNew(clientval models.Client, userco uint, userlan uint, iKey
 	return
 }
 
-// 2025-11-24 Lakshmi Changes
+func GetReqCommNew(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[string]interface{}, models.TxnError) {
+	var reqcall []models.ReqCall
+	var client models.Client
+	var address models.Address
+
+	medDetailsArray := make([]string, 0) // Array for medDetails
+	reqCodeArray := make([]string, 0)    // Array for ReqCode
+	reqIDArray := make([]uint, 0)        // Array for Req.ID
+	remiderdateArray := make([]string, 0)
+
+	// txn := initializers.DB.Begin()
+
+	result := txn.Find(&reqcall, "company_id = ? and policy_id = ? and req_status = ?", iCompany, iPolicy, "P")
+	if result.RowsAffected == 0 {
+		return nil, models.TxnError{
+			ErrorCode: "GL791",
+			DbError:   result.Error,
+		}
+	}
+	result = txn.Find(&client, "company_id = ? and id = ?", iCompany, iClient)
+	if result.RowsAffected == 0 {
+		return nil, models.TxnError{ErrorCode: "GL050", DbError: result.Error}
+	}
+	result = txn.Find(&address, "company_id = ? and client_id = ?", iCompany, iClient)
+	if result.RowsAffected == 0 {
+		return nil, models.TxnError{ErrorCode: "GL035", DbError: result.Error}
+	}
+
+	// Populate data from reqcall
+	for _, req := range reqcall {
+		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, _, _, _ := GetMedInfo(iCompany, req.MedId, txn)
+		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, req.ReqCode)
+		effDate, _ := ConvertYYYYMMDD(req.RemindDate)
+		// When Medical Provider is Empty Do not Print Blank Address
+		medDetails := ""
+		if req.MedId != 0 {
+			medDetails = fmt.Sprintf("%s, %s, %s, %s, %s", oMedName, oMedAddress, oMedPin, oMedState, oMedPhone)
+		}
+		medDetailsArray = append(medDetailsArray, medDetails) // Store medDetails in the array
+
+		reqCodeArray = append(reqCodeArray, oDesc) // Store ReqCode in the array
+
+		reqIDArray = append(reqIDArray, req.ID) // Store Req.ID in the array
+		remiderdateArray = append(remiderdateArray, effDate)
+	}
+
+	// Create resultMap and include all data from clientInfo
+	resultMap := make(map[string]interface{})
+
+	// Include all data directly (without the "clientInfo" label)
+	clientInfo := map[string]interface{}{
+		"ClientFullName":   client.ClientLongName,
+		"ClientSalutation": client.Salutation,
+		"AddressLine1":     address.AddressLine1,
+		"AddressLine2":     address.AddressLine2,
+		"AddressLine3":     address.AddressLine3,
+		"AddressLine4":     address.AddressLine4,
+		"AddressState":     address.AddressState,
+		"AddressCountry":   address.AddressCountry,
+		"PolicyId":         IDtoPrint(iPolicy),
+		"MedDetails":       medDetailsArray,
+		"ReqCodes":         reqCodeArray,
+		"ReqIDs":           reqIDArray,
+		"Reminderdates":    remiderdateArray,
+	}
+
+	for key, value := range clientInfo {
+		resultMap[key] = value
+	}
+
+	return resultMap, models.TxnError{}
+}
+
+// this function does not required handle txn
+func GetGlBalNew(iCompany uint, iPolicy uint, iGlaccount string, txn *gorm.DB) (float64, models.TxnError) {
+	var glbal models.GlBal
+	result := txn.Find(&glbal, "company_id = ? and gl_rdocno = ? and gl_accountno = ?", iCompany, iPolicy, iGlaccount)
+	if result.Error != nil {
+		return 0, models.TxnError{}
+	}
+	return glbal.ContractAmount, models.TxnError{}
+
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// End of Changes
+////////////////////////////////////////////////////////
+
 func PostUlpDeductionByFundAmountNNew(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string, txn *gorm.DB) models.TxnError {
 
 	var policyenq models.Policy
@@ -7694,6 +7809,8 @@ func PostUlpDeductionByFundAmountNNew(iCompany uint, iPolicy uint, iBenefit uint
 	return models.TxnError{}
 }
 
+/////////////////////////////////////////////////////////
+
 func TDFExpiDSNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, models.TxnError) {
 	var benefits []models.Benefit
 	var tdfpolicy models.TDFPolicy
@@ -7770,6 +7887,7 @@ func TDFExpiDSNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 	return "", models.TxnError{}
 }
 
+// ////////////////////////////////////////////////////
 func GetUserNameN(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, oErr error) {
 	var usrenq models.User
 	result := txn.Find(&usrenq, "company_id = ? and id = ?", iCompany, iUserId)
@@ -7778,6 +7896,8 @@ func GetUserNameN(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, oErr
 	}
 	return usrenq.Name, nil
 }
+
+////////////////////////////////////////////////////
 
 func GetUserNameNNew(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, txnErr models.TxnError) {
 	var usrenq models.User
@@ -7788,92 +7908,3 @@ func GetUserNameNNew(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, t
 	}
 	return usrenq.Name, txnErr
 }
-
-// 2025-11-28 Lakshmi Changes
-func GetReqCommNew(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[string]interface{}, models.TxnError) {
-	var reqcall []models.ReqCall
-	var client models.Client
-	var address models.Address
-
-	medDetailsArray := make([]string, 0) // Array for medDetails
-	reqCodeArray := make([]string, 0)    // Array for ReqCode
-	reqIDArray := make([]uint, 0)        // Array for Req.ID
-	remiderdateArray := make([]string, 0)
-
-	// txn := initializers.DB.Begin()
-
-	result := txn.Find(&reqcall, "company_id = ? and policy_id = ? and req_status = ?", iCompany, iPolicy, "P")
-	if result.RowsAffected == 0 {
-		return nil, models.TxnError{
-			ErrorCode: "GL791",
-			DbError:   result.Error,
-		}
-	}
-	result = txn.Find(&client, "company_id = ? and id = ?", iCompany, iClient)
-	if result.RowsAffected == 0 {
-		return nil, models.TxnError{ErrorCode: "GL050", DbError: result.Error}
-	}
-	result = txn.Find(&address, "company_id = ? and client_id = ?", iCompany, iClient)
-	if result.RowsAffected == 0 {
-		return nil, models.TxnError{ErrorCode: "GL035", DbError: result.Error}
-	}
-
-	// Populate data from reqcall
-	for _, req := range reqcall {
-		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, _, _, _ := GetMedInfo(iCompany, req.MedId, txn)
-		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, req.ReqCode)
-		effDate, _ := ConvertYYYYMMDD(req.RemindDate)
-		// When Medical Provider is Empty Do not Print Blank Address
-		medDetails := ""
-		if req.MedId != 0 {
-			medDetails = fmt.Sprintf("%s, %s, %s, %s, %s", oMedName, oMedAddress, oMedPin, oMedState, oMedPhone)
-		}
-		medDetailsArray = append(medDetailsArray, medDetails) // Store medDetails in the array
-
-		reqCodeArray = append(reqCodeArray, oDesc) // Store ReqCode in the array
-
-		reqIDArray = append(reqIDArray, req.ID) // Store Req.ID in the array
-		remiderdateArray = append(remiderdateArray, effDate)
-	}
-
-	// Create resultMap and include all data from clientInfo
-	resultMap := make(map[string]interface{})
-
-	// Include all data directly (without the "clientInfo" label)
-	clientInfo := map[string]interface{}{
-		"ClientFullName":   client.ClientLongName,
-		"ClientSalutation": client.Salutation,
-		"AddressLine1":     address.AddressLine1,
-		"AddressLine2":     address.AddressLine2,
-		"AddressLine3":     address.AddressLine3,
-		"AddressLine4":     address.AddressLine4,
-		"AddressState":     address.AddressState,
-		"AddressCountry":   address.AddressCountry,
-		"PolicyId":         IDtoPrint(iPolicy),
-		"MedDetails":       medDetailsArray,
-		"ReqCodes":         reqCodeArray,
-		"ReqIDs":           reqIDArray,
-		"Reminderdates":    remiderdateArray,
-	}
-
-	for key, value := range clientInfo {
-		resultMap[key] = value
-	}
-
-	return resultMap, models.TxnError{}
-}
-
-// GetGlBalNew function ignores error. Hence, when Find is in error, an empty TxnError is returned.
-func GetGlBalNew(iCompany uint, iPolicy uint, iGlaccount string, txn *gorm.DB) (float64, models.TxnError) {
-	var glbal models.GlBal
-	result := txn.Find(&glbal, "company_id = ? and gl_rdocno = ? and gl_accountno = ?", iCompany, iPolicy, iGlaccount)
-	if result.Error != nil {
-		return 0, models.TxnError{}
-	}
-	return glbal.ContractAmount, models.TxnError{}
-
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// End of Changes
-////////////////////////////////////////////////////////

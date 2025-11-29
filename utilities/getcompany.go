@@ -1,8 +1,8 @@
 package utilities
 
 import (
-	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/initializers"
+	"github.com/FuturaInsTech/GoLifeLib/models"
 )
 
 func AppendData(data map[string]interface{}, icoid uint) map[string]interface{} {

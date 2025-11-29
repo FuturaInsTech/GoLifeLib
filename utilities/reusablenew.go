@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FuturaInsTech/GoLifeLib/initializers"
 	"github.com/FuturaInsTech/GoLifeLib/models"
 	"github.com/FuturaInsTech/GoLifeLib/paramTypes"
 	"github.com/FuturaInsTech/GoLifeLib/types"
@@ -28,6 +27,7 @@ import (
 )
 
 // 2025-10-15 Divya Changes
+
 func TDFCollDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate string, txn *gorm.DB) (string, models.TxnError) {
 	var policy models.Policy
 	var tdfpolicy models.TDFPolicy
@@ -85,7 +85,7 @@ func TdfhUpdateNNew(iCompany uint, iPolicy uint, txn *gorm.DB) models.TxnError {
 
 	results := txn.Find(&tdfpolicyenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	if results.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL003", DbError: results.Error}
+		return models.TxnError{ErrorCode: "GL392", DbError: results.Error}
 	}
 	for i := 0; i < len(tdfpolicyenq); i++ {
 		if tdfpolicyenq[i].EffectiveDate <= iDate {
@@ -104,6 +104,9 @@ func TdfhUpdateNNew(iCompany uint, iPolicy uint, txn *gorm.DB) models.TxnError {
 			}
 		} else {
 			result = txn.Delete(&tdfhupd)
+			if result.Error != nil {
+				return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			}
 			var tdfhupd models.Tdfh
 			tdfhupd.CompanyID = iCompany
 			tdfhupd.PolicyID = iPolicy
@@ -186,13 +189,13 @@ func CreateCommunicationsMNew(iCompany uint, iHistoryCode string, iTranno uint, 
 		communication.ReceiptRefNo = iPa
 		iKey = iTransaction + iReceiptFor
 	}
-
-	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+	errparam := "P0034"
+	err1 := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0034)
 	if err1 != nil {
 		iKey = iTransaction
-		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		err1 = GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0034)
 		if err1 != nil {
-			return models.TxnError{ErrorCode: "PARME", ParamName: "P0034", ParamItem: iKey}
+			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 		}
 	}
 
@@ -200,9 +203,10 @@ func CreateCommunicationsMNew(iCompany uint, iHistoryCode string, iTranno uint, 
 	for i := 0; i < len(p0034data.Letters); i++ {
 		if p0034data.Letters[i].Templates != "" {
 			iKey = p0034data.Letters[i].Templates
-			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			errparam = "P0033"
+			err := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0033)
 			if err != nil {
-				return models.TxnError{ErrorCode: "PARME", ParamName: "P0033", ParamItem: iKey}
+				return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 
 			}
 
@@ -249,214 +253,373 @@ func CreateCommunicationsMNew(iCompany uint, iHistoryCode string, iTranno uint, 
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iDate, txn)
+					oData, funcErr := GetCompanyDataNew(iCompany, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["CompanyData"] = oData
 				case oLetType == "2":
-					oData := GetClientData(iCompany, iClient, txn)
+					oData, funcErr := GetClientDataNew(iCompany, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientData"] = oData
 				case oLetType == "3":
-					oData := GetAddressData(iCompany, iAddress, txn)
+					oData, funcErr := GetAddressDataNew(iCompany, iAddress, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["AddressData"] = oData
 				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, txn)
+					oData, funcErr := GetPolicyDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyData"] = oData
 				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, txn)
+					oData, funcErr := GetBenefitDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurBDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurBData"] = oData
 				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMrtaDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MRTAData"] = oData
 				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iReceipt, txn)
+					oData, funcErr := GetReceiptDataNew(iCompany, iReceipt, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ReceiptData"] = oData
 				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSaChangeDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SAChangeData"] = oData
 				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, txn)
+					oData, funcErr := GetCompAddDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurrHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurrData"] = oData
 					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["SurrDData"] = oData
 				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, txn)
+					oData, funcErr := GetDeathDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["DeathData"] = oData
 				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMatHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MaturityData"] = oData
 					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["MatDData"] = oData
 				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetSurvBPayNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurvbPay"] = oData
 				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetExpiNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ExpiryData"] = oData
 				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, txn)
+					oData, funcErr := GetBonusValsNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BonusData"] = oData
 				case oLetType == "17":
-					oData := GetAgency(iCompany, iAgency, txn)
+					oData, funcErr := GetAgencyNew(iCompany, iAgency, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Agency"] = oData
 				case oLetType == "18":
-					oData := GetNomiData(iCompany, iPolicy, txn)
+					oData, funcErr := GetNomiDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Nominee"] = oData
 				case oLetType == "19":
-					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					oData, funcErr := GetGLDataNew(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 				case oLetType == "20":
-					oData := GetIlpSummaryData(iCompany, iPolicy, txn)
+					oData, funcErr := GetIlpSummaryDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlPSummaryData"] = oData
 				case oLetType == "21":
-					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode, txn)
+					oData, funcErr := GetIlpAnnsummaryDataNew(iCompany, iPolicy, iHistoryCode, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPANNSummaryData"] = oData
 				case oLetType == "22":
-					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					oData, funcErr := GetIlpTranctionDataNew(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPTransactionData"] = oData
 				case oLetType == "23":
-					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate, txn)
+					oData, funcErr := GetPremTaxGLDataNew(iCompany, iPolicy, iFromDate, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 
 				case oLetType == "24":
-					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetIlpFundSwitchDataNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SwitchData"] = oData
 
 				case oLetType == "25":
-					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					oData, funcErr := GetPHistoryDataNew(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyHistoryData"] = oData
 				case oLetType == "26":
-					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate, txn)
+					oData, funcErr := GetIlpFundDataNew(iCompany, iPolicy, iBenefit, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlpFundData"] = oData
 				case oLetType == "27":
-					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPPolicyDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevPolicy"] = oData
 				case oLetType == "28":
-					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPBenefitDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					fmt.Println(oData) // Dummy to avoid compilation error
 				case oLetType == "29":
-					oData := GetPayingAuthorityData(iCompany, iPa, txn)
+					oData, funcErr := GetPayingAuthorityDataNew(iCompany, iPa, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevBenefit"] = oData
 				case oLetType == "30":
-					oData := GetClientWorkData(iCompany, iClientWork, txn)
+					oData, funcErr := GetClientWorkDataNew(iCompany, iClientWork, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientWork"] = oData
 				case oLetType == "36":
-					oData := GetReqData(iCompany, iPolicy, iClient, txn)
+					oData, funcErr := GetReqDataNew(iCompany, iPolicy, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for _, item := range oData {
 						for key, value := range item.(map[string]interface{}) {
 							resultMap[key] = value
 						}
 					}
 				case oLetType == "37":
-					oData := PolicyDepData(iCompany, iPolicy, txn)
+					oData, funcErr := PolicyDepDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "38":
-					oData := PolAgntChData(iCompany, iPolicy, iAgency, iClient, txn)
+					oData, funcErr := PolAgntChDataNew(iCompany, iPolicy, iAgency, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "39":
-					oData := GetBankData(iCompany, iClientWork, txn)
+					oData, funcErr := GetBankDataNew(iCompany, iClientWork, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BankData"] = oData
 				case oLetType == "40":
 					iKey := iReceipt
-					oData := GetPaymentData(iCompany, iPolicy, iKey, txn)
+					oData, funcErr := GetPaymentDataNew(iCompany, iPolicy, iKey, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "41":
-					oData := GetHIPPOLSCDData(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					oData, funcErr := GetHIPPOLSCDDataNew(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "42":
-					oData := GetPriorPolicyData(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					oData, funcErr := GetPriorPolicyDataNew(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "43":
-					oData := GetTermAndConditionData(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					oData, funcErr := GetTermAndConditionDataNew(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "44":
-					oData := GetpremiumCertificateData(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					oData, funcErr := GetpremiumCertificateDataNew(iCompany, iPolicy, iPageSize, iOrientation, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "47":
-					oData := GetPOLSCDEndowmentData(iCompany, iPolicy, iPageSize, iOrientation, p0033data, txn)
+					oData, funcErr := GetPOLSCDEndowmentDataNew(iCompany, iPolicy, iPageSize, iOrientation, p0033data, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "51":
-					oData := PrtReceiptData(iCompany, iReceipt, iPolicy, iPa, p0033data, txn)
+					oData, funcErr := PrtReceiptDataNew(iCompany, iReceipt, iPolicy, iPa, p0033data, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "52":
-					oData := PrtPolicyBillData(iCompany, iPolicy, iDate, p0033data, txn)
+					oData, funcErr := PrtPolicyBillDataNew(iCompany, iPolicy, iDate, p0033data, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "53":
-					oData := PrtPolicyLapseData(iCompany, iPolicy, iDate, p0033data, txn)
+					oData, funcErr := PrtPolicyLapseDataNew(iCompany, iPolicy, iDate, p0033data, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "54":
-					oData := PrtCollectionData(iCompany, iPolicy, iDate, p0033data, txn)
+					oData, funcErr := PrtCollectionDataNew(iCompany, iPolicy, iDate, p0033data, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "55":
-					oData := PrtAnniData(iCompany, iPolicy, iDate, p0033data, txn)
+					oData, funcErr := PrtAnniDataNew(iCompany, iPolicy, iDate, p0033data, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "56":
-					oData := PrtAnniILPData(iCompany, iPolicy, iDate, p0033data, txn)
+					oData, funcErr := PrtAnniILPDataNew(iCompany, iPolicy, iDate, p0033data, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "58":
-					oData := PrtExpiData(iCompany, iPolicy, iDate, p0033data, iTranno, txn)
+					oData, funcErr := PrtExpiDataNew(iCompany, iPolicy, iDate, p0033data, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "61":
-					oData := PrtPremstData(iCompany, iPolicy, iBenefit, iDate, p0033data, iTranno, iAgency, iFromDate, iToDate, iHistoryCode, txn)
+					oData, funcErr := PrtPremstDataNew(iCompany, iPolicy, iBenefit, iDate, p0033data, iTranno, iAgency, iFromDate, iToDate, iHistoryCode, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "65":
-					oData := PrtFreqChangeData(iCompany, iPolicy, iDate, p0033data, iAgency, iHistoryCode, iTranno, txn)
+					oData, funcErr := PrtFreqChangeDataNew(iCompany, iPolicy, iDate, p0033data, iAgency, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "66":
-					oData := PrtSachangeData(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					oData, funcErr := PrtSachangeDataNew(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "67":
-					oData := PrtCompaddData(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					oData, funcErr := PrtCompaddDataNew(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "68":
-					oData := PrtSurrData(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					oData, funcErr := PrtSurrDataNew(iCompany, iPolicy, iDate, p0033data, iAgency, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "69":
-					oData := PrtMatyData(iCompany, iPolicy, iDate, p0033data, iAgency, txn)
+					oData, funcErr := PrtMatyDataNew(iCompany, iPolicy, iDate, p0033data, iAgency, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
@@ -689,22 +852,125 @@ func (r *RequestPdfV3) GeneratePDFPV3New(output io.Writer, iUserco, iClientid ui
 	return true, models.TxnError{}
 }
 
+// func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *gorm.DB) models.TxnError {
+// 	var client models.Client
+// 	result := txn.First(&client, "id = ?", icommunication.ClientID)
+// 	if result.Error != nil {
+// 		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+// 	}
+// 	if client.ClientEmail == "" {
+// 		return models.TxnError{ErrorCode: "GL475"}
+// 	}
+
+// 	iTemplate := icommunication.TemplateName
+// 	var p0033data paramTypes.P0033Data
+// 	var extradatap0033 paramTypes.Extradata = &p0033data
+// 	errparam := "P0033"
+// 	err := GetItemD(int(icommunication.CompanyID), errparam, iTemplate, icommunication.EffectiveDate, &extradatap0033)
+// 	if err != nil {
+// 		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iTemplate}
+// 	}
+
+// 	sender := icommunication.CompanyEmail
+// 	receiver := client.ClientEmail
+// 	password := p0033data.SenderPassword
+// 	smtpServer := p0033data.SMTPServer
+// 	smtpPort := p0033data.SMTPPort
+// 	emailBody := p0033data.Body
+// 	iDateTime := time.Now().Format("20060102150405")
+// 	fileName := fmt.Sprintf("%s_%s.pdf", icommunication.TemplateName, iDateTime)
+
+// 	// Send email asynchronously
+// 	go func() {
+// 		m := gomail.NewMessage()
+// 		m.SetHeader("From", sender)
+// 		m.SetHeader("To", receiver)
+// 		m.SetHeader("Subject", p0033data.Subject)
+// 		m.SetBody("text/plain", emailBody)
+
+// 		// Attach PDF file
+// 		m.Attach(fileName, gomail.SetCopyFunc(func(w io.Writer) error {
+// 			_, err := w.Write(pdfData)
+// 			return models.TxnError{ErrorCode: "GL939", DbError: err}
+// 		}))
+
+// 		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+// 		d.SSL = true
+
+// 		sendStart := time.Now()
+// 		if err := d.DialAndSend(m); err != nil {
+// 			return models.TxnError{ErrorCode: "GL947", DbError: err}
+// 		} else {
+// 			log.Printf("Email sent successfully to %s in %v", receiver, time.Since(sendStart))
+// 		}
+// 	}()
+
+// 	// Send Agent Email asynchronously if allowed
+// 	if icommunication.AgentEmailAllowed == "Y" {
+// 		var agntenq models.Agency
+// 		result := txn.First(&agntenq, "id = ?", icommunication.AgencyID)
+// 		if result.Error != nil {
+// 			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+// 		}
+// 		var agclient models.Client
+// 		result = txn.First(&agclient, "id = ?", agntenq.ClientID)
+// 		if result.Error != nil {
+// 			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+// 		}
+
+// 		if agclient.ClientEmail != "" {
+// 			go func() {
+// 				agentReceiver := agclient.ClientEmail
+// 				iName := GetName(client.CompanyID, client.ID)
+// 				agentEmailBody := fmt.Sprintf(
+// 					"Hi Sir/Madam,\n\nFollowing Email was sent to your Customer %d %s\n\n"+
+// 						"I am from Futura Instech..\n\nThank you!",
+// 					client.ID, iName,
+// 				)
+
+// 				m := gomail.NewMessage()
+// 				m.SetHeader("From", sender)
+// 				m.SetHeader("To", agentReceiver)
+// 				m.SetHeader("Subject", "Mail Sent to Your Customer")
+// 				m.SetBody("text/plain", agentEmailBody)
+
+// 				d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
+// 				d.SSL = true
+
+// 				sendStart := time.Now()
+// 				if err := d.DialAndSend(m); err != nil {
+// 					log.Printf("Failed to send email to Agent: %v", err)
+// 				} else {
+// 					log.Printf("Email sent successfully to agent %s in %v", agentReceiver, time.Since(sendStart))
+// 				}
+// 			}()
+// 		}
+// 	}
+
+//		log.Println("Email sent successfully with attachment via office SMTP")
+//		return models.TxnError{}
+//	}
 func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *gorm.DB) models.TxnError {
+
 	var client models.Client
 	result := txn.First(&client, "id = ?", icommunication.ClientID)
 	if result.Error != nil {
 		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 	}
+
 	if client.ClientEmail == "" {
 		return models.TxnError{ErrorCode: "GL475"}
 	}
 
+	// Get P0033 parameters
 	iTemplate := icommunication.TemplateName
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
-	err := GetItemD(int(icommunication.CompanyID), "P0033", iTemplate, icommunication.EffectiveDate, &extradatap0033)
+	errparam := "P0033"
+
+	err := GetItemD(int(icommunication.CompanyID), errparam, iTemplate, icommunication.EffectiveDate, &extradatap0033)
 	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0033", ParamItem: iTemplate}
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iTemplate}
 	}
 
 	sender := icommunication.CompanyEmail
@@ -716,7 +982,12 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 	iDateTime := time.Now().Format("20060102150405")
 	fileName := fmt.Sprintf("%s_%s.pdf", icommunication.TemplateName, iDateTime)
 
-	// Send email asynchronously
+	// -----------------------------------------------
+	//  CUSTOMER EMAIL WITH CHANNEL RETURN (sync)
+	// -----------------------------------------------
+
+	errChan := make(chan error, 1)
+
 	go func() {
 		m := gomail.NewMessage()
 		m.SetHeader("From", sender)
@@ -724,30 +995,42 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 		m.SetHeader("Subject", p0033data.Subject)
 		m.SetBody("text/plain", emailBody)
 
-		// Attach PDF file
+		// Attach PDF
 		m.Attach(fileName, gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := w.Write(pdfData)
-			return err
+			return models.TxnError{ErrorCode: "GL939", DbError: err}
 		}))
 
 		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
 		d.SSL = true
 
-		sendStart := time.Now()
 		if err := d.DialAndSend(m); err != nil {
-			log.Printf("Failed to send email: %v", err)
-		} else {
-			log.Printf("Email sent successfully to %s in %v", receiver, time.Since(sendStart))
+			errChan <- err
+			return
 		}
+
+		errChan <- nil
 	}()
 
-	// Send Agent Email asynchronously if allowed
+	// Wait for email result
+	if emailErr := <-errChan; emailErr != nil {
+		return models.TxnError{ErrorCode: "GL947", DbError: emailErr}
+	}
+
+	log.Printf("Email sent successfully to %s", receiver)
+
+	// -----------------------------------------------
+	//  AGENT EMAIL (ASYNC – FIRE AND FORGET)
+	// -----------------------------------------------
+
 	if icommunication.AgentEmailAllowed == "Y" {
+
 		var agntenq models.Agency
 		result := txn.First(&agntenq, "id = ?", icommunication.AgencyID)
 		if result.Error != nil {
 			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 		}
+
 		var agclient models.Client
 		result = txn.First(&agclient, "id = ?", agntenq.ClientID)
 		if result.Error != nil {
@@ -755,9 +1038,11 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 		}
 
 		if agclient.ClientEmail != "" {
+
 			go func() {
 				agentReceiver := agclient.ClientEmail
 				iName := GetName(client.CompanyID, client.ID)
+
 				agentEmailBody := fmt.Sprintf(
 					"Hi Sir/Madam,\n\nFollowing Email was sent to your Customer %d %s\n\n"+
 						"I am from Futura Instech..\n\nThank you!",
@@ -773,11 +1058,10 @@ func EmailTriggerMNew(icommunication models.Communication, pdfData []byte, txn *
 				d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
 				d.SSL = true
 
-				sendStart := time.Now()
 				if err := d.DialAndSend(m); err != nil {
 					log.Printf("Failed to send email to Agent: %v", err)
 				} else {
-					log.Printf("Email sent successfully to agent %s in %v", agentReceiver, time.Since(sendStart))
+					log.Printf("Email sent successfully to agent %s", agentReceiver)
 				}
 			}()
 		}
@@ -911,7 +1195,10 @@ func UpdateGlBalNNew(iCompany uint, iGlRldgAcct string, iGlAccountCode string, i
 func TDFLoanDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, iDate string, txn *gorm.DB) (string, models.TxnError) {
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
 
 	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 	if results.Error != nil {
@@ -922,7 +1209,7 @@ func TDFLoanDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 		tdfpolicy.Tranno = iTranno
 		tdfpolicy.Seqno = tdfrule.Seqno
 		txn.Create(&tdfpolicy)
-		return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+		return "", models.TxnError{}
 	} else {
 		txn.Delete(&tdfpolicy)
 		var tdfpolicy models.TDFPolicy
@@ -935,7 +1222,7 @@ func TDFLoanDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 		tdfpolicy.Tranno = iTranno
 
 		txn.Create(&tdfpolicy)
-		return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+		return "", models.TxnError{}
 	}
 }
 
@@ -1021,9 +1308,10 @@ func SendSMSTwilioNew(iCompany, iclientID uint, itempName, iEffDate string, mess
 
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
-	err := GetItemD(int(iCompany), "P0033", itempName, iEffDate, &extradatap0033)
+	errparam := "P0033"
+	err := GetItemD(int(iCompany), errparam, itempName, iEffDate, &extradatap0033)
 	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0033", ParamItem: itempName}
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: itempName}
 	}
 
 	toNumber := client.ClientMobCode + client.ClientMobile
@@ -1100,7 +1388,7 @@ func CreateCommunicationsNNew(iCompany uint, iHistoryCode string, iTranno uint, 
 		var policy models.Policy
 		result := txn.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 		if result.RowsAffected == 0 {
-			return models.TxnError{ErrorCode: "GL037", DbError: result.Error}
+			return models.TxnError{ErrorCode: "GL175", DbError: result.Error}
 		}
 		communication.CompanyID = uint(iCompany)
 		communication.AgencyID = policy.AgencyID
@@ -1134,22 +1422,23 @@ func CreateCommunicationsNNew(iCompany uint, iHistoryCode string, iTranno uint, 
 		communication.ReceiptRefNo = iPa
 		iKey = iTransaction + iReceiptFor
 	}
-
-	err1 := GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+	errparam := "P0034"
+	err1 := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0034)
 	if err1 != nil {
 		iKey = iTransaction
-		err1 = GetItemD(int(iCompany), "P0034", iKey, iDate, &extradatap0034)
+		err1 = GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0034)
 		if err1 != nil {
-			return models.TxnError{ErrorCode: "PARME", ParamName: "P0034", ParamItem: iKey}
+			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 		}
 	}
 
 	for i := 0; i < len(p0034data.Letters); i++ {
 		if p0034data.Letters[i].Templates != "" {
 			iKey = p0034data.Letters[i].Templates
-			err := GetItemD(int(iCompany), "P0033", iKey, iDate, &extradatap0033)
+			errparam := "P0033"
+			err := GetItemD(int(iCompany), errparam, iKey, iDate, &extradatap0033)
 			if err != nil {
-				return models.TxnError{ErrorCode: "PARME", ParamName: "P0033", ParamItem: iKey}
+				return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 			}
 
 			communication.AgentEmailAllowed = p0033data.AgentEmailAllowed
@@ -1192,134 +1481,245 @@ func CreateCommunicationsNNew(iCompany uint, iHistoryCode string, iTranno uint, 
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iDate, txn)
+					oData, funcErr := GetCompanyDataNew(iCompany, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["CompanyData"] = oData
 				case oLetType == "2":
-					oData := GetClientData(iCompany, iClient, txn)
+					oData, funcErr := GetClientDataNew(iCompany, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientData"] = oData
 				case oLetType == "3":
-					oData := GetAddressData(iCompany, iAddress, txn)
+					oData, funcErr := GetAddressDataNew(iCompany, iAddress, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["AddressData"] = oData
 				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, txn)
+					oData, funcErr := GetPolicyDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyData"] = oData
 				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, txn)
+					oData, funcErr := GetBenefitDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurBDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurBData"] = oData
 				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMrtaDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MRTAData"] = oData
 				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iReceipt, txn)
+					oData, funcErr := GetReceiptDataNew(iCompany, iReceipt, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ReceiptData"] = oData
 				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSaChangeDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SAChangeData"] = oData
 				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, txn)
+					oData, funcErr := GetCompAddDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurrHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurrData"] = oData
 					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["SurrDData"] = oData
 				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, txn)
+					oData, funcErr := GetDeathDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["DeathData"] = oData
 				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMatHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MaturityData"] = oData
 					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["MatDData"] = oData
 				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetSurvBPayNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurvbPay"] = oData
 				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetExpiNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ExpiryData"] = oData
 				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, txn)
+					oData, funcErr := GetBonusValsNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BonusData"] = oData
 				case oLetType == "17":
-					oData := GetAgency(iCompany, iAgency, txn)
+					oData, funcErr := GetAgencyNew(iCompany, iAgency, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Agency"] = oData
 				case oLetType == "18":
-					oData := GetNomiData(iCompany, iPolicy, txn)
+					oData, funcErr := GetNomiDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Nominee"] = oData
 				case oLetType == "19":
-					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					oData, funcErr := GetGLDataNew(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 				case oLetType == "20":
-					oData := GetIlpSummaryData(iCompany, iPolicy, txn)
+					oData, funcErr := GetIlpSummaryDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlPSummaryData"] = oData
 				case oLetType == "21":
-					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode, txn)
+					oData, funcErr := GetIlpAnnsummaryDataNew(iCompany, iPolicy, iHistoryCode, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPANNSummaryData"] = oData
 				case oLetType == "22":
-					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					oData, funcErr := GetIlpTranctionDataNew(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPTransactionData"] = oData
 				case oLetType == "23":
-					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate, txn)
+					oData, funcErr := GetPremTaxGLDataNew(iCompany, iPolicy, iFromDate, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 
 				case oLetType == "24":
-					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetIlpFundSwitchDataNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SwitchData"] = oData
 
 				case oLetType == "25":
-					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					oData, funcErr := GetPHistoryDataNew(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyHistoryData"] = oData
 				case oLetType == "26":
-					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate, txn)
+					oData, funcErr := GetIlpFundDataNew(iCompany, iPolicy, iBenefit, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlpFundData"] = oData
 				case oLetType == "27":
-					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPPolicyDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevPolicy"] = oData
 				case oLetType == "28":
-					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPBenefitDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					fmt.Println(oData) // Dummy to avoid compilation error
 				case oLetType == "29":
-					oData := GetPayingAuthorityData(iCompany, iPa, txn)
+					oData, funcErr := GetPayingAuthorityDataNew(iCompany, iPa, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevBenefit"] = oData
 				case oLetType == "30":
-					oData := GetClientWorkData(iCompany, iClientWork, txn)
+					oData, funcErr := GetClientWorkDataNew(iCompany, iClientWork, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientWork"] = oData
 				case oLetType == "36":
-					oData := GetReqData(iCompany, iPolicy, iClient, txn)
+					oData, funcErr := GetReqDataNew(iCompany, iPolicy, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for _, item := range oData {
 						for key, value := range item.(map[string]interface{}) {
 							resultMap[key] = value
 						}
 					}
 				case oLetType == "37":
-					oData := PolicyDepData(iCompany, iPolicy, txn)
+					oData, funcErr := PolicyDepDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "38":
-					oData := PolAgntChData(iCompany, iPolicy, iAgency, iClient, txn)
+					oData, funcErr := PolAgntChDataNew(iCompany, iPolicy, iAgency, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "39":
-					oData := GetBankData(iCompany, iClientWork, txn)
+					oData, funcErr := GetBankDataNew(iCompany, iClientWork, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BankData"] = oData
 				case oLetType == "40":
 					iKey := iReceipt
-					oData := GetPaymentData(iCompany, iPolicy, iKey, txn)
+					oData, funcErr := GetPaymentDataNew(iCompany, iPolicy, iKey, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "45":
-					oData := ColaCancelData(iCompany, iPolicy, iHistoryCode, txn)
+					oData, funcErr := ColaCancelDataNew(iCompany, iPolicy, iHistoryCode, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
 				case oLetType == "46":
-					oData := AplCancelData(iCompany, iPolicy, iHistoryCode, txn)
+					oData, funcErr := AplCancelDataNew(iCompany, iPolicy, iHistoryCode, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					for key, value := range oData {
 						resultMap[key] = value
 					}
@@ -1377,15 +1777,15 @@ func GetMaxTrannoNNew(iCompany uint, iPolicy uint, iMethod string, iEffDate stri
 	var permission models.Permission
 	var result *gorm.DB
 
-	result = initializers.DB.First(&permission, "company_id = ? and method = ?", iCompany, iMethod)
+	result = txn.First(&permission, "company_id = ? and method = ?", iCompany, iMethod)
 	if result.Error != nil {
 		return iMethod, 0, models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 	}
 	iHistoryCode := permission.TransactionID
 	var transaction models.Transaction
-	result = initializers.DB.Find(&transaction, "ID = ?", iHistoryCode)
+	result = txn.Find(&transaction, "ID = ?", iHistoryCode)
 	if result.RowsAffected == 0 {
-		return iMethod, 0, models.TxnError{ErrorCode: "GL058", DbError: result.Error}
+		return iMethod, 0, models.TxnError{ErrorCode: "GL042", DbError: result.Error}
 	}
 	iHistoryCD := transaction.TranCode
 	var phistory models.PHistory
@@ -1393,10 +1793,10 @@ func GetMaxTrannoNNew(iCompany uint, iPolicy uint, iMethod string, iEffDate stri
 
 	fmt.Println(iCompany, iPolicy, iHistoryCD, iEffDate)
 
-	result1 := initializers.DB.Table("p_histories").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(tranno)")
+	result1 := txn.Table("p_histories").Where("company_id = ? and policy_id= ?", iCompany, iPolicy).Select("max(tranno)")
 
 	if result1.Error != nil {
-		fmt.Println(models.TxnError{ErrorCode: "GL058", DbError: result1.Error})
+		fmt.Println(models.TxnError{ErrorCode: "GL919", DbError: result1.Error})
 
 	}
 	err := result1.Row().Scan(&maxtranno)
@@ -1430,9 +1830,10 @@ func ValidateBankNew(bankval models.Bank, userco uint, userlan uint, iKey string
 	var extradatap0065 paramTypes.Extradata = &p0065data
 
 	// Fetch validation rules
-	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
 	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iKey}
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 	}
 
 	// Loop through validation fields
@@ -1470,10 +1871,10 @@ func ValidateClientWorkNNew(clientwork models.ClientWork, userco uint, userlan u
 
 	var p0065data paramTypes.P0065Data
 	var extradatap0065 paramTypes.Extradata = &p0065data
-
-	err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+	errparam := "P0065"
+	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
 	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0065", ParamItem: iKey}
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 	}
 
 	for i := 0; i < len(p0065data.FieldList); i++ {
@@ -1495,7 +1896,7 @@ func ValidateClientWorkNNew(clientwork models.ClientWork, userco uint, userlan u
 
 	var client models.Client
 	clientid := clientwork.ClientID
-	result1 := initializers.DB.Find(&client, "company_id = ? and id = ?", userco, clientid)
+	result1 := txn.Find(&client, "company_id = ? and id = ?", userco, clientid)
 	if result1.RowsAffected == 0 {
 		return models.TxnError{
 			ErrorCode: "GL050",
@@ -1504,11 +1905,11 @@ func ValidateClientWorkNNew(clientwork models.ClientWork, userco uint, userlan u
 	}
 
 	if client.ClientStatus != "AC" {
-		return models.TxnError{ErrorCode: "GL221", DbError: result1.Error}
+		return models.TxnError{ErrorCode: "GL006", DbError: result1.Error}
 	}
 	var employer models.Client
 	employerid := clientwork.EmployerID
-	result2 := initializers.DB.Find(&employer, "company_id = ? and id = ?", userco, employerid)
+	result2 := txn.Find(&employer, "company_id = ? and id = ?", userco, employerid)
 	if result2.RowsAffected == 0 {
 		return models.TxnError{
 			ErrorCode: "GL050",
@@ -1517,7 +1918,7 @@ func ValidateClientWorkNNew(clientwork models.ClientWork, userco uint, userlan u
 	}
 
 	if employer.ClientStatus != "AC" {
-		return models.TxnError{ErrorCode: "GL221", DbError: result2.Error}
+		return models.TxnError{ErrorCode: "GL006", DbError: result2.Error}
 	}
 
 	if clientwork.StartDate > iDate {
@@ -1545,7 +1946,7 @@ func AutoPayCreateNew(iCompany uint, iPolicy uint, iClient uint, iAddress uint, 
 	var bankenq models.Bank
 	result := txn.Find(&bankenq, "id = ?", iBank)
 	if result.RowsAffected == 0 {
-		txnerr = models.TxnError{ErrorCode: "GL058", DbError: result.Error}
+		txnerr = models.TxnError{ErrorCode: "GL262", DbError: result.Error}
 		return oPayno, txnerr
 	}
 	iDrSign := "+"
@@ -1560,10 +1961,10 @@ func AutoPayCreateNew(iCompany uint, iPolicy uint, iClient uint, iAddress uint, 
 	// Get Payment Type Accounting Code for Creation
 	var p0055data paramTypes.P0055Data
 	var extradatap0055 paramTypes.Extradata = &p0055data
-
-	err := GetItemD(int(iCompany), "P0055", iTypeofPayment, iDate, &extradatap0055)
+	errparam := "P0055"
+	err := GetItemD(int(iCompany), errparam, iTypeofPayment, iDate, &extradatap0055)
 	if err != nil {
-		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: "P0055", ParamItem: iTypeofPayment}
+		txnerr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iTypeofPayment}
 		return oPayno, txnerr
 	}
 	iCrBank := p0055data.GlAccount
@@ -1705,9 +2106,10 @@ func EmailTriggerforReportNew(iCompany uint, iReference uint, iClient uint, iEma
 
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
-	err := GetItemD(int(iCompany), "P0033", itempName, iEffDate, &extradatap0033)
+	errparam := "P0033"
+	err := GetItemD(int(iCompany), errparam, itempName, iEffDate, &extradatap0033)
 	if err != nil {
-		return models.TxnError{ErrorCode: "PARME", ParamName: "P0033", ParamItem: itempName}
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: itempName}
 	}
 
 	sender := p0033data.CompanyEmail
@@ -1727,7 +2129,7 @@ func EmailTriggerforReportNew(iCompany uint, iReference uint, iClient uint, iEma
 
 	m.Attach(itempName+iClientnumstr+iTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
 		_, err := w.Write(pdfData)
-		return err
+		return models.TxnError{ErrorCode: "GL939", DbError: err}
 	}))
 
 	// Configure SMTP dialer
@@ -1828,8 +2230,9 @@ func EmailTriggerNNew(icommunication models.Communication, pdfData []byte, txn *
 	iTemplate := icommunication.TemplateName
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
-	err := GetItemD(int(icommunication.CompanyID), "P0033", iTemplate, icommunication.EffectiveDate, &extradatap0033)
 	errparam := "P0033"
+	err := GetItemD(int(icommunication.CompanyID), errparam, iTemplate, icommunication.EffectiveDate, &extradatap0033)
+
 	if err != nil {
 		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iTemplate}
 	}
@@ -1844,6 +2247,8 @@ func EmailTriggerNNew(icommunication models.Communication, pdfData []byte, txn *
 	fileName := fmt.Sprintf("%s_%s.pdf", icommunication.TemplateName, iDateTime)
 
 	// Send email asynchronously
+	errChan := make(chan error, 1)
+
 	go func() {
 		m := gomail.NewMessage()
 		m.SetHeader("From", sender)
@@ -1851,22 +2256,29 @@ func EmailTriggerNNew(icommunication models.Communication, pdfData []byte, txn *
 		m.SetHeader("Subject", p0033data.Subject)
 		m.SetBody("text/plain", emailBody)
 
-		// Attach PDF file
+		// Attach PDF
 		m.Attach(fileName, gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := w.Write(pdfData)
-			return err
+			return models.TxnError{ErrorCode: "GL939", DbError: err}
 		}))
 
 		d := gomail.NewDialer(smtpServer, smtpPort, sender, password)
 		d.SSL = true
 
-		sendStart := time.Now()
 		if err := d.DialAndSend(m); err != nil {
-			log.Printf("Failed to send email: %v", err)
-		} else {
-			log.Printf("Email sent successfully to %s in %v", receiver, time.Since(sendStart))
+			errChan <- err
+			return
 		}
+
+		errChan <- nil
 	}()
+
+	// Wait for email result
+	if emailErr := <-errChan; emailErr != nil {
+		return models.TxnError{ErrorCode: "GL947", DbError: emailErr}
+	}
+
+	log.Printf("Email sent successfully to %s", receiver)
 
 	// Send Agent Email asynchronously if allowed
 	if icommunication.AgentEmailAllowed == "Y" {
@@ -2038,8 +2450,11 @@ func TDFLoanIntNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 	var loanenq []models.Loan
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+	result = txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
 	loandelete := "N"
 	if result.Error != nil || result.RowsAffected == 0 {
 		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
@@ -2053,8 +2468,11 @@ func TDFLoanIntNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 	if loandelete == "Y" {
 		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 		if results.Error == nil {
-			txn.Delete(&tdfpolicy)
-			return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+			results = txn.Delete(&tdfpolicy)
+			if results.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+			}
+			return "", models.TxnError{}
 		}
 
 	}
@@ -2078,10 +2496,16 @@ func TDFLoanIntNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 			tdfpolicy.TDFType = iFunction
 			tdfpolicy.EffectiveDate = oDate
 			tdfpolicy.Tranno = iTranno
-			txn.Create(&tdfpolicy)
-			return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+			results = txn.Create(&tdfpolicy)
+			if results.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+			}
+			return "", models.TxnError{}
 		} else {
-			txn.Delete(&tdfpolicy)
+			results = txn.Delete(&tdfpolicy)
+			if results.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+			}
 			var tdfpolicy models.TDFPolicy
 			tdfpolicy.CompanyID = iCompany
 			tdfpolicy.PolicyID = iPolicy
@@ -2091,8 +2515,11 @@ func TDFLoanIntNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 			tdfpolicy.EffectiveDate = oDate
 			tdfpolicy.Tranno = iTranno
 
-			txn.Create(&tdfpolicy)
-			return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+			results = txn.Create(&tdfpolicy)
+			if results.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
+			}
+			return "", models.TxnError{}
 		}
 	}
 	return "", models.TxnError{}
@@ -2102,8 +2529,11 @@ func TDFLoanCapNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 	var loanenq []models.Loan
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
-	txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+	result = txn.Find(&loanenq, "company_id = ? and policy_id = ? and loan_status = ? ", iCompany, iPolicy, "AC")
 	loandelete := "N"
 	if result.Error != nil || result.RowsAffected == 0 {
 		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
@@ -2117,8 +2547,11 @@ func TDFLoanCapNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 	if loandelete == "Y" {
 		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 		if results.Error == nil {
-			txn.Delete(&tdfpolicy)
-			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			}
+			return "", models.TxnError{}
 		}
 
 	}
@@ -2142,10 +2575,16 @@ func TDFLoanCapNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 			tdfpolicy.TDFType = iFunction
 			tdfpolicy.EffectiveDate = oDate
 			tdfpolicy.Tranno = iTranno
-			txn.Create(&tdfpolicy)
-			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			}
+			return "", models.TxnError{}
 		} else {
-			txn.Delete(&tdfpolicy)
+			result = txn.Delete(&tdfpolicy)
+			if result.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			}
 			var tdfpolicy models.TDFPolicy
 			tdfpolicy.CompanyID = iCompany
 			tdfpolicy.PolicyID = iPolicy
@@ -2155,8 +2594,11 @@ func TDFLoanCapNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 			tdfpolicy.EffectiveDate = oDate
 			tdfpolicy.Tranno = iTranno
 
-			txn.Create(&tdfpolicy)
-			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			result = txn.Create(&tdfpolicy)
+			if result.Error != nil {
+				return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+			}
+			return "", models.TxnError{}
 		}
 	}
 	return "", models.TxnError{}
@@ -2336,7 +2778,7 @@ func TDFFundPNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 
 	result := txn.Where("company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P").Order("fund_eff_date").Find(&ilptransenq)
 	if result.RowsAffected == 0 {
-		return "", models.TxnError{ErrorCode: "GL037", DbError: result.Error}
+		return "", models.TxnError{ErrorCode: "GL137", DbError: result.Error}
 	}
 
 	for i := 0; i < len(ilptransenq); i++ {
@@ -2371,7 +2813,7 @@ func TDFFundPNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, i
 			}
 			return "", models.TxnError{}
 		} else {
-			initializers.DB.Delete(&tdfpolicy)
+			txn.Delete(&tdfpolicy)
 			var tdfpolicy models.TDFPolicy
 			tdfpolicy.CompanyID = iCompany
 			tdfpolicy.PolicyID = iPolicy
@@ -2426,13 +2868,13 @@ func TDFFundMNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, t
 		}
 	}
 
-	result = initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	result = txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
 
 	if result.Error != nil {
 		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 	}
 
-	results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+	results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 	if result.Error != nil {
 		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 	}
@@ -2464,7 +2906,7 @@ func TDFFundMNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, t
 			tdfpolicy.EffectiveDate = odate
 			tdfpolicy.Tranno = iTranno
 
-			result = initializers.DB.Create(&tdfpolicy)
+			result = txn.Create(&tdfpolicy)
 			if result.Error != nil {
 				return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 			}
@@ -2568,7 +3010,7 @@ func TDFIBDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 	}
 
-	result = initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+	result = txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
 
 	if result.Error != nil {
 		tdfpolicy.CompanyID = iCompany
@@ -2577,13 +3019,13 @@ func TDFIBDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 		tdfpolicy.TDFType = iFunction
 		tdfpolicy.EffectiveDate = incomeb.NextPayDate
 		tdfpolicy.Tranno = iTranno
-		result = initializers.DB.Create(&tdfpolicy)
+		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
 			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 		}
 
 	} else {
-		result = initializers.DB.Delete(&tdfpolicy)
+		result = txn.Delete(&tdfpolicy)
 		if result.Error != nil {
 			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 		}
@@ -2595,7 +3037,7 @@ func TDFIBDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn
 		tdfpolicy.ID = 0
 		tdfpolicy.EffectiveDate = incomeb.NextPayDate
 		tdfpolicy.Tranno = iTranno
-		result = initializers.DB.Create(&tdfpolicy)
+		result = txn.Create(&tdfpolicy)
 		if result.Error != nil {
 			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 		}
@@ -2609,11 +3051,14 @@ func TDFExtrDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, t
 	var tdfpolicy models.TDFPolicy
 	var tdfrule models.TDFRule
 	var policyenq models.Policy
-	initializers.DB.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
-	result := initializers.DB.Find(&extraenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+	result = txn.Find(&extraenq, "company_id = ? and policy_id = ? ", iCompany, iPolicy)
 	if result.Error != nil {
 		if result.RowsAffected == 0 {
-			return "", models.TxnError{ErrorCode: "GL058", DbError: result.Error}
+			return "", models.TxnError{ErrorCode: "GL236", DbError: result.Error}
 		}
 	}
 	oDate := ""
@@ -2626,7 +3071,7 @@ func TDFExtrDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, t
 		}
 	}
 	// Subtract Billing Lead Days as well
-	result = initializers.DB.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	result = txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
 	if result.RowsAffected == 0 {
 		return "", models.TxnError{ErrorCode: "GL017", DbError: result.Error}
 	}
@@ -2642,7 +3087,7 @@ func TDFExtrDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, t
 	}
 
 	if oDate != "" {
-		results := initializers.DB.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
+		results := txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iFunction)
 		if results.Error != nil {
 			tdfpolicy.CompanyID = iCompany
 			tdfpolicy.PolicyID = iPolicy
@@ -2772,7 +3217,11 @@ func TDFMatDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, tx
 		iDate := benefits[i].BStartDate
 		var q0006data paramTypes.Q0006Data
 		var extradataq0006 paramTypes.Extradata = &q0006data
-		GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradataq0006)
+		errparam := "Q0006"
+		err := GetItemD(int(iCompany), errparam, iCoverage, iDate, &extradataq0006)
+		if err != nil {
+			return "", models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iCoverage}
+		}
 		if q0006data.MatMethod != "" {
 			if oDate == "" {
 				oDate = benefits[i].BRiskCessDate
@@ -3034,7 +3483,7 @@ func CreateCommunicationsNew(iCompany uint, iHistoryCode string, iTranno uint, i
 
 	var p0034data paramTypes.P0034Data
 	var extradatap0034 paramTypes.Extradata = &p0034data
-	txn = initializers.DB.Begin()
+	// txn = initializers.DB.Begin()
 
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
@@ -3043,7 +3492,7 @@ func CreateCommunicationsNew(iCompany uint, iHistoryCode string, iTranno uint, i
 	if iPolicy != 0 {
 		result := txn.Find(&policy, "company_id = ? and id = ?", iCompany, iPolicy)
 		if result.RowsAffected == 0 {
-			return models.TxnError{ErrorCode: "GL037", DbError: result.Error}
+			return models.TxnError{ErrorCode: "GL175", DbError: result.Error}
 		}
 	}
 	var payingauth models.PayingAuthority
@@ -3109,14 +3558,13 @@ func CreateCommunicationsNew(iCompany uint, iHistoryCode string, iTranno uint, i
 		communication.ReceiptFor = iReceiptFor
 		communication.ReceiptRefNo = iClient
 	}
-
-	err1 := GetItemD(int(iCompany), "P0034", iP0034Key, iDate, &extradatap0034)
+	errparam := "P0034"
+	err1 := GetItemD(int(iCompany), errparam, iP0034Key, iDate, &extradatap0034)
 	if err1 != nil {
 		iP0034Key = iHistoryCode
-		errparam := "P0034"
 		err1 = GetItemD(int(iCompany), errparam, iP0034Key, iDate, &extradatap0034)
 		if err1 != nil {
-			return models.TxnError{ErrorCode: "PARME", ParamName: "P0034", ParamItem: iP0034Key}
+			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iP0034Key}
 		}
 	}
 
@@ -3169,98 +3617,188 @@ func CreateCommunicationsNew(iCompany uint, iHistoryCode string, iTranno uint, i
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iDate, txn)
+					oData, funcErr := GetCompanyDataNew(iCompany, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["CompanyData"] = oData
 				case oLetType == "2":
-					oData := GetClientData(iCompany, iClient, txn)
+					oData, funcErr := GetClientDataNew(iCompany, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientData"] = oData
 				case oLetType == "3":
-					oData := GetAddressData(iCompany, iAddress, txn)
+					oData, funcErr := GetAddressDataNew(iCompany, iAddress, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["AddressData"] = oData
 				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, txn)
+					oData, funcErr := GetPolicyDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyData"] = oData
 				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, txn)
+					oData, funcErr := GetBenefitDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurBDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurBData"] = oData
 				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMrtaDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MRTAData"] = oData
 				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iReceipt, txn)
+					oData, funcErr := GetReceiptDataNew(iCompany, iReceipt, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ReceiptData"] = oData
 				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSaChangeDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SAChangeData"] = oData
 				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, txn)
+					oData, funcErr := GetCompAddDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurrHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurrData"] = oData
 					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["SurrDData"] = oData
 				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, txn)
+					oData, funcErr := GetDeathDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["DeathData"] = oData
 				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMatHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MaturityData"] = oData
 					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["MatDData"] = oData
 				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetSurvBPayNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurvbPay"] = oData
 				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetExpiNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ExpiryData"] = oData
 				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, txn)
+					oData, funcErr := GetBonusValsNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BonusData"] = oData
 				case oLetType == "17":
-					oData := GetAgency(iCompany, iAgency, txn)
+					oData, funcErr := GetAgencyNew(iCompany, iAgency, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Agency"] = oData
 				case oLetType == "18":
-					oData := GetNomiData(iCompany, iPolicy, txn)
+					oData, funcErr := GetNomiDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Nominee"] = oData
 				case oLetType == "19":
-					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					oData, funcErr := GetGLDataNew(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 				case oLetType == "20":
-					oData := GetIlpSummaryData(iCompany, iPolicy, txn)
+					oData, funcErr := GetIlpSummaryDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlPSummaryData"] = oData
 				case oLetType == "21":
-					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode, txn)
+					oData, funcErr := GetIlpAnnsummaryDataNew(iCompany, iPolicy, iHistoryCode, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPANNSummaryData"] = oData
 				case oLetType == "22":
-					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					oData, funcErr := GetIlpTranctionDataNew(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPTransactionData"] = oData
 				case oLetType == "23":
-					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate, txn)
+					oData, funcErr := GetPremTaxGLDataNew(iCompany, iPolicy, iFromDate, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 				case oLetType == "24":
-					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetIlpFundSwitchDataNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SwitchData"] = oData
 				case oLetType == "25":
-					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					oData, funcErr := GetPHistoryDataNew(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyHistoryData"] = oData
 				case oLetType == "26":
-					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate, txn)
+					oData, funcErr := GetIlpFundDataNew(iCompany, iPolicy, iBenefit, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlpFundData"] = oData
 				case oLetType == "27":
-					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPPolicyDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevPolicy"] = oData
 				case oLetType == "28":
-					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPBenefitDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevBenefit"] = oData
 				case oLetType == "29":
-					oData := GetPayingAuthorityData(iCompany, iPa, txn)
+					oData, funcErr := GetPayingAuthorityDataNew(iCompany, iPa, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PaData"] = oData
 				case oLetType == "30":
-					oData := GetClientWorkData(iCompany, iClientWork, txn)
+					oData, funcErr := GetClientWorkDataNew(iCompany, iClientWork, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientWork"] = oData
 				// case oLetType == "36":
 				// 	oData := GetReqData(iCompany, iPolicy)
@@ -3278,7 +3816,7 @@ func CreateCommunicationsNew(iCompany uint, iHistoryCode string, iTranno uint, i
 			communication.PDFPath = p0034data.Letters[i].PdfLocation
 			communication.TemplatePath = p0034data.Letters[i].ReportTemplateLocation
 
-			results := initializers.DB.Create(&communication)
+			results := txn.Create(&communication)
 
 			if results.Error != nil {
 				return models.TxnError{
@@ -3299,30 +3837,30 @@ func ValidateBillTypeNNew(policyenq models.Policy, userco uint, userlan uint, iD
 
 	errparam := "P0055"
 
-	err := GetItemD(int(userco), "errparam", iBillType, iDate, &extradatap0055)
+	err := GetItemD(int(userco), errparam, iBillType, iDate, &extradatap0055)
 	if err != nil {
 		txnErr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iBillType}
-		return
+		return txnErr
 	}
 	// Validate SSI Bill Type
 
 	if p0055data.PayingAuthority == "N" &&
 		iBillType == policyenq.BillingType {
 		txnErr = models.TxnError{ErrorCode: "GL637"}
-		return
+		return txnErr
 	}
 
 	if p0055data.PayingAuthority == "Y" &&
 		iBillType == policyenq.BillingType &&
 		iPayingAuthority == policyenq.PayingAuthority {
 		txnErr = models.TxnError{ErrorCode: "GL638"}
-		return
+		return txnErr
 	}
 
 	if p0055data.PayingAuthority == "N" {
 		if iPayingAuthority != 0 {
 			txnErr = models.TxnError{ErrorCode: "GL700"}
-			return
+			return txnErr
 
 		}
 	}
@@ -3330,7 +3868,7 @@ func ValidateBillTypeNNew(policyenq models.Policy, userco uint, userlan uint, iD
 	if p0055data.PayingAuthority == "Y" {
 		if iPayingAuthority == 0 {
 			txnErr = models.TxnError{ErrorCode: "GL701"}
-			return
+			return txnErr
 
 		}
 	}
@@ -3339,12 +3877,12 @@ func ValidateBillTypeNNew(policyenq models.Policy, userco uint, userlan uint, iD
 	funcErr := ValidatePayingAuthorityNNew(userco, userlan, iDate, iPayingAuthority, txn)
 	if funcErr.ErrorCode != "" {
 		txnErr = funcErr
-		return
+		return txnErr
 	}
 
 	// P0055 Bank Extration Types like cBank,DBank,NEFT,UPI validation are to be added
 
-	return models.TxnError{}
+	return txnErr
 }
 
 func ValidatePayingAuthorityNNew(userco uint, userlan uint, iDate string, iPayingAuthority uint, txn *gorm.DB) (txnErr models.TxnError) {
@@ -3353,25 +3891,25 @@ func ValidatePayingAuthorityNNew(userco uint, userlan uint, iDate string, iPayin
 	result := txn.First(&payingauth, "company_id = ? and id = ?", userco, iPayingAuthority)
 	if result.Error != nil {
 		txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
-		return
+		return txnErr
 	}
 
 	if payingauth.PaStatus != "AC" {
 		txnErr = models.TxnError{ErrorCode: "GL640"}
-		return
+		return txnErr
 	}
 
 	if payingauth.StartDate > iDate {
 		txnErr = models.TxnError{ErrorCode: "GL641"}
-		return
+		return txnErr
 	}
 
 	if payingauth.EndDate < iDate {
 		txnErr = models.TxnError{ErrorCode: "GL642"}
-		return
+		return txnErr
 	}
 
-	return models.TxnError{}
+	return txnErr
 }
 
 // 2025-10-30 Lakshmi Changes
@@ -3530,7 +4068,7 @@ func CheckPendingILPNew(iCompany uint, iPolicy uint, iLanguage uint, txn *gorm.D
 
 	result := txn.Find(&ilptransenq, "company_id = ? and policy_id = ? and ul_process_flag = ?", iCompany, iPolicy, "P")
 	if result.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL504", DbError: result.Error}
+		return models.TxnError{ErrorCode: "GL137", DbError: result.Error}
 	}
 	return models.TxnError{}
 }
@@ -3561,7 +4099,7 @@ func PostUlpDeductionByUnitsNNew(iCompany uint, iPolicy uint, iBenefit uint, iSu
 
 	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
 	if result.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL443", DbError: result.Error}
+		return models.TxnError{ErrorCode: "GL784", DbError: result.Error}
 	}
 
 	var ilpsumenq []models.IlpSummary
@@ -3647,7 +4185,7 @@ func GetAnnualRateNNew(iCompany uint, iCoverage string, iAge uint, iGender strin
 	var q0006data paramTypes.Q0006Data
 	var extradata paramTypes.Extradata = &q0006data
 	errparam := "Q0006"
-	err := GetItemD(int(iCompany), "Q0006", iCoverage, iDate, &extradata)
+	err := GetItemD(int(iCompany), errparam, iCoverage, iDate, &extradata)
 	if err != nil {
 		return 0, models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iCoverage}
 
@@ -3868,7 +4406,7 @@ func CalcSwitchFeeN(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiveDa
 	iPolicyAnniversary = Date2String(b)
 	// Get No of Free Done in Policy Anniversary
 	var policyhistory []models.PHistory
-	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
+	results := txn.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
 	switchcount := 0
 	if results.Error != nil {
 		switchcount = 0
@@ -3931,7 +4469,7 @@ func CalcSwitchFeeNNew(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiv
 	iPolicyAnniversary = Date2String(b)
 	// Get No of Free Done in Policy Anniversary
 	var policyhistory []models.PHistory
-	results := initializers.DB.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
+	results := txn.Find(&policyhistory, "company_id = ? and policy_id = ? and effective_date >=? and effective_date <=? and is_reversed = ? and history_code = ?", iCompany, iPolicy, iPolicyAnniversary, iBusinessDate, 0, "H0139")
 	switchcount := 0
 	if results.Error != nil {
 		switchcount = 0
@@ -3942,17 +4480,17 @@ func CalcSwitchFeeNNew(iCompany uint, iPolicy uint, iFeeMethod string, iEffectiv
 	// Percentage
 	if p0070data.SwitchFeeBasis == "P" {
 		if uint(switchcount) <= p0070data.FreeSwitches {
-			return models.TxnError{}, 0, 0
+			return txnerr, 0, 0
 		} else {
-			return models.TxnError{}, 0, p0070data.FeePercentage
+			return txnerr, 0, p0070data.FeePercentage
 		}
 	}
 	// Fixed Amount
 	if p0070data.SwitchFeeBasis == "F" {
 		if uint(switchcount) <= p0070data.FreeSwitches {
-			return models.TxnError{}, 0, 0
+			return txnerr, 0, 0
 		} else {
-			return models.TxnError{}, p0070data.FeeAmount, 0
+			return txnerr, p0070data.FeeAmount, 0
 		}
 	}
 
@@ -4004,7 +4542,7 @@ func ValidateBenefitFieldsNNew(benefitval models.Benefit, userco uint, userlan u
 	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
 	if err != nil {
 		iKey = iHistoryCode
-		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
 		if err != nil {
 			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 		}
@@ -4077,7 +4615,7 @@ func ValidateMrtaFieldsNNew(mrtaval models.Mrta, userco uint, userlan uint, iHis
 	err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
 	if err != nil {
 		iKey = iHistoryCode
-		err := GetItemD(int(userco), "P0065", iKey, "0", &extradatap0065)
+		err := GetItemD(int(userco), errparam, iKey, "0", &extradatap0065)
 		if err != nil {
 			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
 		}
@@ -4308,7 +4846,7 @@ func GetMrtaPremNNew(iCompany uint, iCoverage string, iSA float64, iAge uint, iG
 func ValidateBenefitDataN(benefitenq models.Benefit, langid uint, iHistoryCode string, txn *gorm.DB) (string error) {
 	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
 	var clientenq models.Client
-	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
+	result := txn.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
 	if result.Error != nil {
 		shortCode := "GL212" // Client Not Found
 		longDesc, _ := GetErrorDesc(benefitenq.CompanyID, langid, shortCode)
@@ -4397,7 +4935,7 @@ func ValidateBenefitDataN(benefitenq models.Benefit, langid uint, iHistoryCode s
 func ValidateBenefitDataNNew(benefitenq models.Benefit, langid uint, iHistoryCode string, txn *gorm.DB) (string models.TxnError) {
 	//businessdate := GetBusinessDate(benefitenq.CompanyID, 0, 0)
 	var clientenq models.Client
-	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
+	result := txn.First(&clientenq, "company_id  = ? and id = ?", benefitenq.CompanyID, benefitenq.ClientID)
 	if result.Error != nil {
 		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 	}
@@ -4431,7 +4969,7 @@ func ValidateBenefitDataNNew(benefitenq models.Benefit, langid uint, iHistoryCod
 		}
 	}
 	if !iAllowedPolTerm {
-		return models.TxnError{ErrorCode: "GL548"} // Policy Term not Allowed
+		return models.TxnError{ErrorCode: "GL549"} // Policy Term not Allowed
 	}
 
 	//#003 Premium Paying Term not Allowed
@@ -4471,7 +5009,7 @@ func ValidateBenefitDataNNew(benefitenq models.Benefit, langid uint, iHistoryCod
 func ValidatePolicyDataN(policyenq models.Policy, langid uint, iHistoryCode string, txn *gorm.DB) (string error) {
 	businessdate := GetBusinessDate(policyenq.CompanyID, 0, 0)
 	var clientenq models.Client
-	result := initializers.DB.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
+	result := txn.First(&clientenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.ClientID)
 	if result.Error != nil {
 		shortCode := "GL212" // Client Not Found
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
@@ -4480,7 +5018,7 @@ func ValidatePolicyDataN(policyenq models.Policy, langid uint, iHistoryCode stri
 	}
 
 	var agencyenq models.Agency
-	result = initializers.DB.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
+	result = txn.First(&agencyenq, "company_id  = ? and id = ?", policyenq.CompanyID, policyenq.AgencyID)
 	if result.Error != nil {
 		shortCode := "GL275" // Agent Not Found
 		longDesc, _ := GetErrorDesc(policyenq.CompanyID, langid, shortCode)
@@ -4703,7 +5241,7 @@ func ValidatePolicyDataNNew(policyenq models.Policy, langid uint, iHistoryCode s
 	}
 
 	if policyenq.PRCD > businessdate {
-		return models.TxnError{ErrorCode: "GL548"} // RCD is greter than businessdate
+		return models.TxnError{ErrorCode: "GL568"} // RCD is greter than businessdate
 	}
 
 	return models.TxnError{}
@@ -4833,115 +5371,220 @@ func CreateCommunicationsLNew(iCompany uint, iHistoryCode string, iTranno uint, 
 				oLetType = p0034data.Letters[i].LetType[n]
 				switch {
 				case oLetType == "1":
-					oData := GetCompanyData(iCompany, iDate, txn)
+					oData, funcErr := GetCompanyDataNew(iCompany, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["CompanyData"] = oData
 				case oLetType == "2":
-					oData := GetClientData(iCompany, iClient, txn)
+					oData, funcErr := GetClientDataNew(iCompany, iClient, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientData"] = oData
 				case oLetType == "3":
-					oData := GetAddressData(iCompany, iAddress, txn)
+					oData, funcErr := GetAddressDataNew(iCompany, iAddress, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["AddressData"] = oData
 				case oLetType == "4":
-					oData := GetPolicyData(iCompany, iPolicy, txn)
+					oData, funcErr := GetPolicyDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyData"] = oData
 				case oLetType == "5":
-					oData := GetBenefitData(iCompany, iPolicy, txn)
+					oData, funcErr := GetBenefitDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BenefitData"] = oData
 				case oLetType == "6":
-					oData := GetSurBData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurBDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurBData"] = oData
 				case oLetType == "7":
-					oData := GetMrtaData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMrtaDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MRTAData"] = oData
 				case oLetType == "8":
-					oData := GetReceiptData(iCompany, iReceipt, txn)
+					oData, funcErr := GetReceiptDataNew(iCompany, iReceipt, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ReceiptData"] = oData
 				case oLetType == "9":
-					oData := GetSaChangeData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSaChangeDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SAChangeData"] = oData
 				case oLetType == "10":
-					oData := GetCompAddData(iCompany, iPolicy, txn)
+					oData, funcErr := GetCompAddDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ComponantAddData"] = oData
 				case oLetType == "11":
-					oData := GetSurrHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetSurrHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurrData"] = oData
 					// oData = GetSurrDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["SurrDData"] = oData
 				case oLetType == "12":
-					oData := GetDeathData(iCompany, iPolicy, txn)
+					oData, funcErr := GetDeathDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["DeathData"] = oData
 				case oLetType == "13":
-					oData := GetMatHData(iCompany, iPolicy, txn)
+					oData, funcErr := GetMatHDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["MaturityData"] = oData
 					// oData = GetMatDData(iCompany, iPolicy, iClient, iAddress, iReceipt)
 					// resultMap["MatDData"] = oData
 				case oLetType == "14":
-					oData := GetSurvBPay(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetSurvBPayNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SurvbPay"] = oData
 				case oLetType == "15":
-					oData := GetExpi(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetExpiNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ExpiryData"] = oData
 				case oLetType == "16":
-					oData := GetBonusVals(iCompany, iPolicy, txn)
+					oData, funcErr := GetBonusValsNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["BonusData"] = oData
 				case oLetType == "17":
-					oData := GetAgency(iCompany, iAgency, txn)
+					oData, funcErr := GetAgencyNew(iCompany, iAgency, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Agency"] = oData
 				case oLetType == "18":
-					oData := GetNomiData(iCompany, iPolicy, txn)
+					oData, funcErr := GetNomiDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["Nominee"] = oData
 				case oLetType == "19":
-					oData := GetGLData(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					oData, funcErr := GetGLDataNew(iCompany, iPolicy, iFromDate, iToDate, iGlHistoryCode, iGlAccountCode, iGlSign, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 				case oLetType == "20":
-					oData := GetIlpSummaryData(iCompany, iPolicy, txn)
+					oData, funcErr := GetIlpSummaryDataNew(iCompany, iPolicy, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlPSummaryData"] = oData
 				case oLetType == "21":
-					oData := GetIlpAnnsummaryData(iCompany, iPolicy, iHistoryCode, txn)
+					oData, funcErr := GetIlpAnnsummaryDataNew(iCompany, iPolicy, iHistoryCode, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPANNSummaryData"] = oData
 				case oLetType == "22":
-					oData := GetIlpTranctionData(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					oData, funcErr := GetIlpTranctionDataNew(iCompany, iPolicy, iHistoryCode, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ILPTransactionData"] = oData
 				case oLetType == "23":
-					oData := GetPremTaxGLData(iCompany, iPolicy, iFromDate, iToDate, txn)
+					oData, funcErr := GetPremTaxGLDataNew(iCompany, iPolicy, iFromDate, iToDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["GLData"] = oData
 
 				case oLetType == "24":
-					oData := GetIlpFundSwitchData(iCompany, iPolicy, iTranno, txn)
+					oData, funcErr := GetIlpFundSwitchDataNew(iCompany, iPolicy, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["SwitchData"] = oData
 
 				case oLetType == "25":
-					oData := GetPHistoryData(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					oData, funcErr := GetPHistoryDataNew(iCompany, iPolicy, iHistoryCode, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PolicyHistoryData"] = oData
 				case oLetType == "26":
-					oData := GetIlpFundData(iCompany, iPolicy, iBenefit, iDate, txn)
+					oData, funcErr := GetIlpFundDataNew(iCompany, iPolicy, iBenefit, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["IlpFundData"] = oData
 				case oLetType == "27":
-					oData := GetPPolicyData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPPolicyDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevPolicy"] = oData
 				case oLetType == "28":
-					oData := GetPBenefitData(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					oData, funcErr := GetPBenefitDataNew(iCompany, iPolicy, iHistoryCode, iTranno, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					fmt.Println(oData) // Dummy to avoid compilation error
 				case oLetType == "29":
-					oData := GetPayingAuthorityData(iCompany, iPa, txn)
+					oData, funcErr := GetPayingAuthorityDataNew(iCompany, iPa, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["PrevBenefit"] = oData
 				case oLetType == "30":
-					oData := GetClientWorkData(iCompany, iClientWork, txn)
+					oData, funcErr := GetClientWorkDataNew(iCompany, iClientWork, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["ClientWork"] = oData
 				case oLetType == "31":
-					oData := GetLoanData(iCompany, iPolicy, iDate, iAmount1, txn)
+					oData, funcErr := GetLoanDataNew(iCompany, iPolicy, iDate, iAmount1, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["LoanData"] = oData
 				case oLetType == "32":
-					oData := GetAllLoanInterestData(iCompany, iPolicy, iDate, txn)
+					oData, funcErr := GetAllLoanInterestDataNew(iCompany, iPolicy, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["LoanInterestData"] = oData
 				case oLetType == "33":
-					oData := LoanCapData(iCompany, iPolicy, iDate, iFromDate, iToDate, iAmount1, iAmount2, iNo1, txn)
+					oData, funcErr := LoanCapDataNew(iCompany, iPolicy, iDate, iFromDate, iToDate, iAmount1, iAmount2, iNo1, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["LoanCap"] = oData
 				case oLetType == "34":
-					oData := LoanBillData(iCompany, iPolicy, iDate, txn)
+					oData, funcErr := LoanBillDataNew(iCompany, iPolicy, iDate, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["LoanBillData"] = oData
 				case oLetType == "35":
-					oData := LoanBillsInterestData(iCompany, iPolicy, iNo1, iAmount1, txn)
+					oData, funcErr := LoanBillsInterestDataNew(iCompany, iPolicy, iNo1, iAmount1, txn)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					}
 					resultMap["LoanBillsInterest"] = oData
 				case oLetType == "98":
 					resultMap["BatchData"] = batchData
@@ -4954,15 +5597,15 @@ func CreateCommunicationsLNew(iCompany uint, iHistoryCode string, iTranno uint, 
 			}
 
 			if p0033data.Online == "Y" {
-				err := GetReportforOnline(communication, p0033data.TemplateName, txn)
-				if err != nil {
-					log.Fatalf("Failed to generate report: %v", err)
+				funcErr := GetReportforOnlineNew(communication, p0033data.TemplateName, txn)
+				if funcErr.ErrorCode != "" {
+					return funcErr
 				}
 			}
 			if p0033data.SMSAllowed == "Y" {
-				err := SendSMSTwilio(communication.CompanyID, communication.ClientID, p0033data.TemplateName, communication.EffectiveDate, p0033data.SMSBody, txn)
-				if err != nil {
-					log.Fatalf("Failed to send SMS: %v", err)
+				funcErr := SendSMSTwilioNew(communication.CompanyID, communication.ClientID, p0033data.TemplateName, communication.EffectiveDate, p0033data.SMSBody, txn)
+				if funcErr.ErrorCode != "" {
+					return funcErr
 				}
 			}
 			communication.Print = "Y"
@@ -5005,7 +5648,7 @@ func EmailTriggerforReportNNew(iCompany uint, iReference uint, iClient uint, iEm
 	var p0033data paramTypes.P0033Data
 	var extradatap0033 paramTypes.Extradata = &p0033data
 	errparam := "P0033"
-	err := GetItemD(int(iCompany), "P0033", itempName, iEffDate, &extradatap0033)
+	err := GetItemD(int(iCompany), errparam, itempName, iEffDate, &extradatap0033)
 	if err != nil {
 		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: itempName}
 
@@ -5028,7 +5671,7 @@ func EmailTriggerforReportNNew(iCompany uint, iReference uint, iClient uint, iEm
 
 	m.Attach(itempName+iClientnumstr+iTime+".pdf", gomail.SetCopyFunc(func(w io.Writer) error {
 		_, err := w.Write(pdfData)
-		return err
+		return models.TxnError{ErrorCode: "GL939", DbError: err}
 	}))
 
 	// Configure SMTP dialer
@@ -5135,7 +5778,7 @@ func GetAllowedFundsNNew(iCompany uint, iCoverage string, iDate string, txn *gor
 
 	}
 	if q0006data.FUNDCODE == nil {
-		return nil, models.TxnError{ErrorCode: "GL881"}
+		return nil, models.TxnError{ErrorCode: "GL452"}
 	}
 
 	var p0061data paramTypes.P0061Data
@@ -5353,7 +5996,7 @@ func ValidatePolicyFieldsNNew(policyval models.Policy, userco uint, userlan uint
 func LockTheEntityN(iCompany uint, lockedType types.LockedType, lockedTypeKey string, versionID string, iUserId uint64, txn *gorm.DB) error {
 
 	var tranLock models.TransactionLock
-	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+	result := txn.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
 
 	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
 
@@ -5384,7 +6027,7 @@ func LockTheEntityN(iCompany uint, lockedType types.LockedType, lockedTypeKey st
 	tranLock.UpdatedAt = time.Now()
 
 	//result = initializers.DB.Save(&tranLock)
-	result = initializers.DB.Model(&tranLock).Updates(tranLock)
+	result = txn.Model(&tranLock).Updates(tranLock)
 
 	if result.Error != nil {
 		return result.Error
@@ -5397,7 +6040,7 @@ func LockTheEntityN(iCompany uint, lockedType types.LockedType, lockedTypeKey st
 func LockTheEntityNNew(iCompany uint, lockedType types.LockedType, lockedTypeKey string, versionID string, iUserId uint64, txn *gorm.DB) models.TxnError {
 
 	var tranLock models.TransactionLock
-	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+	result := txn.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
 
 	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
 
@@ -5429,10 +6072,10 @@ func LockTheEntityNNew(iCompany uint, lockedType types.LockedType, lockedTypeKey
 	tranLock.UpdatedAt = time.Now()
 
 	//result = initializers.DB.Save(&tranLock)
-	result = initializers.DB.Model(&tranLock).Updates(tranLock)
+	result = txn.Model(&tranLock).Updates(tranLock)
 
 	if result.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL685", DbError: result.Error}
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 
 	}
 
@@ -5443,7 +6086,7 @@ func LockTheEntityNNew(iCompany uint, lockedType types.LockedType, lockedTypeKey
 func UnLockTheEntityNew(iCompany uint, lockedType types.LockedType, lockedTypeKey string, iUserId uint64, changeVersion bool, txn *gorm.DB) models.TxnError {
 
 	var tranLock models.TransactionLock
-	result := initializers.DB.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
+	result := txn.First(&tranLock, "company_id = ? and locked_type = ? and locked_type_key = ?", iCompany, lockedType, lockedTypeKey)
 	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
 
 	if recordNotFound {
@@ -5472,7 +6115,7 @@ func UnLockTheEntityNew(iCompany uint, lockedType types.LockedType, lockedTypeKe
 		dataMap["version_id"] = uuid.New().String()
 	}
 
-	result = initializers.DB.Model(&tranLock).Updates(dataMap)
+	result = txn.Model(&tranLock).Updates(dataMap)
 
 	if result.Error != nil {
 		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
@@ -5572,7 +6215,7 @@ func PostAllocationNNew(iCompany uint, iPolicy uint, iBenefit uint, iAmount floa
 
 	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
 	if result.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL443", DbError: result.Error}
+		return models.TxnError{ErrorCode: "GL784", DbError: result.Error}
 	}
 
 	for j := 0; j < len(ilpfundenq); j++ {
@@ -6070,14 +6713,14 @@ func ValidateClientN(clientval models.Client, userco uint, userlan uint, iKey st
 func ValidateFieldsN(iFunction string, iFieldName string, iFieldVal string, iUserId uint64, iFieldType string, txn *gorm.DB) error {
 	var fieldvalidators models.FieldValidator
 	var getUser models.User
-	results := initializers.DB.First(&getUser, "id = ?", iUserId)
+	results := txn.First(&getUser, "id = ?", iUserId)
 
 	if results.Error != nil {
 		return errors.New(results.Error.Error())
 	} else {
 		oLanguageId := getUser.LanguageID
 		oCompanyId := getUser.CompanyID
-		results := initializers.DB.First(&fieldvalidators, "function_name = ? and company_id = ? and language_id =? and field_name = ?", iFunction, oCompanyId, oLanguageId, iFieldName)
+		results := txn.First(&fieldvalidators, "function_name = ? and company_id = ? and language_id =? and field_name = ?", iFunction, oCompanyId, oLanguageId, iFieldName)
 
 		if results.Error != nil {
 			return nil
@@ -6157,7 +6800,7 @@ func ValidateFieldsNNew(iFunction string, iFieldName string, iFieldVal string, i
 
 func ValidateItemN(iUserId uint64, iName string, iItem string, iFieldName string, iErros string, txn *gorm.DB) error {
 	var getUser models.User
-	results := initializers.DB.First(&getUser, "id = ?", iUserId)
+	results := txn.First(&getUser, "id = ?", iUserId)
 	if results.Error != nil {
 		fmt.Println(results.Error)
 		return errors.New(results.Error.Error())
@@ -6165,7 +6808,7 @@ func ValidateItemN(iUserId uint64, iName string, iItem string, iFieldName string
 	var valdiateparam models.ParamDesc
 	oLanguageId := getUser.LanguageID
 	oCompanyId := getUser.CompanyID
-	results = initializers.DB.Where("company_id = ? AND name = ? and item = ? and language_id = ?", oCompanyId, iName, iItem, oLanguageId).Find(&valdiateparam)
+	results = txn.Where("company_id = ? AND name = ? and item = ? and language_id = ?", oCompanyId, iName, iItem, oLanguageId).Find(&valdiateparam)
 	if results.Error != nil || results.RowsAffected == 0 {
 
 		return errors.New(" -" + strconv.FormatUint(uint64(oCompanyId), 10) + "-" + iName + "-" + strconv.FormatUint(uint64(oLanguageId), 10) + "-" + "-" + iFieldName + iErros + " is missing")
@@ -6176,7 +6819,7 @@ func ValidateItemN(iUserId uint64, iName string, iItem string, iFieldName string
 
 func ValidateItemNNew(iUserId uint64, iName string, iItem string, iFieldName string, iErros string, txn *gorm.DB) models.TxnError {
 	var getUser models.User
-	results := initializers.DB.First(&getUser, "id = ?", iUserId)
+	results := txn.First(&getUser, "id = ?", iUserId)
 	if results.Error != nil {
 		return models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
 
@@ -6184,7 +6827,7 @@ func ValidateItemNNew(iUserId uint64, iName string, iItem string, iFieldName str
 	var valdiateparam models.ParamDesc
 	oLanguageId := getUser.LanguageID
 	oCompanyId := getUser.CompanyID
-	results = initializers.DB.Where("company_id = ? AND name = ? and item = ? and language_id = ?", oCompanyId, iName, iItem, oLanguageId).Find(&valdiateparam)
+	results = txn.Where("company_id = ? AND name = ? and item = ? and language_id = ?", oCompanyId, iName, iItem, oLanguageId).Find(&valdiateparam)
 	if results.Error != nil || results.RowsAffected == 0 {
 		return models.TxnError{ErrorCode: "DBERR", DbError: results.Error}
 		//return errors.New(" -" + strconv.FormatUint(uint64(oCompanyId), 10) + "-" + iName + "-" + strconv.FormatUint(uint64(oLanguageId), 10) + "-" + "-" + iFieldName + iErros + " is missing")
@@ -6338,7 +6981,7 @@ func GetMaxTranno2New(iCompany uint, iPolicy uint, iMethod string, iEffDate stri
 	result1 := txn.Order("tranno DESC").Find(&phistories, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 
 	if result1.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL274", DbError: result1.Error}, 0
+		return models.TxnError{ErrorCode: "GL919", DbError: result1.Error}, 0
 	}
 	maxtranno = int(phistories.Tranno)
 	return models.TxnError{}, uint(maxtranno)
@@ -6519,7 +7162,7 @@ func RevGlMoveNNew(tranno, userco, ipolicy float64, txn *gorm.DB) models.TxnErro
 	results := txn.Where("gl_rldg_acct LIKE ?", "%"+opol+"%").Find(&glmoveenq, "tranno = ? and company_id = ? ", tranno, userco)
 
 	if results.RowsAffected == 0 {
-		return models.TxnError{ErrorCode: "GL037", DbError: results.Error}
+		return models.TxnError{ErrorCode: "GL830", DbError: results.Error}
 	}
 
 	for i := 0; i < len(glmoveenq); i++ {
@@ -6616,7 +7259,7 @@ func CreateReceiptBN(iCompany uint, iPolicy uint, iAmount float64, iCollDate str
 	receiptupd.CompanyID = iCompany
 
 	// Save Receipt
-	result = initializers.DB.Create(&receiptupd)
+	result = txn.Create(&receiptupd)
 
 	// Debit Entry
 	glcode := p0027data.GlMovements[0].AccountCode
@@ -6766,7 +7409,7 @@ func CreateReceiptBNNew(iCompany uint, iPolicy uint, iAmount float64, iCollDate 
 	receiptupd.CompanyID = iCompany
 
 	// Save Receipt
-	result = initializers.DB.Create(&receiptupd)
+	result = txn.Create(&receiptupd)
 	if result.Error != nil {
 		txnerr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
 		return 0, txnerr
@@ -7146,5 +7789,91 @@ func GetUserNameNNew(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, t
 	return usrenq.Name, txnErr
 }
 
+// 2025-11-28 Lakshmi Changes
+func GetReqCommNew(iCompany uint, iPolicy uint, iClient uint, txn *gorm.DB) (map[string]interface{}, models.TxnError) {
+	var reqcall []models.ReqCall
+	var client models.Client
+	var address models.Address
+
+	medDetailsArray := make([]string, 0) // Array for medDetails
+	reqCodeArray := make([]string, 0)    // Array for ReqCode
+	reqIDArray := make([]uint, 0)        // Array for Req.ID
+	remiderdateArray := make([]string, 0)
+
+	// txn := initializers.DB.Begin()
+
+	result := txn.Find(&reqcall, "company_id = ? and policy_id = ? and req_status = ?", iCompany, iPolicy, "P")
+	if result.RowsAffected == 0 {
+		return nil, models.TxnError{
+			ErrorCode: "GL791",
+			DbError:   result.Error,
+		}
+	}
+	result = txn.Find(&client, "company_id = ? and id = ?", iCompany, iClient)
+	if result.RowsAffected == 0 {
+		return nil, models.TxnError{ErrorCode: "GL050", DbError: result.Error}
+	}
+	result = txn.Find(&address, "company_id = ? and client_id = ?", iCompany, iClient)
+	if result.RowsAffected == 0 {
+		return nil, models.TxnError{ErrorCode: "GL035", DbError: result.Error}
+	}
+
+	// Populate data from reqcall
+	for _, req := range reqcall {
+		oMedName, oMedAddress, oMedPin, oMedState, oMedPhone, _, _, _ := GetMedInfo(iCompany, req.MedId, txn)
+		oDesc := GetP0050ItemCodeDesc(iCompany, "REQCODE", 1, req.ReqCode)
+		effDate, _ := ConvertYYYYMMDD(req.RemindDate)
+		// When Medical Provider is Empty Do not Print Blank Address
+		medDetails := ""
+		if req.MedId != 0 {
+			medDetails = fmt.Sprintf("%s, %s, %s, %s, %s", oMedName, oMedAddress, oMedPin, oMedState, oMedPhone)
+		}
+		medDetailsArray = append(medDetailsArray, medDetails) // Store medDetails in the array
+
+		reqCodeArray = append(reqCodeArray, oDesc) // Store ReqCode in the array
+
+		reqIDArray = append(reqIDArray, req.ID) // Store Req.ID in the array
+		remiderdateArray = append(remiderdateArray, effDate)
+	}
+
+	// Create resultMap and include all data from clientInfo
+	resultMap := make(map[string]interface{})
+
+	// Include all data directly (without the "clientInfo" label)
+	clientInfo := map[string]interface{}{
+		"ClientFullName":   client.ClientLongName,
+		"ClientSalutation": client.Salutation,
+		"AddressLine1":     address.AddressLine1,
+		"AddressLine2":     address.AddressLine2,
+		"AddressLine3":     address.AddressLine3,
+		"AddressLine4":     address.AddressLine4,
+		"AddressState":     address.AddressState,
+		"AddressCountry":   address.AddressCountry,
+		"PolicyId":         IDtoPrint(iPolicy),
+		"MedDetails":       medDetailsArray,
+		"ReqCodes":         reqCodeArray,
+		"ReqIDs":           reqIDArray,
+		"Reminderdates":    remiderdateArray,
+	}
+
+	for key, value := range clientInfo {
+		resultMap[key] = value
+	}
+
+	return resultMap, models.TxnError{}
+}
+
+// GetGlBalNew function ignores error. Hence, when Find is in error, an empty TxnError is returned.
+func GetGlBalNew(iCompany uint, iPolicy uint, iGlaccount string, txn *gorm.DB) (float64, models.TxnError) {
+	var glbal models.GlBal
+	result := txn.Find(&glbal, "company_id = ? and gl_rdocno = ? and gl_accountno = ?", iCompany, iPolicy, iGlaccount)
+	if result.Error != nil {
+		return 0, models.TxnError{}
+	}
+	return glbal.ContractAmount, models.TxnError{}
+
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes
+////////////////////////////////////////////////////////

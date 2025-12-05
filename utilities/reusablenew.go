@@ -8446,5 +8446,728 @@ func GetFormattedFieldNew(value string, field reflect.StructField) (interface{},
 	}
 }
 
+// 2025-12-05 Lakshmi Changes
+func FundSwitchN(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTargetFund string, iEffectiveDate string, txn *gorm.DB) (oerror error) {
+	var ilpswitchheader models.IlpSwitchHeader
+	var ilpswitchfunds models.IlpSwitchFund
+	var ilpsummary []models.IlpSummary
+
+	result := txn.Find(&ilpsummary, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.Error != nil {
+		return errors.New("Funds Not Found")
+	}
+	// Switch 100 % from All funds and transfer it to Target Fund
+
+	ilpswitchheader.BenefitID = iBenefit
+	ilpswitchheader.CompanyID = iCompany
+	ilpswitchheader.EffectiveDate = iEffectiveDate
+	ilpswitchheader.FundSwitchBasis = "P"
+	ilpswitchheader.PolicyID = iPolicy
+	ilpswitchheader.Tranno = iTranno
+	iTotalAmount := 0.0
+	txn.Create(&ilpswitchheader)
+	// We do not need to delete ilpsummary
+	for i := 0; i < len(ilpsummary); i++ {
+		if ilpsummary[i].FundUnits > 0 {
+			ilpswitchfunds.ID = 0
+			ilpswitchfunds.BenefitID = ilpsummary[i].BenefitID
+			ilpswitchfunds.CompanyID = ilpsummary[i].CompanyID
+			ilpswitchfunds.FundCode = ilpsummary[i].FundCode
+			ilpswitchfunds.FundCurr = ilpsummary[i].FundCurr
+			ilpswitchfunds.FundType = ilpsummary[i].FundType
+			ilpswitchfunds.PolicyID = ilpsummary[i].PolicyID
+			ilpswitchfunds.Tranno = iTranno
+			ilpswitchfunds.EffectiveDate = iEffectiveDate
+			ilpswitchfunds.FundPercentage = -100
+			ilpswitchfunds.SwitchDirection = "S"
+			_, ilpswitchfunds.FundPrice, _ = GetFundCPrice(iCompany, ilpsummary[i].FundCode, iEffectiveDate)
+			_, iFundAmount, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, ilpsummary[i].FundCode, iEffectiveDate)
+			iFundAmount = RoundFloat(iFundAmount, 2) * -1
+			ilpswitchfunds.FundAmount = iFundAmount
+			ilpswitchfunds.FundUnits = ilpsummary[i].FundUnits * -1
+			ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+			iTotalAmount = iFundAmount + iTotalAmount
+			txn.Create(&ilpswitchfunds)
+			// Set Summary Units to Zero.
+			ilpsummary[i].FundUnits = 0
+			txn.Save(&ilpsummary[i])
+		}
+	}
+	// Write Target
+	iKey := iTargetFund
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	err := GetItemD(int(iCompany), "P0061", iKey, iEffectiveDate, &extradatap0061)
+
+	if err != nil {
+		shortCode := "GL442"
+		longDesc, _ := GetErrorDesc(iCompany, 1, shortCode)
+		return errors.New(shortCode + " : " + longDesc)
+
+	}
+
+	ilpswitchfunds.ID = 0
+	ilpswitchfunds.BenefitID = iBenefit
+	ilpswitchfunds.CompanyID = iCompany
+	ilpswitchfunds.FundCode = iTargetFund
+	ilpswitchfunds.FundCurr = p0061data.FundCurr
+	ilpswitchfunds.FundType = p0061data.FundType
+	ilpswitchfunds.PolicyID = iPolicy
+	ilpswitchfunds.Tranno = iTranno
+	ilpswitchfunds.EffectiveDate = iEffectiveDate
+	ilpswitchfunds.FundPercentage = 100
+	ilpswitchfunds.SwitchDirection = "T"
+	ilpswitchfunds.FundAmount = RoundFloat(iTotalAmount, 2) * -1
+	ilpswitchfunds.FundPrice, _, _ = GetFundCPrice(iCompany, iTargetFund, iEffectiveDate)
+	ilpswitchfunds.FundUnits = RoundFloat(iTotalAmount/ilpswitchfunds.FundPrice*-1, 5)
+	ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+	txn.Create(&ilpswitchfunds)
+
+	// Create ILP Summary
+	var ilpsum models.IlpSummary
+
+	ilpsum.PolicyID = ilpswitchfunds.PolicyID
+	ilpsum.BenefitID = ilpswitchfunds.BenefitID
+	ilpsum.FundCode = ilpswitchfunds.FundCode
+	ilpsum.FundType = ilpswitchfunds.FundType
+	ilpsum.FundUnits = ilpswitchfunds.FundUnits
+	ilpsum.FundCurr = ilpswitchfunds.FundCurr
+	ilpsum.CompanyID = ilpswitchfunds.CompanyID
+
+	txn.Create(&ilpsum)
+
+	return nil
+}
+
+func FundSwitchNNew(iCompany uint, iPolicy uint, iBenefit uint, iTranno uint, iTargetFund string, iEffectiveDate string, txn *gorm.DB) (txnErr models.TxnError) {
+	var ilpswitchheader models.IlpSwitchHeader
+	var ilpswitchfunds models.IlpSwitchFund
+	var ilpsummary []models.IlpSummary
+
+	result := txn.Find(&ilpsummary, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.RowsAffected == 0 {
+		txnErr = models.TxnError{ErrorCode: "GL135", DbError: result.Error}
+		return txnErr
+	}
+	// Switch 100 % from All funds and transfer it to Target Fund
+
+	ilpswitchheader.BenefitID = iBenefit
+	ilpswitchheader.CompanyID = iCompany
+	ilpswitchheader.EffectiveDate = iEffectiveDate
+	ilpswitchheader.FundSwitchBasis = "P"
+	ilpswitchheader.PolicyID = iPolicy
+	ilpswitchheader.Tranno = iTranno
+	iTotalAmount := 0.0
+	result = txn.Create(&ilpswitchheader)
+	if result.Error != nil {
+		txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return txnErr
+	}
+	// We do not need to delete ilpsummary
+	for i := 0; i < len(ilpsummary); i++ {
+		if ilpsummary[i].FundUnits > 0 {
+			ilpswitchfunds.ID = 0
+			ilpswitchfunds.BenefitID = ilpsummary[i].BenefitID
+			ilpswitchfunds.CompanyID = ilpsummary[i].CompanyID
+			ilpswitchfunds.FundCode = ilpsummary[i].FundCode
+			ilpswitchfunds.FundCurr = ilpsummary[i].FundCurr
+			ilpswitchfunds.FundType = ilpsummary[i].FundType
+			ilpswitchfunds.PolicyID = ilpsummary[i].PolicyID
+			ilpswitchfunds.Tranno = iTranno
+			ilpswitchfunds.EffectiveDate = iEffectiveDate
+			ilpswitchfunds.FundPercentage = -100
+			ilpswitchfunds.SwitchDirection = "S"
+			_, ilpswitchfunds.FundPrice, _ = GetFundCPrice(iCompany, ilpsummary[i].FundCode, iEffectiveDate)
+			_, iFundAmount, _ := GetAllFundValueByBenefit(iCompany, iPolicy, iBenefit, ilpsummary[i].FundCode, iEffectiveDate)
+			iFundAmount = RoundFloat(iFundAmount, 2) * -1
+			ilpswitchfunds.FundAmount = iFundAmount
+			ilpswitchfunds.FundUnits = ilpsummary[i].FundUnits * -1
+			ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+			iTotalAmount = iFundAmount + iTotalAmount
+			result = txn.Create(&ilpswitchfunds)
+			if result.Error != nil {
+				txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+				return txnErr
+			}
+			// Set Summary Units to Zero.
+			ilpsummary[i].FundUnits = 0
+			result = txn.Save(&ilpsummary[i])
+			if result.Error != nil {
+				txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+				return txnErr
+			}
+		}
+	}
+	// Write Target
+	iKey := iTargetFund
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+	errparam := "P0061"
+	err := GetItemD(int(iCompany), errparam, iKey, iEffectiveDate, &extradatap0061)
+
+	if err != nil {
+		txnErr = models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		return txnErr
+	}
+
+	ilpswitchfunds.ID = 0
+	ilpswitchfunds.BenefitID = iBenefit
+	ilpswitchfunds.CompanyID = iCompany
+	ilpswitchfunds.FundCode = iTargetFund
+	ilpswitchfunds.FundCurr = p0061data.FundCurr
+	ilpswitchfunds.FundType = p0061data.FundType
+	ilpswitchfunds.PolicyID = iPolicy
+	ilpswitchfunds.Tranno = iTranno
+	ilpswitchfunds.EffectiveDate = iEffectiveDate
+	ilpswitchfunds.FundPercentage = 100
+	ilpswitchfunds.SwitchDirection = "T"
+	ilpswitchfunds.FundAmount = RoundFloat(iTotalAmount, 2) * -1
+	ilpswitchfunds.FundPrice, _, _ = GetFundCPrice(iCompany, iTargetFund, iEffectiveDate)
+	ilpswitchfunds.FundUnits = RoundFloat(iTotalAmount/ilpswitchfunds.FundPrice*-1, 5)
+	ilpswitchfunds.IlpSwitchHeaderID = ilpswitchheader.ID
+	result = txn.Create(&ilpswitchfunds)
+	if result.Error != nil {
+		txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return txnErr
+	}
+
+	// Create ILP Summary
+	var ilpsum models.IlpSummary
+
+	ilpsum.PolicyID = ilpswitchfunds.PolicyID
+	ilpsum.BenefitID = ilpswitchfunds.BenefitID
+	ilpsum.FundCode = ilpswitchfunds.FundCode
+	ilpsum.FundType = ilpswitchfunds.FundType
+	ilpsum.FundUnits = ilpswitchfunds.FundUnits
+	ilpsum.FundCurr = ilpswitchfunds.FundCurr
+	ilpsum.CompanyID = ilpswitchfunds.CompanyID
+
+	result = txn.Create(&ilpsum)
+	if result.Error != nil {
+		txnErr = models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return txnErr
+	}
+	return txnErr
+}
+
+func TDFAnnPNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, models.TxnError) {
+	var annuity models.Annuity
+	var tdfpolicy models.TDFPolicy
+	var tdfrule models.TDFRule
+
+	result := txn.First(&tdfrule, "company_id = ? and tdf_type = ?", iCompany, iFunction)
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+	}
+	result = txn.First(&annuity, "company_id = ? and policy_id = ? and paystatus = ?", iCompany, iPolicy, "PN")
+
+	if result.Error != nil {
+		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+	result = txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
+
+	if result.Error != nil {
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.EffectiveDate = annuity.AnnNxtDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		}
+
+		return "", models.TxnError{}
+	} else {
+		result = txn.Delete(&tdfpolicy)
+		if result.Error != nil {
+			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		}
+
+		var tdfpolicy models.TDFPolicy
+		tdfpolicy.CompanyID = iCompany
+		tdfpolicy.PolicyID = iPolicy
+		tdfpolicy.Seqno = tdfrule.Seqno
+		tdfpolicy.TDFType = iFunction
+		tdfpolicy.ID = 0
+		tdfpolicy.EffectiveDate = annuity.AnnNxtDate
+		tdfpolicy.Tranno = iTranno
+		result = txn.Create(&tdfpolicy)
+		if result.Error != nil {
+			return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		}
+
+		return "", models.TxnError{}
+	}
+}
+
+func PostUlpDeductionNNew(iCompany uint, iPolicy uint, iBenefit uint, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, NegativeUnitsOrAmt string, txn *gorm.DB) models.TxnError {
+
+	var policyenq models.Policy
+
+	result := txn.Find(&policyenq, "company_id = ? and id = ?", iCompany, iPolicy)
+	if result.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL003", DbError: result.Error}
+	}
+
+	var p0061data paramTypes.P0061Data
+	var extradatap0061 paramTypes.Extradata = &p0061data
+
+	var p0059data paramTypes.P0059Data
+	var extradatap0059 paramTypes.Extradata = &p0059data
+
+	iKey := iHistoryCode + iBenefitCode
+	errparam := "P0059"
+	err := GetItemD(int(iCompany), errparam, iKey, iStartDate, &extradatap0059)
+	if err != nil {
+		return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+	}
+
+	var ilpfundenq []models.IlpFund
+
+	result = txn.Find(&ilpfundenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL784", DbError: result.Error}
+	}
+
+	var ilpsumenq []models.IlpSummary
+
+	result = txn.Find(&ilpsumenq, "company_id = ? and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+	if result.RowsAffected == 0 {
+		return models.TxnError{ErrorCode: "GL135", DbError: result.Error}
+	}
+
+	// Get Total Fund Value
+	iTotalFundValue, _, _, funcErr := GetAllFundValueByBenefitNNew(iCompany, iPolicy, iBenefit, "", iEffDate, txn)
+	if funcErr.ErrorCode != "" {
+		return funcErr
+	}
+	for j := 0; j < len(ilpsumenq); j++ {
+		iBusinessDate := GetBusinessDate(iCompany, 0, 0)
+		if p0059data.CurrentOrFuture == "F" {
+			iBusinessDate = AddLeadDays(iBusinessDate, 1)
+		} else if p0059data.CurrentOrFuture == "E" {
+			iBusinessDate = iEffDate
+		}
+		iFundCode := ilpsumenq[j].FundCode
+		iFundValue, _, _, funcErr := GetAllFundValueByBenefitNNew(iCompany, iPolicy, iBenefit, iFundCode, iEffDate, txn)
+		if funcErr.ErrorCode != "" {
+			return funcErr
+		}
+		if iFundValue == 0 {
+			if p0059data.NegativeAccum == "N" {
+				// triger TdfLaps
+				return models.TxnError{}
+			}
+
+		}
+		var ilptrancrt models.IlpTransaction
+		iKey := ilpsumenq[j].FundCode
+		errparam = "P0061"
+		err := GetItemD(int(iCompany), errparam, iKey, iStartDate, &extradatap0061)
+		if err != nil {
+			return models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+		}
+		ilptrancrt.CompanyID = iCompany
+		ilptrancrt.PolicyID = iPolicy
+		ilptrancrt.BenefitID = iBenefit
+		ilptrancrt.FundCode = ilpsumenq[j].FundCode
+		ilptrancrt.FundType = ilpsumenq[j].FundType
+		ilptrancrt.TransactionDate = iEffDate
+		ilptrancrt.FundEffDate = iBusinessDate
+		//ilptrancrt.FundAmount = RoundFloat(((iAmount * ilpfundenq[j].FundPercentage) / 100), 2)
+
+		if NegativeUnitsOrAmt == "U" {
+			if iTotalFundValue <= 0 {
+				ilptrancrt.FundAmount = RoundFloat(iAmount, 2)
+				ilptrancrt.OriginalAmount = RoundFloat(iAmount, 2)
+				ilptrancrt.InvNonInvPercentage = 100
+			} else {
+				ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+				ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+				ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
+			}
+		} else {
+			ilptrancrt.FundAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+			ilptrancrt.OriginalAmount = RoundFloat(((iAmount * iFundValue) / iTotalFundValue), 2)
+			ilptrancrt.InvNonInvPercentage = RoundFloat((iFundValue / iTotalFundValue), 5)
+
+		}
+		ilptrancrt.FundCurr = p0061data.FundCurr
+		ilptrancrt.FundUnits = 0
+		ilptrancrt.FundPrice = 0
+		ilptrancrt.CurrentOrFuture = p0059data.CurrentOrFuture
+
+		ilptrancrt.ContractCurry = policyenq.PContractCurr
+		ilptrancrt.HistoryCode = iHistoryCode
+		ilptrancrt.InvNonInvFlag = "AC"
+		ilptrancrt.AllocationCategory = p0059data.AllocationCategory
+		ilptrancrt.AccountCode = p0059data.AccountCode
+		ilptrancrt.CurrencyRate = 1.00 // ranga
+		ilptrancrt.MortalityIndicator = ""
+		ilptrancrt.SurrenderPercentage = 0
+		ilptrancrt.Tranno = iTranno
+		ilptrancrt.Seqno = uint(p0059data.SeqNo)
+		ilptrancrt.UlProcessFlag = "P"
+		result = txn.Create(&ilptrancrt)
+		if result.Error != nil {
+			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		}
+
+	}
+	var tdfpolicyupd models.TDFPolicy
+	iType := "FUNDM"
+	if iHistoryCode == "H0132" {
+		iType = "FUNDM"
+	} else if iHistoryCode == "H0133" {
+		iType = "FUNDF"
+	}
+	var tdfrule models.TDFRule
+	result = txn.Find(&tdfrule, "company_id = ? and tdf_type  = ?", iCompany, iType)
+	if result.Error != nil {
+		return models.TxnError{ErrorCode: "GL953", DbError: result.Error}
+	}
+	result = txn.Find(&tdfpolicyupd, "company_id = ? and policy_id = ? and tdf_type = ?", iCompany, iPolicy, iType)
+
+	if result.RowsAffected == 0 {
+		tdfpolicyupd.CompanyID = iCompany
+		tdfpolicyupd.PolicyID = iPolicy
+		tdfpolicyupd.EffectiveDate = iStartDate
+		tdfpolicyupd.TDFType = iType
+		tdfpolicyupd.Tranno = iTranno
+		tdfpolicyupd.Seqno = tdfrule.Seqno
+		result = txn.Create(&tdfpolicyupd)
+		if result.Error != nil {
+			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		}
+	}
+	return models.TxnError{}
+}
+
+func GetAllFundValueByBenefitN(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string, txn *gorm.DB) (float64, float64, string) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, 0)
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	if iFundCode != "" {
+		result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+		if result.Error != nil {
+			return 0, 0, iDate
+		}
+	} else {
+		result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+		if result.Error != nil {
+			return 0, 0, iDate
+		}
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		iFundCode := ilpsummaryenq[i].FundCode
+		bpv, opv, _ := GetaFundValueByBenefit(iCompany, iPolicy, iBenefit, iFundCode, iDate)
+		bpfv = RoundFloat(bpfv+bpv, 2)
+		opfv = RoundFloat(opfv+opv, 2)
+	}
+	return bpfv, opfv, iDate
+}
+
+func GetAllFundValueByBenefitNNew(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string, txn *gorm.DB) (float64, float64, string, models.TxnError) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, 0)
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	if iFundCode != "" {
+		result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+		if result.RowsAffected == 0 {
+			return 0, 0, iDate, models.TxnError{ErrorCode: "GL135", DbError: result.Error}
+		}
+	} else {
+		result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ?", iCompany, iPolicy, iBenefit)
+		if result.RowsAffected == 0 {
+			return 0, 0, iDate, models.TxnError{ErrorCode: "GL135", DbError: result.Error}
+		}
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		iFundCode := ilpsummaryenq[i].FundCode
+		bpv, opv, _, funcErr := GetaFundValueByBenefitNNew(iCompany, iPolicy, iBenefit, iFundCode, iDate, txn)
+		if funcErr.ErrorCode != "" {
+
+		}
+		bpfv = RoundFloat(bpfv+bpv, 2)
+		opfv = RoundFloat(opfv+opv, 2)
+	}
+	return bpfv, opfv, iDate, models.TxnError{}
+}
+
+func GetaFundValueByBenefitN(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string, txn *gorm.DB) (float64, float64, string) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq models.IlpSummary
+	result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = txn.Where("company_id = ? and fund_code = ? and  approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+
+	bpfundvalue = RoundFloat(ilpsummaryenq.FundUnits*ilppriceenq.FundBidPrice, 2)
+	opfundvalue = RoundFloat(ilpsummaryenq.FundUnits*ilppriceenq.FundOfferPrice, 2)
+
+	return bpfundvalue, opfundvalue, iPriceDateUsed
+
+}
+
+func GetaFundValueByBenefitNNew(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iDate string, txn *gorm.DB) (float64, float64, string, models.TxnError) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate, models.TxnError{ErrorCode: "GL007"}
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq models.IlpSummary
+	result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and benefit_id = ? and fund_code = ?", iCompany, iPolicy, iBenefit, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate, models.TxnError{ErrorCode: "GL135", DbError: result.Error}
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = txn.Where("company_id = ? and fund_code = ? and  approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate, models.TxnError{ErrorCode: "GL127", DbError: result.Error}
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+
+	bpfundvalue = RoundFloat(ilpsummaryenq.FundUnits*ilppriceenq.FundBidPrice, 2)
+	opfundvalue = RoundFloat(ilpsummaryenq.FundUnits*ilppriceenq.FundOfferPrice, 2)
+
+	return bpfundvalue, opfundvalue, iPriceDateUsed, models.TxnError{}
+
+}
+
+func CalcUlPolicyFeeN(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string, txn *gorm.DB) (float64, string, error) {
+
+	iKey := iFeeMethod
+	iNextDue := Date2String(GetNextDue(iEffDate, iFeeFreq, ""))
+	oAmount := 0.00
+	var p0063data paramTypes.P0063Data
+	var extradatap0063 paramTypes.Extradata = &p0063data
+	err := GetItemD(int(iCompany), "P0063", iKey, iStartDate, &extradatap0063)
+	if err != nil {
+		err := errors.New("P0063 Not Found")
+		return 0, "", err
+	}
+	switch iKey {
+	case "ULFEE01":
+		oAmount = p0063data.FlatAmount
+	case "ULFEE02":
+		tempdate := iStartDate
+		i := 0
+		for tempdate < iEffDate {
+			a := GetNextDue(tempdate, "Y", "")
+			tempdate = Date2String(a)
+			i++
+		}
+		iDays := i * 365
+		oAmount = SimpleInterest(p0063data.FlatAmount, p0063data.Percentage, float64(iDays))
+	case "ULFEE03":
+		tempdate := iStartDate
+		i := 0
+		for tempdate < iEffDate {
+			a := GetNextDue(tempdate, "Y", "")
+			tempdate = Date2String(a)
+			i++
+		}
+		iDays := i * 365
+		oAmount = CompoundInterest(p0063data.FlatAmount, p0063data.Percentage, float64(iDays))
+
+	case "ULFEE04":
+		oAmount, _, _ = GetAllFundValueByBenefitN(iCompany, iPolicy, iBenefitID, "", iEffDate, txn)
+		oAmount = oAmount * p0063data.FundValPercentage / 100
+
+	case "ULFEE05":
+		oAmount, _, _ = GetAllFundValueByPolN(iCompany, iPolicy, iEffDate, txn)
+		oAmount = oAmount * p0063data.FundValPercentage / 100
+
+	}
+
+	if p0063data.CapAmount != 0 {
+		if oAmount > p0063data.CapAmount {
+			oAmount = p0063data.CapAmount
+		}
+	}
+
+	mPrem := 0.00
+	switch iFeeFreq {
+	case "M":
+		mPrem = oAmount / 12
+	case "Q":
+		mPrem = oAmount / 4
+	case "H":
+		mPrem = oAmount / 2
+	case "Y":
+		mPrem = oAmount / 1
+	}
+
+	oAmount = RoundFloat(mPrem, 2)
+
+	return oAmount, iNextDue, err
+}
+
+func CalcUlPolicyFeeNew(iCompany uint, iPolicy uint, iBenefitID uint, iCoverage string, iStartDate string, iEffDate string, iFeeMethod string, iFeeFreq string, txn *gorm.DB) (float64, string, models.TxnError) {
+
+	iKey := iFeeMethod
+	iNextDue := Date2String(GetNextDue(iEffDate, iFeeFreq, ""))
+	oAmount := 0.00
+	var p0063data paramTypes.P0063Data
+	var extradatap0063 paramTypes.Extradata = &p0063data
+	errparam := "P0063"
+	err := GetItemD(int(iCompany), errparam, iKey, iStartDate, &extradatap0063)
+	if err != nil {
+		return 0, "", models.TxnError{ErrorCode: "PARME", ParamName: errparam, ParamItem: iKey}
+	}
+	switch iKey {
+	case "ULFEE01":
+		oAmount = p0063data.FlatAmount
+	case "ULFEE02":
+		tempdate := iStartDate
+		i := 0
+		for tempdate < iEffDate {
+			a := GetNextDue(tempdate, "Y", "")
+			tempdate = Date2String(a)
+			i++
+		}
+		iDays := i * 365
+		oAmount = SimpleInterest(p0063data.FlatAmount, p0063data.Percentage, float64(iDays))
+	case "ULFEE03":
+		tempdate := iStartDate
+		i := 0
+		for tempdate < iEffDate {
+			a := GetNextDue(tempdate, "Y", "")
+			tempdate = Date2String(a)
+			i++
+		}
+		iDays := i * 365
+		oAmount = CompoundInterest(p0063data.FlatAmount, p0063data.Percentage, float64(iDays))
+
+	case "ULFEE04":
+		oAmount, _, _, funcErr := GetAllFundValueByBenefitNNew(iCompany, iPolicy, iBenefitID, "", iEffDate, txn)
+		if funcErr.ErrorCode != "" {
+			return 0, "", funcErr
+		}
+		oAmount = oAmount * p0063data.FundValPercentage / 100
+
+	case "ULFEE05":
+		oAmount, _, _, funcErr := GetAllFundValueByPolNNew(iCompany, iPolicy, iEffDate, txn)
+		if funcErr.ErrorCode != "" {
+			return 0, "", funcErr
+		}
+		oAmount = oAmount * p0063data.FundValPercentage / 100
+
+	}
+
+	if p0063data.CapAmount != 0 {
+		if oAmount > p0063data.CapAmount {
+			oAmount = p0063data.CapAmount
+		}
+	}
+
+	mPrem := 0.00
+	switch iFeeFreq {
+	case "M":
+		mPrem = oAmount / 12
+	case "Q":
+		mPrem = oAmount / 4
+	case "H":
+		mPrem = oAmount / 2
+	case "Y":
+		mPrem = oAmount / 1
+	}
+
+	oAmount = RoundFloat(mPrem, 2)
+
+	return oAmount, iNextDue, models.TxnError{}
+}
+
+func GetAllFundValueByPolNNew(iCompany uint, iPolicy uint, iDate string, txn *gorm.DB) (float64, float64, string, models.TxnError) {
+	if iDate == "" {
+		iDate = GetBusinessDate(iCompany, 0, 0)
+	}
+
+	var ilpsummaryenq []models.IlpSummary
+	result := txn.Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? ", iCompany, iPolicy)
+	if result.Error != nil {
+		return 0, 0, iDate, models.TxnError{ErrorCode: "GL135", DbError: result.Error}
+	}
+
+	bpfv := 0.0
+	opfv := 0.0
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpv, opv, _, funcErr := GetaFundValueNNew(iCompany, iPolicy, ilpsummaryenq[i].FundCode, iDate, txn)
+		if funcErr.ErrorCode != "" {
+			return 0, 0, iDate, funcErr
+		}
+		bpfv = RoundFloat(bpfv+bpv, 5)
+		opfv = RoundFloat(opfv+opv, 5)
+	}
+	return bpfv, opfv, iDate, models.TxnError{}
+}
+
+func GetaFundValueNNew(iCompany uint, iPolicy uint, iFundCode string, iDate string, txn *gorm.DB) (float64, float64, string, models.TxnError) {
+	if iCompany == 0 || iPolicy == 0 || iFundCode == "" || iDate == "" {
+		return 0, 0, iDate, models.TxnError{ErrorCode: "GL007"}
+	}
+
+	bpfundvalue := 0.0
+	opfundvalue := 0.0
+	var ilpsummaryenq []models.IlpSummary
+	result := txn.Order("fund_code").
+		Find(&ilpsummaryenq, "company_id = ?  and policy_id = ? and fund_code = ?", iCompany, iPolicy, iFundCode)
+	if result.Error != nil {
+		return 0, 0, iDate, models.TxnError{ErrorCode: "GL135", DbError: result.Error}
+	}
+
+	var ilppriceenq models.IlpPrice
+	var iPriceDateUsed = "00000000"
+	result = txn.Where("company_id = ? and fund_code = ? and approval_flag = ? and fund_eff_date <= ?", iCompany, iFundCode, "AP", iDate).Order("fund_eff_date DESC").First(&ilppriceenq)
+	if result.Error != nil {
+		return 0, 0, iDate, models.TxnError{ErrorCode: "GL127", DbError: result.Error}
+	}
+
+	iPriceDateUsed = ilppriceenq.FundEffDate
+	fmt.Println("******* Price Date Used|BidPrice|OfferPrice ********", iPriceDateUsed, ilppriceenq.FundBidPrice, ilppriceenq.FundOfferPrice)
+	for i := 0; i < len(ilpsummaryenq); i++ {
+		bpfundvalue = RoundFloat(ilpsummaryenq[i].FundUnits*ilppriceenq.FundBidPrice, 5)
+		opfundvalue = RoundFloat(ilpsummaryenq[i].FundUnits*ilppriceenq.FundOfferPrice, 5)
+	}
+	return bpfundvalue, opfundvalue, iPriceDateUsed, models.TxnError{}
+
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of Changes

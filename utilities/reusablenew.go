@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/url"
 	"os"
 	"os/exec"
@@ -22,6 +23,7 @@ import (
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/google/uuid"
 	"github.com/valyala/fasthttp"
+	"github.com/xuri/excelize/v2"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
@@ -7697,10 +7699,6 @@ func GetGlBalNew(iCompany uint, iPolicy uint, iGlaccount string, txn *gorm.DB) (
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// End of Changes
-////////////////////////////////////////////////////////
-
 func PostUlpDeductionByFundAmountNNew(iCompany uint, iPolicy uint, iBenefit uint, iFundCode string, iAmount float64, iHistoryCode string, iBenefitCode string, iStartDate string, iEffDate string, iTranno uint, iallocType string, txn *gorm.DB) models.TxnError {
 
 	var policyenq models.Policy
@@ -7809,8 +7807,6 @@ func PostUlpDeductionByFundAmountNNew(iCompany uint, iPolicy uint, iBenefit uint
 	return models.TxnError{}
 }
 
-/////////////////////////////////////////////////////////
-
 func TDFExpiDSNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, txn *gorm.DB) (string, models.TxnError) {
 	var benefits []models.Benefit
 	var tdfpolicy models.TDFPolicy
@@ -7887,7 +7883,6 @@ func TDFExpiDSNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 	return "", models.TxnError{}
 }
 
-// ////////////////////////////////////////////////////
 func GetUserNameN(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, oErr error) {
 	var usrenq models.User
 	result := txn.Find(&usrenq, "company_id = ? and id = ?", iCompany, iUserId)
@@ -7896,8 +7891,6 @@ func GetUserNameN(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, oErr
 	}
 	return usrenq.Name, nil
 }
-
-////////////////////////////////////////////////////
 
 func GetUserNameNNew(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, txnErr models.TxnError) {
 	var usrenq models.User
@@ -7908,3 +7901,550 @@ func GetUserNameNNew(iCompany uint, iUserId uint, txn *gorm.DB) (oName string, t
 	}
 	return usrenq.Name, txnErr
 }
+
+// 2025-12-04 Lakshmi Changes
+func UploadParamDataItemsNew(file multipart.File, txn *gorm.DB) models.TxnError {
+
+	f, err := excelize.OpenReader(file)
+
+	if err != nil {
+		return models.TxnError{ErrorCode: "K0026", DbError: err}
+	}
+
+	firstSheet := f.WorkBook.Sheets.Sheet[0].Name
+	//fmt.Printf("'%s' is first sheet of %d sheets.\n", firstSheet, f.SheetCount)
+
+	headerFieldMap := make(map[string]string)
+	for i := 0; i < 6; i++ {
+		k := i / 3
+		j := i % 3
+
+		cellName1, _ := excelize.CoordinatesToCellName((j*2)+1, k+3)
+		cellName2, _ := excelize.CoordinatesToCellName((j*2)+2, k+3)
+		cellVal1, _ := f.GetCellValue(firstSheet, cellName1)
+		cellVal2, _ := f.GetCellValue(firstSheet, cellName2)
+		headerFieldMap[cellVal1] = cellVal2
+
+	}
+
+	var headerParam models.Param
+
+	result := txn.Model(&models.Param{}).Find(&headerParam, "company_id  = ? AND  name = ?  AND  rec_type = ?  AND item = ?  and seqno =? and is_valid =?", headerFieldMap["Company"], headerFieldMap["Param Name"], "HE", "", 0, true)
+
+	if result.Error != nil {
+
+		return models.TxnError{ErrorCode: "GL078", DbError: result.Error}
+
+	}
+
+	if result.RowsAffected == 0 {
+
+		return models.TxnError{ErrorCode: "GL078", DbError: result.Error}
+
+	}
+
+	paramType := "0"
+	extraDataExist, _ := headerParam.Data["extraDataExist"].(bool)
+
+	if headerParam.Data["paramType"] == "dated" {
+		paramType = "D"
+	} else {
+
+		if extraDataExist {
+			paramType = "1"
+		}
+	}
+
+	if paramType == "0" {
+		return models.TxnError{ErrorCode: "GL954"}
+	}
+	totalHeaderElem := 6
+	seqNo := 0
+	if paramType == "D" {
+		totalHeaderElem = 9
+		for i := 6; i < 9; i++ {
+			k := i / 3
+			j := i % 3
+
+			cellName1, _ := excelize.CoordinatesToCellName((j*2)+1, k+3)
+			cellName2, _ := excelize.CoordinatesToCellName((j*2)+2, k+3)
+			cellVal1, _ := f.GetCellValue(firstSheet, cellName1)
+			cellVal2, _ := f.GetCellValue(firstSheet, cellName2)
+			headerFieldMap[cellVal1] = cellVal2
+
+		}
+		seqNo, err = strconv.Atoi(headerFieldMap["Seq No"])
+		if err != nil {
+			return models.TxnError{ErrorCode: "GL955"}
+		}
+
+		if seqNo > 0 {
+			var params_existing []models.Param
+			result := txn.Order("seqno asc").Find(&params_existing, "company_id  = ? AND  name = ?  AND item = ? AND  rec_type = ?", headerFieldMap["Company"], headerFieldMap["Param Name"], headerFieldMap["Item Name"], "IT")
+
+			if result.Error != nil {
+
+				return models.TxnError{ErrorCode: "GL089", DbError: result.Error}
+
+			}
+
+			if result.RowsAffected < int64(seqNo) {
+
+				return models.TxnError{ErrorCode: "GL088", DbError: result.Error}
+
+			}
+
+		}
+	}
+
+	//check if param item already exists
+	var param models.Param
+	result = txn.First(&param, "company_id  = ? AND  name = ?  AND  rec_type = ?  AND item = ?  and seqno =?", headerFieldMap["Company"], headerFieldMap["Param Name"], "IT", headerFieldMap["Item Name"], seqNo)
+	recordNotFound := errors.Is(result.Error, gorm.ErrRecordNotFound)
+
+	if !recordNotFound && result.Error != nil {
+		return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+	}
+
+	//extra data processing begins
+
+	fields, subfields, funcErr := GetParamExtraDataFieldsNew(headerFieldMap["Param Name"])
+
+	if funcErr.ErrorCode != "" {
+		return funcErr
+
+	}
+
+	var extradata map[string]interface{}
+	//check if the field is array type
+	if subfields != nil {
+
+		k := totalHeaderElem / 3
+		j := totalHeaderElem % 3
+
+		if j > 0 {
+			k++
+		}
+
+		keyArray := make([]string, 0)
+
+		for i := 0; ; i++ {
+			cellName, _ := excelize.CoordinatesToCellName(i+1, k+4)
+			cellVal, _ := f.GetCellValue(firstSheet, cellName)
+
+			if cellVal == "" {
+				break
+			}
+			keyArray = append(keyArray, cellVal)
+
+		}
+		subFieldMap := make(map[string]reflect.StructField)
+		for _, v := range subfields {
+
+			subFieldMap[v.Name] = v
+		}
+		valArray := make([]interface{}, 0)
+		for i := 0; ; i++ {
+
+			breakloop := true
+			valMap := make(map[string]interface{})
+			for j := 0; j < len(keyArray); j++ {
+
+				cellName, _ := excelize.CoordinatesToCellName(j+1, i+k+5)
+				cellVal, _ := f.GetCellValue(firstSheet, cellName)
+				subfld, ok := subFieldMap[keyArray[j]]
+				if !ok {
+					return models.TxnError{ErrorCode: "GL956", DbError: result.Error}
+				}
+				if subfld.Type.Kind() == reflect.String {
+					valMap[keyArray[j]] = cellVal
+
+				} else {
+
+					value, funcErr := GetFormattedFieldNew(cellVal, subfld)
+					if funcErr.ErrorCode != "" {
+						return funcErr
+					} else {
+						//make first character lower case in the key
+
+						valMap[strings.ToLower(string(keyArray[j][0]))+keyArray[j][1:]] = value
+
+					}
+
+				}
+
+				if cellVal != "" {
+					breakloop = false
+				}
+
+			}
+
+			if breakloop {
+				break
+			}
+
+			valArray = append(valArray, valMap)
+
+		}
+
+		extradata = map[string]interface{}{
+			//make first character lower case in the key
+
+			strings.ToLower(string(fields[0].Name[0])) + fields[0].Name[1:]: valArray,
+		}
+
+	} else {
+
+		extraDataFieldMap := make(map[string]string)
+		for i := totalHeaderElem; ; i++ {
+			k := i / 3
+			j := i % 3
+
+			cellName1, _ := excelize.CoordinatesToCellName((j*2)+1, k+3)
+			cellName2, _ := excelize.CoordinatesToCellName((j*2)+2, k+3)
+			cellVal1, _ := f.GetCellValue(firstSheet, cellName1)
+
+			if cellVal1 == "" {
+				break
+			}
+
+			cellVal2, _ := f.GetCellValue(firstSheet, cellName2)
+			extraDataFieldMap[cellVal1] = cellVal2
+
+		}
+
+		data1, funcErr := GetFormattedExtraDataNew(fields, extraDataFieldMap)
+
+		if funcErr.ErrorCode != "" {
+			return funcErr
+		}
+
+		extradata = data1
+
+	}
+
+	if recordNotFound {
+		param.Data = extradata
+		param.CreatedAt = time.Now()
+		val, _ := strconv.Atoi(headerFieldMap["Company"])
+
+		param.CompanyId = uint16(val)
+		param.Name = headerFieldMap["Param Name"]
+		param.Item = headerFieldMap["Item Name"]
+		if paramType != "D" {
+			param.EndDate = "0"
+			param.StartDate = "0"
+		} else {
+
+			date, err := time.Parse("02-01-2006", headerFieldMap["Start Date"])
+			if err == nil {
+				param.StartDate = date.Format("20060102")
+			} else {
+				return models.TxnError{ErrorCode: "GL963", DbError: err}
+			}
+
+			date, err = time.Parse("02-01-2006", headerFieldMap["End Date"])
+			if err == nil {
+				param.EndDate = date.Format("20060102")
+			} else {
+				return models.TxnError{ErrorCode: "GL964", DbError: err}
+			}
+
+		}
+		param.Is_valid = true
+		param.RecType = "IT"
+		param.LastModUser = 1
+		param.Seqno = uint16(seqNo)
+
+		result := txn.Create(&param)
+
+		if result.Error != nil {
+
+			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+		}
+
+	} else {
+
+		param.Data = extradata
+		param.UpdatedAt = time.Now()
+		param.LastModUser = 1
+		if paramType == "D" {
+
+			date, err := time.Parse("02-01-2006", headerFieldMap["Start Date"])
+			if err == nil {
+				param.StartDate = date.Format("20060102")
+			} else {
+				return models.TxnError{ErrorCode: "GL963", DbError: err}
+			}
+
+			date, err = time.Parse("02-01-2006", headerFieldMap["End Date"])
+			if err == nil {
+				param.EndDate = date.Format("20060102")
+			} else {
+				return models.TxnError{ErrorCode: "GL964", DbError: err}
+			}
+
+		}
+
+		result = txn.Model(&param).Where("company_id  = ? AND  name = ?  AND  rec_type = ?  AND item = ?  and seqno =?", headerFieldMap["Company"], headerFieldMap["Param Name"], "IT", headerFieldMap["Item Name"], seqNo).Updates(param)
+
+		if result.Error != nil {
+			return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+		}
+
+	}
+
+	if seqNo == 0 {
+
+		if recordNotFound {
+
+			var paramdesc models.ParamDesc
+			paramdesc.CreatedAt = time.Now()
+			val, err := strconv.Atoi(headerFieldMap["Company"])
+			if err != nil {
+				return models.TxnError{ErrorCode: "GL422", DbError: result.Error}
+			}
+			paramdesc.CompanyId = uint16(val)
+			paramdesc.Name = headerFieldMap["Param Name"]
+			paramdesc.Item = headerFieldMap["Item Name"]
+			val, err = strconv.Atoi(headerFieldMap["Language Id"])
+			if err != nil {
+
+				return models.TxnError{ErrorCode: "GL473", DbError: result.Error}
+
+			}
+			paramdesc.LanguageId = uint8(val)
+			paramdesc.RecType = "IT"
+			paramdesc.Longdesc = headerFieldMap["Long Description"]
+			paramdesc.Shortdesc = headerFieldMap["Short Description"]
+			paramdesc.LastModUser = 1
+
+			result = txn.Create(&paramdesc)
+
+			if result.Error != nil {
+
+				return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+			}
+
+		} else {
+
+			var paramdesc models.ParamDesc
+
+			result = txn.First(&paramdesc, "company_id  = ? AND  name = ?  AND  rec_type = ?  AND item = ?  and language_id =?", headerFieldMap["Company"], headerFieldMap["Param Name"], "IT", headerFieldMap["Item Name"], headerFieldMap["Language Id"])
+
+			if result.Error != nil {
+
+				return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+			}
+
+			paramdesc.UpdatedAt = time.Now()
+			paramdesc.LastModUser = 1
+			paramdesc.Longdesc = headerFieldMap["Long Description"]
+			paramdesc.Shortdesc = headerFieldMap["Short Description"]
+
+			result = txn.Model(&paramdesc).Updates(paramdesc)
+
+			if result.Error != nil {
+
+				return models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+
+			}
+
+		}
+
+	}
+
+	return models.TxnError{}
+
+}
+
+func GetParamExtraDataFieldsNew(paramName string) ([]reflect.StructField, []reflect.StructField, models.TxnError) {
+
+	var data interface{}
+	var subfield interface{}
+
+	switch paramName {
+
+	case "Q0011":
+		data = paramTypes.Q0011Data{}
+	case "Q0017":
+		data = paramTypes.Q0017Data{}
+	case "Q0016":
+		data = paramTypes.Q0016Data{}
+	case "Q0015":
+		data = paramTypes.Q0015Data{}
+
+	case "Q0014":
+		data = paramTypes.Q0014Data{}
+
+	case "Q0005":
+		data = paramTypes.Q0005Data{}
+
+	case "Q0006":
+		data = paramTypes.Q0006Data{}
+
+	case "P0044":
+		data = paramTypes.P0044Data{}
+
+	case "Q0010":
+		data = paramTypes.Q0010Data{}
+		subfield = paramTypes.Q0010{}
+
+	case "P0028":
+		data = paramTypes.P0028Data{}
+		subfield = paramTypes.P0028{}
+
+	default:
+		return nil, nil, models.TxnError{ErrorCode: "GL957"}
+
+	}
+
+	typeOfT := reflect.TypeOf(data)
+	if typeOfT.Kind() != reflect.Struct {
+		return nil, nil, models.TxnError{ErrorCode: "GL958"}
+	}
+
+	fields := reflect.VisibleFields(reflect.TypeOf(data))
+
+	var subfields []reflect.StructField = nil
+	//If array type then get the subfield list
+	if len(fields) == 1 && (fields[0].Type.Kind() == reflect.Slice || fields[0].Type.Kind() == reflect.Array) {
+
+		subfields = reflect.VisibleFields(reflect.TypeOf(subfield))
+
+	}
+
+	return fields, subfields, models.TxnError{}
+
+}
+
+func GetFormattedExtraDataNew(fields []reflect.StructField, dataMap map[string]string) (map[string]interface{}, models.TxnError) {
+
+	dataMap1 := make(map[string]interface{})
+
+	for _, f := range fields {
+
+		if f.Type.Kind() == reflect.String {
+			dataMap1[strings.ToLower(string(f.Name[0]))+f.Name[1:]] = dataMap[f.Name]
+
+		} else {
+			value, funcErr := GetFormattedFieldNew(dataMap[f.Name], f)
+
+			if funcErr.ErrorCode != "" {
+				return nil, funcErr
+			}
+			//make first character lower case in the key
+			dataMap1[strings.ToLower(string(f.Name[0]))+f.Name[1:]] = value
+		}
+
+	}
+
+	return dataMap1, models.TxnError{}
+
+}
+
+func GetFormattedFieldNew(value string, field reflect.StructField) (interface{}, models.TxnError) {
+
+	switch field.Type.Kind() {
+
+	case reflect.Bool:
+		boolValue, err := strconv.ParseBool(value)
+		if err != nil {
+			return nil, models.TxnError{ErrorCode: "GL959", DbError: err}
+		}
+		return boolValue, models.TxnError{}
+
+	case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64:
+		intVar := 0
+		if value != "" {
+			val, err := strconv.Atoi(value)
+
+			if err != nil {
+				return nil, models.TxnError{ErrorCode: "GL960", DbError: err}
+			}
+
+			intVar = val
+		}
+		return intVar, models.TxnError{}
+	case reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64:
+		var intVar uint64 = 0
+		if value != "" {
+			val, err := strconv.ParseUint(value, 10, 32)
+			if err != nil {
+				return nil, models.TxnError{ErrorCode: "GL961", DbError: err}
+			}
+			intVar = val
+		}
+		return intVar, models.TxnError{}
+	case reflect.Float32, reflect.Float64:
+		var floatVal float64 = 0
+		if value != "" {
+			val, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return nil, models.TxnError{ErrorCode: "GL962", DbError: err}
+			}
+			floatVal = val
+		}
+		return floatVal, models.TxnError{}
+
+	case reflect.Slice, reflect.Array:
+		s := strings.Split(value, ",")
+		switch field.Type.Elem().Kind() {
+
+		case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64:
+
+			intArry := make([]int, 0)
+			for _, v := range s {
+
+				val, err := strconv.Atoi(v)
+				if err != nil {
+					return nil, models.TxnError{ErrorCode: "GL960", DbError: err}
+				}
+				intArry = append(intArry, val)
+			}
+			return intArry, models.TxnError{}
+		case reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64:
+
+			intArry := make([]uint64, 0)
+			for _, v := range s {
+
+				val, err := strconv.ParseUint(v, 10, 32)
+				if err != nil {
+					return nil, models.TxnError{ErrorCode: "GL961", DbError: err}
+				}
+				intArry = append(intArry, val)
+			}
+			return intArry, models.TxnError{}
+
+		case reflect.Float32, reflect.Float64:
+			floatArry := make([]float64, 0)
+			for _, v := range s {
+
+				val, err := strconv.ParseFloat(v, 64)
+				if err != nil {
+					return nil, models.TxnError{ErrorCode: "GL962", DbError: err}
+				}
+				floatArry = append(floatArry, val)
+			}
+			return floatArry, models.TxnError{}
+
+		case reflect.String:
+			return s, models.TxnError{}
+
+		default:
+			fmt.Println("unhandled Type array field:" + field.Name + " value:" + value)
+			return s, models.TxnError{}
+		}
+	default:
+		fmt.Println("unhandled Type field:" + field.Name + " value:" + value)
+		return value, models.TxnError{}
+
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// End of Changes

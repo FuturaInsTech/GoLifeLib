@@ -2701,7 +2701,7 @@ func TDFSurvbDNNew(iCompany uint, iPolicy uint, iFunction string, iTranno uint, 
 
 	if result.Error != nil {
 		//	txn.Rollback()
-		return "", models.TxnError{ErrorCode: "DBERR", DbError: result.Error}
+		return "", models.TxnError{}
 	}
 	result = txn.First(&tdfpolicy, "company_id = ? and policy_id = ? and tdf_type = ? ", iCompany, iPolicy, iFunction)
 

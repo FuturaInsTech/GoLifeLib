@@ -814,7 +814,7 @@ func GetNomiDataNew(iCompany uint, iPolicy uint, txn *gorm.DB) ([]interface{}, m
 
 	result := txn.Find(&nomenq, "company_id = ? and policy_id = ?", iCompany, iPolicy)
 	if result.RowsAffected == 0 {
-		return nil, models.TxnError{ErrorCode: "GL256", DbError: result.Error}
+		return nil, models.TxnError{}
 	}
 	nomarray := make([]interface{}, 0)
 	var clientenq models.Client

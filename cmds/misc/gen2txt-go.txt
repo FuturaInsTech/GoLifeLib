@@ -1,0 +1,82 @@
+// Updates all “General” formatted cells to “Text” across all sheets
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/xuri/excelize/v2"
+)
+
+func main() {
+	var iFile string = ""
+	var oFile string = ""
+	if len(os.Args) > 3 {
+		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> <outfilename>...")
+		fmt.Println("Usage: cmd <basefilename> <outfilename> ...")
+	} else if len(os.Args) == 3 {
+		iFile = os.Args[1]
+		oFile = os.Args[2]
+	} else if len(os.Args) == 2 {
+		iFile = os.Args[1]
+		oFile = iFile + "-m"
+	} else {
+		fmt.Printf("Error: No arguments provided.\n")
+		os.Exit(1)
+	}
+
+	inputFile := iFile + ".xlsx"
+	outputFile := oFile + ".xlsx"
+
+	f, err := excelize.OpenFile(inputFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	// Create TEXT format (NumberFormat = 49)
+	textStyle, err := f.NewStyle(&excelize.Style{
+		NumFmt: 49,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, sheet := range f.GetSheetList() {
+
+		rows, err := f.GetRows(sheet)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for r := 0; r < len(rows); r++ {
+			for c := 0; c < len(rows[r]); c++ {
+
+				cell, _ := excelize.CoordinatesToCellName(c+1, r+1)
+
+				styleID, err := f.GetCellStyle(sheet, cell)
+				if err != nil {
+					continue
+				}
+
+				style, err := f.GetStyle(styleID)
+				if err != nil {
+					continue
+				}
+
+				// General format = NumFmt == 0
+				if style.NumFmt == 0 {
+					_ = f.SetCellStyle(sheet, cell, cell, textStyle)
+				}
+			}
+		}
+	}
+
+	if err := f.SaveAs(outputFile); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("All General cells converted to Text format successfully.")
+}

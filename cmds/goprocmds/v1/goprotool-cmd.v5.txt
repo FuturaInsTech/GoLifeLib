@@ -146,7 +146,8 @@ func FetchFilteredNames(r *excelize.File, inpchars string, outchars string, sepc
 	}
 
 	for _, name := range allNames {
-		lower := strings.ToLower(name.Name)
+		//lower := strings.ToLower(name.Name) // changed to be case sensitive
+		lower := name.Name
 
 		matched := false
 		for _, prefix := range prefixes {

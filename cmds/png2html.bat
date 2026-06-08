@@ -10,4 +10,4 @@ REM Tell Tesseract where trained data files are located
 set "TESSDATA_PREFIX=%BASEDIR%tessdata"
 
 REM Execute program and pass all arguments
-"%BASEDIR%pngtohtml.exe" %*
+"%BASEDIR%png2html.exe" %*

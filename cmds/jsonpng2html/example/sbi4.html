@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>OCR Overlay</title>
+
+<style>
+
+body {
+	margin: 0;
+	padding: 20px;
+	background: #efefef;
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+.template-container {
+	position: relative;
+	display: inline-block;
+}
+
+.bg-image {
+	display: block;
+	width: auto;
+	height: auto;
+}
+
+
+.policyterm {
+	position: absolute;
+	left: 858px;
+	top: 331px;
+	width: 133px;
+	height: 22px;
+	font-size: 12px;
+	color: #C9CCD0;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.product {
+	position: absolute;
+	left: 297px;
+	top: 278px;
+	width: 109px;
+	height: 22px;
+	font-size: 12px;
+	color: #CCCED2;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.bonus {
+	position: absolute;
+	left: 923px;
+	top: 560px;
+	width: 84px;
+	height: 20px;
+	font-size: 12px;
+	color: #EEAA84;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="template-container">
+<img class="bg-image" src="sbi4bg.png" />
+<div class="policyterm">&lt;policyTerm&gt;</div>
+
+<div class="product">&lt;product&gt;</div>
+
+<div class="bonus">&lt;bonus&gt;</div>
+
+</div>
+
+</body>
+</html>

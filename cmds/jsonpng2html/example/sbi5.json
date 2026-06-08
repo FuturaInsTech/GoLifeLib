@@ -1,0 +1,35 @@
+{
+  "fields": [
+    "product",
+    "age",
+    "gender",
+    "sumAssured",
+    "policyTerm",
+    "premiumPayingTerm",
+    "deathBenefit",
+    "maturityBenefit",
+    "totalBenefits",
+    "bonus",
+    "yearend1",
+	"age1",
+	"annualPremium1",
+	"totalPremiumPaid1",
+	"guaranteedBenefits1",
+	"illustratedBenefits1",
+    "yearend2",
+	"age2",
+	"annualPremium2",
+	"totalPremiumPaid2",
+	"guaranteedBenefits2",
+	"illustratedBenefits2",
+	"yearendN",
+	"ageN",
+	"annualPremiumN",			// seven slots exist in the picture
+	"totalPremiumPaidN",		// after generating the html 
+	"guaranteedBenefitsN",		// manually edited alignment font and added addl fields
+	"illustratedBenefitsN2",	// replaced these N variable fields in json
+	"companyPhone",
+	"companyWebsite",
+	"companyEmail"
+	]
+}

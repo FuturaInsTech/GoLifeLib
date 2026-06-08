@@ -1,0 +1,17 @@
+{
+  "fields": [
+    "product",				// <>
+    "age",					// ()
+    "gender",				// []
+//    "sumAssured",			// {}
+    "policyTerm",			// <>
+    "premiumPayingTerm",	// ()
+    "deathBenefit",			// {}
+    "maturityBenefit",		// []
+    "totalBenefits",		// ()
+    "bonus",				// <>
+//	"companyPhone",			// {}
+	"companyWebsite",		// []
+	"companyEmail"			// <>
+	]
+}

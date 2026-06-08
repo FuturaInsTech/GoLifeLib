@@ -1,0 +1,45 @@
+
+.policyterm {
+	position: absolute;
+	left: 858px;
+	top: 331px;
+	width: 133px;
+	height: 22px;
+	font-size: 12px;
+	color: #C9CCD0;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+}
+
+.product {
+	position: absolute;
+	left: 297px;
+	top: 278px;
+	width: 109px;
+	height: 22px;
+	font-size: 12px;
+	color: #CCCED2;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+}
+
+.bonus {
+	position: absolute;
+	left: 923px;
+	top: 560px;
+	width: 84px;
+	height: 20px;
+	font-size: 12px;
+	color: #EEAA84;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+}

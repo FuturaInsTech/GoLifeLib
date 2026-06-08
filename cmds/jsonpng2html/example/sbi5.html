@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>OCR Overlay</title>
+
+<style>
+
+body {
+	margin: 0;
+	padding: 20px;
+	background: #efefef;
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+.template-container {
+	position: relative;
+	display: inline-block;
+}
+
+.bg-image {
+	display: block;
+	width: auto;
+	height: auto;
+}
+
+
+.guaranteedbenefits1 {
+	position: absolute;
+	left: 424px;
+	top: 849px;
+	width: 145px;
+	height: 19px;
+	font-size: 12px;
+	color: #B6B8C8;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefits2 {
+	position: absolute;
+	left: 424px;
+	top: 849px;
+	width: 145px;
+	height: 19px;
+	font-size: 12px;
+	color: #B6B8C8;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefitsn {
+	position: absolute;
+	left: 424px;
+	top: 849px;
+	width: 145px;
+	height: 19px;
+	font-size: 12px;
+	color: #B6B8C8;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefits1 {
+	position: absolute;
+	left: 424px;
+	top: 897px;
+	width: 145px;
+	height: 20px;
+	font-size: 12px;
+	color: #B9BACA;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefits2 {
+	position: absolute;
+	left: 424px;
+	top: 897px;
+	width: 145px;
+	height: 20px;
+	font-size: 12px;
+	color: #B9BACA;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefitsn {
+	position: absolute;
+	left: 424px;
+	top: 897px;
+	width: 145px;
+	height: 20px;
+	font-size: 12px;
+	color: #B9BACA;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefits1 {
+	position: absolute;
+	left: 424px;
+	top: 1003px;
+	width: 145px;
+	height: 19px;
+	font-size: 12px;
+	color: #B2B4C5;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefits2 {
+	position: absolute;
+	left: 424px;
+	top: 1003px;
+	width: 145px;
+	height: 19px;
+	font-size: 12px;
+	color: #B2B4C5;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.guaranteedbenefitsn {
+	position: absolute;
+	left: 424px;
+	top: 1003px;
+	width: 145px;
+	height: 19px;
+	font-size: 12px;
+	color: #B2B4C5;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.totalpremiumpaid1 {
+	position: absolute;
+	left: 298px;
+	top: 1003px;
+	width: 139px;
+	height: 19px;
+	font-size: 12px;
+	color: #B6B8C8;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.totalpremiumpaid2 {
+	position: absolute;
+	left: 298px;
+	top: 1003px;
+	width: 139px;
+	height: 19px;
+	font-size: 12px;
+	color: #B6B8C8;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.totalpremiumpaidn {
+	position: absolute;
+	left: 298px;
+	top: 1003px;
+	width: 139px;
+	height: 19px;
+	font-size: 12px;
+	color: #B6B8C8;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.maturitybenefit {
+	position: absolute;
+	left: 323px;
+	top: 628px;
+	width: 250px;
+	height: 35px;
+	font-size: 21px;
+	color: #B0C0B3;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.companywebsite {
+	position: absolute;
+	left: 705px;
+	top: 1314px;
+	width: 169px;
+	height: 27px;
+	font-size: 15px;
+	color: #3B4B79;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremium1 {
+	position: absolute;
+	left: 180px;
+	top: 849px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #BEC0D0;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremium2 {
+	position: absolute;
+	left: 180px;
+	top: 849px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #BEC0D0;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremiumn {
+	position: absolute;
+	left: 180px;
+	top: 849px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #BEC0D0;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremium1 {
+	position: absolute;
+	left: 180px;
+	top: 1003px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #B9BCCC;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremium2 {
+	position: absolute;
+	left: 180px;
+	top: 1003px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #B9BCCC;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremiumn {
+	position: absolute;
+	left: 180px;
+	top: 1003px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #B9BCCC;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremium1 {
+	position: absolute;
+	left: 180px;
+	top: 897px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #BBBDCE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremium2 {
+	position: absolute;
+	left: 180px;
+	top: 897px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #BBBDCE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.annualpremiumn {
+	position: absolute;
+	left: 180px;
+	top: 897px;
+	width: 127px;
+	height: 19px;
+	font-size: 12px;
+	color: #BBBDCE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.totalbenefits {
+	position: absolute;
+	left: 615px;
+	top: 626px;
+	width: 220px;
+	height: 38px;
+	font-size: 24px;
+	color: #CFB6D3;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.companyemail {
+	position: absolute;
+	left: 938px;
+	top: 1314px;
+	width: 152px;
+	height: 27px;
+	font-size: 15px;
+	color: #3A4976;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.companyphone {
+	position: absolute;
+	left: 509px;
+	top: 1314px;
+	width: 149px;
+	height: 27px;
+	font-size: 15px;
+	color: #3A4E87;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.deathbenefit {
+	position: absolute;
+	left: 61px;
+	top: 626px;
+	width: 221px;
+	height: 39px;
+	font-size: 24px;
+	color: #B7BACF;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.policyterm {
+	position: absolute;
+	left: 923px;
+	top: 337px;
+	width: 133px;
+	height: 24px;
+	font-size: 13px;
+	color: #B8BACD;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.sumassured {
+	position: absolute;
+	left: 918px;
+	top: 281px;
+	width: 142px;
+	height: 24px;
+	font-size: 13px;
+	color: #BABCCE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.yearend2 {
+	position: absolute;
+	left: 36px;
+	top: 897px;
+	width: 87px;
+	height: 20px;
+	font-size: 12px;
+	color: #BEBFCF;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.yearend1 {
+	position: absolute;
+	left: 36px;
+	top: 849px;
+	width: 87px;
+	height: 19px;
+	font-size: 12px;
+	color: #BBBDCD;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.yearendn {
+	position: absolute;
+	left: 36px;
+	top: 1003px;
+	width: 89px;
+	height: 20px;
+	font-size: 12px;
+	color: #BDBECE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.product {
+	position: absolute;
+	left: 347px;
+	top: 279px;
+	width: 110px;
+	height: 28px;
+	font-size: 16px;
+	color: #C5C7D7;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.gender {
+	position: absolute;
+	left: 349px;
+	top: 390px;
+	width: 107px;
+	height: 29px;
+	font-size: 17px;
+	color: #C6C8D7;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.bonus {
+	position: absolute;
+	left: 929px;
+	top: 628px;
+	width: 135px;
+	height: 34px;
+	font-size: 21px;
+	color: #EED3B6;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.age1 {
+	position: absolute;
+	left: 122px;
+	top: 849px;
+	width: 64px;
+	height: 19px;
+	font-size: 12px;
+	color: #BDBECE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.age2 {
+	position: absolute;
+	left: 121px;
+	top: 897px;
+	width: 64px;
+	height: 20px;
+	font-size: 12px;
+	color: #BDBECF;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.agen {
+	position: absolute;
+	left: 121px;
+	top: 1003px;
+	width: 66px;
+	height: 20px;
+	font-size: 12px;
+	color: #BEBFCE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+.age {
+	position: absolute;
+	left: 363px;
+	top: 336px;
+	width: 77px;
+	height: 25px;
+	font-size: 14px;
+	color: #BABCCE;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: normal;
+	font-style: normal;
+	white-space: nowrap;
+	z-index: 100;
+	pointer-events: none;
+	border: 1px dashed rgba(255,0,0,0.35);
+	background: rgba(255,255,0,0.08);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="template-container">
+<img class="bg-image" src="sbi5bg.png" />
+<div class="guaranteedbenefits1">&lt;guaranteedBenefits1&gt;</div>
+
+<div class="guaranteedbenefits2">&lt;guaranteedBenefits2&gt;</div>
+
+<div class="guaranteedbenefitsn">&lt;guaranteedBenefitsN&gt;</div>
+
+<div class="guaranteedbenefits1">&lt;guaranteedBenefits1&gt;</div>
+
+<div class="guaranteedbenefits2">&lt;guaranteedBenefits2&gt;</div>
+
+<div class="guaranteedbenefitsn">&lt;guaranteedBenefitsN&gt;</div>
+
+<div class="guaranteedbenefits1">&lt;guaranteedBenefits1&gt;</div>
+
+<div class="guaranteedbenefits2">&lt;guaranteedBenefits2&gt;</div>
+
+<div class="guaranteedbenefitsn">&lt;guaranteedBenefitsN&gt;</div>
+
+<div class="totalpremiumpaid1">&lt;totalPremiumPaid1&gt;</div>
+
+<div class="totalpremiumpaid2">&lt;totalPremiumPaid2&gt;</div>
+
+<div class="totalpremiumpaidn">&lt;totalPremiumPaidN&gt;</div>
+
+<div class="maturitybenefit">&lt;maturityBenefit&gt;</div>
+
+<div class="companywebsite">&lt;companyWebsite&gt;</div>
+
+<div class="annualpremium1">&lt;annualPremium1&gt;</div>
+
+<div class="annualpremium2">&lt;annualPremium2&gt;</div>
+
+<div class="annualpremiumn">&lt;annualPremiumN&gt;</div>
+
+<div class="annualpremium1">&lt;annualPremium1&gt;</div>
+
+<div class="annualpremium2">&lt;annualPremium2&gt;</div>
+
+<div class="annualpremiumn">&lt;annualPremiumN&gt;</div>
+
+<div class="annualpremium1">&lt;annualPremium1&gt;</div>
+
+<div class="annualpremium2">&lt;annualPremium2&gt;</div>
+
+<div class="annualpremiumn">&lt;annualPremiumN&gt;</div>
+
+<div class="totalbenefits">&lt;totalBenefits&gt;</div>
+
+<div class="companyemail">&lt;companyEmail&gt;</div>
+
+<div class="companyphone">&lt;companyPhone&gt;</div>
+
+<div class="deathbenefit">&lt;deathBenefit&gt;</div>
+
+<div class="policyterm">&lt;policyTerm&gt;</div>
+
+<div class="sumassured">&lt;sumAssured&gt;</div>
+
+<div class="yearend2">&lt;yearend2&gt;</div>
+
+<div class="yearend1">&lt;yearend1&gt;</div>
+
+<div class="yearendn">&lt;yearendN&gt;</div>
+
+<div class="product">&lt;product&gt;</div>
+
+<div class="gender">&lt;gender&gt;</div>
+
+<div class="bonus">&lt;bonus&gt;</div>
+
+<div class="age1">&lt;age1&gt;</div>
+
+<div class="age2">&lt;age2&gt;</div>
+
+<div class="agen">&lt;ageN&gt;</div>
+
+<div class="age">&lt;age&gt;</div>
+
+</div>
+
+</body>
+</html>

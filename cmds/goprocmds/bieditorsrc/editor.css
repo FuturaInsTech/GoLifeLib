@@ -1,0 +1,587 @@
+html,
+body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+	background:#ECEFF3 !important;
+}
+
+body{
+    display:flex;
+    flex-direction:column;
+    font-family:
+        "Segoe UI",
+        "Inter",
+        sans-serif;
+    font-size:14px;
+    background:#f4f6f9;
+    color:#2c3e50;
+}
+
+#headerArea{
+    flex:0 0 auto;
+}
+
+.topbar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 14px;
+    background:#ffffff;
+    border-bottom:1px solid #d9dee5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    font-size:14px;
+    font-weight:500;
+}
+
+.topbar button{
+    width:100px;      /* same width for all */
+    height:30px;      /* same height */
+	min-width: 30px;
+    padding:0;
+    border:none;
+    border-radius:6px;
+    background:#2d7ff9;
+    color:white;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:
+        background .2s,
+        transform .15s;
+}
+
+/* Keep + and - smaller */
+
+#btnZoomIn,
+#btnZoomOut{
+    width:45px;
+    height:30px;
+    padding:0;
+    font-size:13px;
+    line-height:30px;
+}
+
+.topbar button:hover{
+    background:#1c67d8;
+    transform:
+        translateY(-1px);
+}
+
+.topbar button:active{
+    transform:
+        translateY(0);
+}
+
+.toolbar button i {
+    font-size: 16px;
+    color: #555;              /* softer than default black */
+    pointer-events: none;
+}
+
+.toolbar button:hover i {
+    color: #222;               /* darker on hover, for feedback */
+}
+
+/* ===== Coordinate toolbar ===== */
+.coord-toolbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-left:30px;
+	margin-right:30px;
+}
+
+
+/* Individual X,Y,W,H cards */
+.coord-box{
+    display:flex;
+    align-items:center;
+    height:24px;
+    border-radius:6px;
+    overflow:hidden;
+    border:1px solid #2D7FF9;
+    box-shadow:
+        0 1px 3px rgba(0,0,0,.25);
+}
+
+
+/* Left label area */
+.coord-label{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:100%;
+    background:#2D7FF9;
+    color:white;
+    font-size:13px;
+    font-weight:500;
+}
+
+
+/* Value box */
+.coord-value{
+    width:60px;
+    height:100%;
+    border:none;
+    outline:none;
+    text-align:center;
+    background:#FFFFFF;
+    color:#000000;
+    font-size:13px;
+    font-weight:500;
+    padding:0;
+    box-shadow:
+        inset 0 1px 2px rgba(0,0,0,.15);
+}
+
+/* Highlight on selection */
+.coord-box:focus-within{
+    border-color:#57A4FF;
+    box-shadow:
+        0 0 6px rgba(45,127,249,.7);
+}
+
+.template-container{
+    position:relative;
+}
+
+.bg-image{
+    position:absolute;
+    top:0;
+    left:0;
+    z-index:-1 !important;
+    pointer-events:none !important;
+}
+
+.template-container [data-field-id]{
+    position:absolute !important;
+    z-index:9999 !important;
+    pointer-events:auto !important;
+    display:inline-block !important;
+    min-width:20px;
+    min-height:20px;
+}
+
+#coordPanel{
+    margin-left:auto;
+    display:flex;
+    gap:12px;
+    align-items:center;
+    padding:6px 12px;
+    background:#f8fafc;
+    border:1px solid #dde4ea;
+    border-radius:6px;
+    font-family:
+        "Consolas",
+        monospace;
+    font-size:13px;
+    font-weight:500;
+}
+
+#gjs{
+    flex:1;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+}
+
+/* Only ONE place handles scrolling */
+.gjs-editor,
+.gjs-cv-canvas,
+.gjs-canvas,
+.gjs-frame,
+.gjs-frame-wrapper{
+
+    overflow:hidden !important;
+	background:#ECEFF3 !important;
+}
+
+
+/* Real scroll area */
+.gjs-cv-canvas > div{
+    overflow:auto !important;
+    width:100%;
+    height:100%;
+}
+
+/* Actual GrapesJS scroll owner */
+
+.gjs-cv-canvas__frames {
+    overflow:auto !important;
+}
+
+/* Scrollbar CSS are in editor-sb.css file */
+/* Dynamically this file will get loaded at run time */
+
+
+/* =====================================
+   Workspace + Side panel theme
+   ===================================== */
+
+
+/* Main editor workspace background */
+
+.gjs-cv-canvas{
+
+    background:#EAF3FF !important;
+
+    background-image:
+        linear-gradient(
+            rgba(45,127,249,.04) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(45,127,249,.04) 1px,
+            transparent 1px
+        );
+
+    background-size:20px 20px;
+}
+
+
+
+/* Left/right panels background */
+
+.gjs-one-bg{
+
+    background:#DCEBFF !important;
+}
+
+
+
+/* Secondary panel sections */
+
+.gjs-two-color{
+
+    color:#000000 !important;
+}
+
+
+
+/* Panel borders */
+
+.gjs-sm-sector,
+.gjs-block-category{
+
+    border-bottom:1px solid #BFD3F2 !important;
+}
+
+/* General panel headers */
+
+.gjs-sm-sector-title{
+
+    background:#CFE3FF !important;
+
+    color:#000000 !important;
+
+    font-weight:600 !important;
+}
+
+
+/* ==========================
+   Device/Desktop dropdown ONLY
+   ========================== */
+
+
+/* Selected value */
+
+.gjs-devices-c select{
+
+    background:#FFFFFF !important;
+
+    color:#000000 !important;
+
+    border:1px solid #AFC7EA !important;
+
+    border-radius:6px !important;
+
+    padding:4px 10px !important;
+
+    font-size:12px !important;
+
+    font-weight:500 !important;
+
+    min-width:90px !important;
+
+/*    appearance:none !important;  */
+
+    box-shadow:
+        inset 0 1px 2px rgba(0,0,0,.1);
+}
+
+
+/* Focus */
+
+.gjs-devices-c select:focus{
+
+    border-color:#2D7FF9 !important;
+
+    box-shadow:
+        0 0 5px rgba(45,127,249,.4);
+
+    outline:none !important;
+}
+
+
+/* Dropdown values */
+
+.gjs-devices-c select option{
+
+    background:#DCEBFF !important;
+
+    color:#000000 !important;
+}
+
+
+/* Hover */
+
+.gjs-devices-c select option:hover{
+
+    background:#BFD8FF !important;
+
+    color:#000000 !important;
+}
+
+/* =====================================
+   Selected product/class chip
+   ===================================== */
+
+/* Product chip background */
+
+.gjs-clm-tag{
+
+    background:#2D7FF9 !important;
+
+    color:#FFFFFF !important;
+
+    border:none !important;
+
+    border-radius:5px !important;
+
+    font-size:12px !important;
+
+    font-weight:500 !important;
+
+    padding:4px 8px !important;
+
+    box-shadow:
+        0 1px 3px rgba(0,0,0,.15);
+}
+
+
+/* Close X icon */
+
+.gjs-clm-tag .gjs-clm-tag-close{
+
+    color:#FFFFFF !important;
+
+    opacity:.9;
+}
+
+
+.gjs-clm-tag .gjs-clm-tag-close:hover{
+
+    color:#FFFFFF !important;
+
+    opacity:1;
+}
+
+
+/* Add + button beside product */
+
+.gjs-clm-tags button{
+
+    background:#2D7FF9 !important;
+
+    color:#FFFFFF !important;
+
+    border:none !important;
+
+    border-radius:5px !important;
+}
+
+
+.gjs-clm-tags button:hover{
+
+    background:#1C67D8 !important;
+}
+
+/* =====================================
+   Force all style property labels black
+   ===================================== */
+
+
+/* Property labels */
+
+.gjs-sm-label,
+.gjs-sm-property label,
+.gjs-sm-property .gjs-sm-label{
+
+    color:#000000 !important;
+
+    font-size:12px !important;
+
+    font-weight:500 !important;
+}
+
+
+/* Sub-labels:
+   Top, Left, Width, Height,
+   Font Family, Size, Weight, etc.
+*/
+
+.gjs-sm-property-title,
+.gjs-sm-property__label,
+.gjs-field-label{
+
+    color:#000000 !important;
+
+    font-weight:500 !important;
+}
+
+
+/* Reapply black specifically */
+
+.gjs-sm-sector label,
+.gjs-sm-sector-title,
+.gjs-sm-property label{
+
+    color:#000000 !important;
+}
+
+
+/* =====================================
+   Keep native dropdown arrows visible
+   ===================================== */
+
+/* Device dropdown */
+
+.gjs-devices-c select{
+
+    color:#000000 !important;
+
+    background:#FFFFFF !important;
+
+    appearance:auto !important;
+
+    -webkit-appearance:menulist !important;
+
+    -moz-appearance:menulist !important;
+
+    padding-right:6px !important;
+}
+
+
+
+/* =====================================
+   Style panel dropdown value list
+   ===================================== */
+
+
+/* Left field/value area */
+
+.gjs-sm-properties .gjs-field,
+.gjs-sm-properties .gjs-fields{
+
+    background:#FFFFFF !important;
+
+    border-radius:6px !important;
+
+    border:1px solid #AFC7EA !important;
+}
+
+
+/* Expanded dropdown list items */
+
+.gjs-sm-properties select option{
+
+    background:#FFFFFF !important;
+
+    color:#000000 !important;
+}
+
+
+/* Hovered item */
+
+.gjs-sm-properties select option:hover{
+
+    background:#EAF3FF !important;
+
+    color:#000000 !important;
+}
+
+
+
+/* Selected item */
+.gjs-sm-properties select option:checked{
+
+    background:#DCEBFF !important;
+
+    color:#000000 !important;
+}
+
+
+/* ==============================
+   GrapesJS integer arrows 
+   ============================== */
+
+/* Arrow container */
+
+.gjs-field-arrows{
+
+    background:#FFFFFF !important;
+
+    width:12px !important;
+
+    border-left:1px solid #D0DCEF !important;
+
+    padding-left:4px !important;
+}
+
+
+/* Up arrow */
+
+.gjs-field-arrow-u{
+
+    border-bottom:3px solid #444444 !important;
+
+    border-left:3px solid transparent !important;
+
+    border-right:3px solid transparent !important;
+
+    margin-left:3px !important;
+
+    margin-bottom:8px !important;   /* add space below */
+}
+
+
+/* Down arrow */
+
+.gjs-field-arrow-d{
+
+    border-top:3px solid #444444 !important;
+
+    border-left:3px solid transparent !important;
+
+    border-right:3px solid transparent !important;
+
+    margin-left:3px !important;
+
+    margin-top:8px !important;      /* add space above */
+}
+
+/* Hover */
+
+.gjs-field-arrow-u:hover,
+.gjs-field-arrow-d:hover{
+
+    border-bottom-color:#2D7FF9 !important;
+    border-top-color:#2D7FF9 !important;
+
+    cursor:pointer !important;
+}

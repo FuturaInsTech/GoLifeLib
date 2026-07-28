@@ -1,0 +1,28 @@
+/* Scrollbar size */
+
+::-webkit-scrollbar{
+    width:18px !important;
+    height:18px !important;
+}
+
+/* Track */
+::-webkit-scrollbar-track{
+    background:#E9EDF2 !important;;
+}
+
+/* Thumb */
+::-webkit-scrollbar-thumb{
+    background:#2D7FF9 !important;
+    border-radius:8px !important;
+    border:3px solid #E9EDF2 !important;
+}
+
+/* Hover */
+::-webkit-scrollbar-thumb:hover{
+    background:#1C67D8 !important;
+}
+
+/* Active drag */
+::-webkit-scrollbar-thumb:active{
+    background:#1254B8 !important;
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<link rel="stylesheet"
+href="node_modules/grapesjs/dist/css/grapes.min.css">
+
+<link rel="stylesheet"
+href="editor.css">
+
+</head>
+
+<body>
+
+<div id="headerArea">
+
+<div class="topbar">
+
+	<button id="btnOpen" title="Open (Ctrl+O)"><i class="fa fa-folder-open"></i></button>
+	<button id="btnSave" title="Save (Ctrl+S)"><i class="fa fa-save"></i></button>
+
+	<button id="btnNew" title="New (Ctrl+N)"><i class="fa fa-file-text-o"></i></button>
+	<button id="btnDelete" title="Delete (Delete)"><i class="fa fa-trash"></i></button>
+	
+	<button id="btnUndo" title="Undo (Ctrl+Z)"><i class="fa fa-undo"></i></button>
+	<button id="btnRedo" title="Redo (Ctrl+Y)"><i class="fa fa-repeat"></i></button>
+	
+	<button id="btnCopy"  title="Copy (Ctrl+C)"><i class="fa fa-copy"></i></button>
+	<button id="btnPaste" title="Paste (Ctrl+V)"><i class="fa fa-paste"></i></button>
+
+	<span class="coord-toolbar">
+		<div class="coord-box">
+			<span class="coord-label">X</span>
+			<input id="txtX" title="RowPosition" class="coord-value" type="number" value="0">
+		</div>
+		<div class="coord-box">
+			<span class="coord-label">Y</span>
+			<input id="txtY" title="ColPosition" class="coord-value" type="number" value="0">
+		</div>
+		<div class="coord-box">
+			<span class="coord-label">W</span>
+			<input id="txtW" title="Width" class="coord-value" type="number" value="0">
+		</div>
+		<div class="coord-box">
+			<span class="coord-label">H</span>
+			<input id="txtH" title="Height" class="coord-value" type="number" value="0">
+		</div>
+	</span>
+
+	<button id="btnZoomOut" title="ZoomOut (Ctrl+-)"><i class="fa fa-search-minus"></i></button>
+	<button id="btnZoom100" title="Zoom100 (Ctrl+0)">100%</button>
+	<button id="btnZoomIn" title="ZoomIn (Ctrl++)"><i class="fa fa-search-plus"></i></button>
+	<div class="separator"></div>
+
+	<button id="btnAlignLeft"   title="Align Left (Alt+Left)"><i class="fa fa-align-left"></i></button>
+	<button id="btnAlignRight"  title="Align Right (Alt+Right)"><i class="fa fa-align-right"></i></button>
+	<button id="btnAlignTop"    title="Align Top (Alt+Up)"><i class="fa fa-arrow-up"></i></button>
+	<button id="btnAlignBottom" title="Align Bottom (Alt+Down)"><i class="fa fa-arrow-down"></i></button>
+	<button id="btnSameWidth"   title="Same Width (Alt+W)"><i class="fa fa-arrows-h"></i></button>
+	<button id="btnSameHeight"  title="Same Height (Alt+H)"><i class="fa fa-arrows-v"></i></button>
+	<button id="btnSameSize"    title="Same Size (Alt+E)"><i class="fa fa-expand"></i></button>
+	</div>
+
+</div>
+
+
+<div id="gjs"></div>
+
+<script src="node_modules/grapesjs/dist/grapes.min.js"></script>
+
+<script src="editor.js"></script>
+
+</body>
+
+</html>

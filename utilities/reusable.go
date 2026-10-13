@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -74,7 +75,13 @@ func ConvertYYYYMMDD(inputDate string) (string, error) {
 
 func CreateFuncMap() template.FuncMap {
 	return template.FuncMap{
-		"formatNumber": formatNumber,
+		// NOTE:
+		// The existing gohtml files generated used formatNumber as key.
+		// As the impact is HIGH retain the key to be the same though it calls formatValue.
+		// After gohtml generator is changed from formatNumber to formatValue,
+		// and existing gohtml files are also corrected,
+		// this key shall also be changed as formatValue.
+		"formatNumber": formatValue,
 		"contains":     strings.Contains, // <C>.<Field> STR.text.</C> Tag
 		"eq": func(a, b interface{}) bool { // <E>.<Field> STR.text..</E> Tag
 			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
@@ -174,13 +181,15 @@ func formatNumber(value interface{}, fds string) string {
 		famt = value.(string)
 	}
 	parts := strings.Split(famt, ".")
-	if fds[0] == 'a' || fds[0] == 'A' {
+
+	switch fds[0] {
+	case 'a', 'A':
 		integralpart = formatInteger(parts[0], fds[0])
-	} else if fds[0] == 'c' || fds[0] == 'C' {
+	case 'c', 'C':
 		integralpart = formatInteger(parts[0], fds[0])
-	} else if fds[0] == 'd' || fds[0] == 'D' {
+	case 'd', 'D':
 		integralpart = parts[0]
-	} else {
+	default:
 		integralpart = parts[0]
 	}
 
@@ -191,6 +200,51 @@ func formatNumber(value interface{}, fds string) string {
 		famount = integralpart
 	}
 	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+}
+
+/****************************************************************************************************/
+// Helper functions and function to return table html contents for a json data to update in out file.
+
+func escapeHTML(s string) string {
+	return strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+		`"`, "&#34;",
+		"'", "&#39;",
+	).Replace(s)
+}
+
+// formatValue is to determine which formatting function to call
+// func formatValue(value interface{}, fds string) error {
+func formatValue(value interface{}, fds string) error {
+
+	if fds == "" {
+		return errors.New("format string cannot be empty")
+	}
+
+	switch fds[0] {
+
+	case 'a', 'A',
+		'c', 'C',
+		'd', 'D':
+
+		formatNumber(value, fds)
+
+		return nil
+
+	case 't', 'T':
+
+		// Table processing is handled separately
+		// after the field name is identified.
+		return nil
+
+	default:
+
+		return errors.New(
+			"Incorrect Format Type - " + fds,
+		)
+	}
 }
 
 // This Function has to be used when an email is trigger through communication (Online)
@@ -1727,3 +1781,850 @@ func ToSnakeCase(str string) string {
 	}
 	return string(result)
 }
+
+/*
+=====================================================================
+PROCESS 2D MAP TABLE DATA FORMATTING OF GOHTML TEMPLATE BEGINS HERE
+=====================================================================
+
+ProcessTable performs all table-related processing.
+
+Parameters:
+
+	htmlContent
+	    Pointer to the existing HTML document.
+
+	fieldName
+	    Name of the field used in the GoHTML.
+
+	    Example:
+	    "otable_data"
+
+	tableValue
+	    Actual value of the table field.
+
+	    Supported values:
+	    - map[string]interface{}
+	    - JSON string
+	    - []byte containing JSON
+	    - other JSON-compatible values
+
+	format
+	    Table formatting instruction.
+
+	    Examples:
+	    "t4"
+	    "T4"
+	    "t10"
+
+	    t4 means:
+
+	        t = table
+	        4 = maximum 4 data columns
+
+The function:
+
+	1. Validates the table format.
+	2. Generates the exact GoHTML placeholder.
+	3. Generates the table HTML.
+	4. Replaces the placeholder.
+	5. Generates table CSS.
+	6. Injects CSS into the existing <style> tag.
+
+The supplied htmlContent is modified in-place.
+===========================================================
+*/
+
+func ProcessTable(htmlContent *string, fieldName string, tableValue interface{}, format string) error {
+
+	if htmlContent == nil {
+		return fmt.Errorf(
+			"htmlContent cannot be nil",
+		)
+	}
+
+	/*
+		=======================================================
+		1. DETERMINE TABLE SIZE
+		=======================================================
+	*/
+
+	columnCount, isTable :=
+		parseTableFormat(format)
+
+	if !isTable {
+		return fmt.Errorf(
+			"invalid table format %q: expected tN or TN",
+			format,
+		)
+	}
+
+	/*
+		=======================================================
+		2. BUILD EXACT GOHTML PLACEHOLDER
+		=======================================================
+
+		For:
+
+		    fieldName = otable_data
+		    format    = t4
+
+		we generate:
+
+		    {{ formatNumber $.otable_data "t4" }}
+	*/
+
+	placeholder := buildPlaceholder(fieldName, format)
+
+	/*
+		=======================================================
+		3. CONVERT TABLE DATA
+		=======================================================
+	*/
+
+	data, err := convertToMap(tableValue)
+
+	if err != nil {
+		return fmt.Errorf(
+			"unable to convert table data: %w",
+			err,
+		)
+	}
+
+	/*
+		=======================================================
+		4. GENERATE TABLE HTML
+		=======================================================
+	*/
+
+	tableHTML :=
+		buildTableHTML(
+			data,
+			columnCount,
+		)
+
+	/*
+		=======================================================
+		5. REPLACE PLACEHOLDER
+		=======================================================
+	*/
+
+	if !strings.Contains(
+		*htmlContent,
+		placeholder,
+	) {
+
+		return fmt.Errorf(
+			"table placeholder not found: %s",
+			placeholder,
+		)
+	}
+
+	*htmlContent =
+		strings.Replace(
+			*htmlContent,
+			placeholder,
+			tableHTML,
+			1,
+		)
+
+	/*
+		=======================================================
+		6. GENERATE TABLE CSS
+		=======================================================
+	*/
+
+	tableCSS :=
+		buildTableCSS()
+
+	/*
+		=======================================================
+		7. INJECT CSS INTO <style>
+		=======================================================
+
+		Because ProcessTable can be called multiple times,
+		injectCSS() checks whether the table CSS is already
+		present.
+
+		Therefore:
+
+		    First table -> CSS inserted
+
+		    Second table -> CSS not duplicated
+
+		    Third table -> CSS not duplicated
+	*/
+
+	updatedHTML, err :=
+		injectCSS(
+			*htmlContent,
+			tableCSS,
+		)
+
+	if err != nil {
+		return err
+	}
+
+	*htmlContent =
+		updatedHTML
+
+	return nil
+}
+
+/*
+===========================================================
+PARSE TABLE FORMAT
+===========================================================
+
+Examples:
+
+	t4   -> table, 4 columns
+	T4   -> table, 4 columns
+	t10  -> table, 10 columns
+	t15  -> table, maximum 10 columns
+
+Invalid:
+
+	x4
+	x10
+	t
+	t0
+	abc
+
+Maximum allowed = 10.
+===========================================================
+*/
+
+func parseTableFormat(format string) (int, bool) {
+
+	format =
+		strings.TrimSpace(
+			format,
+		)
+
+	if len(format) < 2 {
+		return 0, false
+	}
+
+	/*
+		-------------------------------------------------------
+		First character must be t or T.
+		-------------------------------------------------------
+	*/
+
+	if format[0] != 't' &&
+		format[0] != 'T' {
+
+		return 0, false
+	}
+
+	/*
+		-------------------------------------------------------
+		Remaining characters must be numeric.
+		-------------------------------------------------------
+	*/
+
+	count, err :=
+		strconv.Atoi(
+			format[1:],
+		)
+
+	if err != nil {
+		return 0, false
+	}
+
+	if count <= 0 {
+		return 0, false
+	}
+
+	/*
+		-------------------------------------------------------
+		Maximum table size = 10.
+		-------------------------------------------------------
+	*/
+
+	// if count > 10 {
+	// 	count = 10
+	// }
+
+	return count, true
+}
+
+/*
+===========================================================
+BUILD GOHTML PLACEHOLDER
+===========================================================
+*/
+
+func buildPlaceholder(fieldName string, format string) string {
+
+	return `{{ formatNumber $.` +
+		fieldName +
+		` "` +
+		format +
+		`" }}`
+}
+
+/*
+===========================================================
+GET TABLE TITLE
+===========================================================
+
+Reads:
+
+	"TableGridTitle": "Insurers/Features"
+
+The title is used as the first table header.
+
+If the field is absent, "Parameter" is used.
+===========================================================
+*/
+
+func getTableTitle(data map[string]interface{}) string {
+	// TFH4 is the preferred inner grid title. Keep the older
+	// TableGridTitle key working for backward compatibility.
+	const defaultGridTitle = "Parameter"
+	if gridtitle := getMetadataString(data, "TFH4"); gridtitle != "" {
+		return gridtitle
+	}
+	if gridtitle := getMetadataString(data, "TableGridTitle"); gridtitle != "" {
+		return gridtitle
+	}
+	return defaultGridTitle
+}
+
+func getOuterHeading(data map[string]interface{}) string {
+	return getMetadataString(data, "TFH1")
+}
+
+func getOuterSubHeading(data map[string]interface{}) string {
+	return getMetadataString(data, "TFH2")
+}
+
+func getInnerTableHeading(data map[string]interface{}) string {
+	// Support the previous key too, so older JSON still renders.
+	if heading := getMetadataString(data, "TFH3"); heading != "" {
+		return heading
+	}
+	return getMetadataString(data, "TableHeading")
+}
+
+func getInnerFooterHeading(data map[string]interface{}) string {
+	if heading := getMetadataString(data, "TFH5"); heading != "" {
+		return heading
+	}
+	return getMetadataString(data, "FooterHeading")
+}
+
+func getOuterFooter(data map[string]interface{}) string {
+	return getMetadataString(data, "TFH6")
+}
+
+func getMetadataString(data map[string]interface{}, key string) string {
+	value, exists := data[key]
+	if !exists || value == nil {
+		return ""
+	}
+	text, ok := value.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(text)
+}
+
+func isTableMetadata(key string) bool {
+	switch key {
+	case "TFH1", "TFH2", "TFH3", "TFH4", "TFH5", "TFH6",
+		"Heading", "SubHeading", "TableHeading", "TableGridTitle", "FooterHeading", "FootNotes":
+		return true
+	default:
+		return false
+	}
+}
+
+/*
+===========================================================
+GET TABLE COLUMNS
+===========================================================
+
+TableGridTitle is metadata and is NOT considered a row.
+
+Column names are collected from the inner objects.
+===========================================================
+*/
+
+func getColumns(
+	data map[string]interface{},
+	maxColumns int,
+) []string {
+
+	columnSet :=
+		make(map[string]bool)
+
+	for rowName, rowValue := range data {
+
+		/*
+			---------------------------------------------------
+			TableGridTitle is not a table row.
+			---------------------------------------------------
+		*/
+
+		if isTableMetadata(rowName) {
+
+			continue
+		}
+
+		row, ok :=
+			rowValue.(map[string]interface{})
+
+		if !ok {
+			continue
+		}
+
+		for columnName := range row {
+
+			columnSet[columnName] = true
+		}
+	}
+
+	columns :=
+		make(
+			[]string,
+			0,
+			len(columnSet),
+		)
+
+	for columnName := range columnSet {
+
+		columns =
+			append(
+				columns,
+				columnName,
+			)
+	}
+
+	/*
+		-------------------------------------------------------
+		Sort for deterministic output.
+		-------------------------------------------------------
+	*/
+
+	sort.Strings(columns)
+
+	/*
+		-------------------------------------------------------
+		Apply tN maximum.
+		-------------------------------------------------------
+	*/
+
+	if len(columns) > maxColumns {
+
+		columns =
+			columns[:maxColumns]
+	}
+
+	return columns
+}
+
+/*
+===========================================================
+BUILD TABLE HTML
+===========================================================
+*/
+
+func buildTableHTML(
+	data map[string]interface{},
+	maxColumns int,
+) string {
+	outerHeading := getOuterHeading(data)             // TFH1: centered above table
+	outerSubHeading := getOuterSubHeading(data)       // TFH2: left aligned above table
+	innerHeading := getInnerTableHeading(data)        // TFH3: centered row inside table
+	tableTitle := getTableTitle(data)                 // TFH4: normal grid header cell
+	innerFooterHeading := getInnerFooterHeading(data) // TFH5: final row inside table
+	outerFooter := getOuterFooter(data)               // TFH6: left aligned below table
+
+	columns := getColumns(data, maxColumns)
+	colspan := strconv.Itoa(len(columns) + 1) // row-label column plus product columns
+
+	var b strings.Builder
+
+	// Outer headings are deliberately outside the <table> element.
+	if outerHeading != "" {
+		b.WriteString(`<div class="tabledata-outer-heading">`)
+		b.WriteString(escapeHTML(outerHeading))
+		b.WriteString("</div>\n")
+	}
+	if outerSubHeading != "" {
+		b.WriteString(`<div class="tabledata-outer-subheading">`)
+		b.WriteString(escapeHTML(outerSubHeading))
+		b.WriteString("</div>\n")
+	}
+
+	b.WriteString(`<table class="tabledata-table">` + "\n<thead>\n")
+
+	// TFH3: optional inner heading spanning every table column.
+	if innerHeading != "" {
+		b.WriteString(`<tr class="tabledata-table-heading"><th colspan="` + colspan + `">`)
+		b.WriteString(escapeHTML(innerHeading))
+		b.WriteString("</th></tr>\n")
+	}
+
+	// TFH4 (or legacy TableGridTitle): first cell in the regular grid header.
+	b.WriteString(`<tr><th class="tabledata-heading">`)
+	b.WriteString(escapeHTML(tableTitle))
+	b.WriteString("</th>\n")
+	for _, column := range columns {
+		b.WriteString(`<th class="tabledata-column">`)
+		b.WriteString(escapeHTML(column))
+		b.WriteString("</th>\n")
+	}
+	b.WriteString("</tr>\n</thead>\n<tbody>\n")
+
+	rowNames := make([]string, 0, len(data))
+	for rowName := range data {
+		if isTableMetadata(rowName) {
+			continue
+		}
+		if _, ok := data[rowName].(map[string]interface{}); ok {
+			rowNames = append(rowNames, rowName)
+		}
+	}
+	sort.Strings(rowNames)
+
+	for _, rowName := range rowNames {
+		row := data[rowName].(map[string]interface{})
+		b.WriteString(`<tr><td class="tabledata-row-heading">`)
+		b.WriteString(escapeHTML(rowName))
+		b.WriteString("</td>\n")
+		for _, column := range columns {
+			value := interface{}(nil)
+			if cellValue, exists := row[column]; exists {
+				value = cellValue
+			}
+			b.WriteString(`<td class="tabledata-value">`)
+			b.WriteString(escapeHTML(valueToString(value)))
+			b.WriteString("</td>\n")
+		}
+		b.WriteString("</tr>\n")
+	}
+	b.WriteString("</tbody>\n")
+
+	// TFH5: optional footer row inside the table, left aligned.
+	if innerFooterHeading != "" {
+		b.WriteString(`<tfoot><tr class="tabledata-footer-heading"><td colspan="` + colspan + `">`)
+		b.WriteString(escapeHTML(innerFooterHeading))
+		b.WriteString("</td></tr></tfoot>\n")
+	}
+	b.WriteString("</table>\n")
+
+	// TFH6: optional reference/note outside and below the table.
+	if outerFooter != "" {
+		b.WriteString(`<div class="tabledata-outer-footer">`)
+		b.WriteString(escapeHTML(outerFooter))
+		b.WriteString("</div>\n")
+	}
+	return b.String()
+}
+
+/*
+===========================================================
+CONVERT CELL VALUE TO STRING
+===========================================================
+*/
+
+func valueToString(value interface{}) string {
+
+	if value == nil {
+		return "-"
+	}
+
+	switch v := value.(type) {
+
+	case string:
+
+		if strings.TrimSpace(v) == "" {
+			return "-"
+		}
+
+		return v
+
+	case float64:
+
+		if v == float64(int64(v)) {
+			return strconv.FormatInt(
+				int64(v),
+				10,
+			)
+		}
+
+		return strconv.FormatFloat(v, 'f', -1, 64)
+
+	case float32:
+		return strconv.FormatFloat(float64(v), 'f', -1, 32)
+
+	case bool:
+		return strconv.FormatBool(v)
+
+	default:
+		return fmt.Sprintf("%v", value)
+	}
+}
+
+/*
+===========================================================
+BUILD TABLE CSS
+===========================================================
+*/
+
+func buildTableCSS() string {
+
+	return `
+/*
+===========================================================
+GENERATED TABLE DATA CSS
+===========================================================
+*/
+
+.tabledata-outer-heading {
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+    margin: 0 0 6px 0;
+}
+
+.tabledata-outer-subheading {
+    width: 100%;
+    text-align: left;
+    margin: 0 0 8px 0;
+}
+
+.tabledata-outer-footer {
+    width: 100%;
+    text-align: left;
+    font-size: 12px;
+    margin: 6px 0 0 0;
+}
+
+.tabledata-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+    table-layout: fixed;
+
+    font-family: Arial, sans-serif;
+
+    font-size: 14px;
+
+    margin-top: 15px;
+
+    margin-bottom: 15px;
+}
+
+.tabledata-table th,
+.tabledata-table td {
+
+    border: 1px solid #999;
+
+    padding: 8px;
+
+    text-align: left;
+
+    vertical-align: top;
+
+    word-wrap: break-word;
+
+    overflow-wrap: break-word;
+}
+
+.tabledata-table thead th {
+
+    font-weight: bold;
+
+    background-color: #f2f2f2;
+}
+
+.tabledata-heading {
+
+    width: 20%;
+}
+
+.tabledata-column {
+
+    text-align: center;
+}
+
+/*
+===========================================================
+OPTIONAL TABLE HEADING
+===========================================================
+*/
+
+.tabledata-table-heading th {
+
+    text-align: center;
+
+    font-weight: bold;
+
+    background-color: #f2f2f2;
+}
+
+/*
+===========================================================
+OPTIONAL FOOTER HEADING
+===========================================================
+*/
+
+.tabledata-footer-heading td {
+
+    text-align: left;
+
+    font-weight: bold;
+
+    background-color: #ffffff;
+}
+
+.tabledata-row-heading {
+
+    font-weight: bold;
+
+    background-color: #f7f7f7;
+}
+
+.tabledata-value {
+
+    background-color: #ffffff;
+}
+`
+}
+
+/*
+===========================================================
+INJECT CSS INTO EXISTING <style> TAG
+===========================================================
+
+Important:
+
+ProcessTable() can be called multiple times.
+
+Therefore this function first checks whether the
+.tabledata-table CSS already exists.
+
+First call:
+    CSS is inserted.
+
+Second call:
+    CSS is not inserted again.
+
+Third call:
+    CSS is not inserted again.
+===========================================================
+*/
+
+func injectCSS(htmlContent string, css string) (string, error) {
+
+	/*
+		-------------------------------------------------------
+		Do not inject the same CSS more than once.
+		-------------------------------------------------------
+	*/
+
+	if strings.Contains(htmlContent, ".tabledata-table {") {
+
+		return htmlContent, nil
+	}
+
+	/*
+		-------------------------------------------------------
+		Find </style>.
+		-------------------------------------------------------
+	*/
+
+	lowerHTML :=
+		strings.ToLower(htmlContent)
+
+	styleEnd :=
+		strings.Index(lowerHTML, "</style>")
+
+	if styleEnd == -1 {
+
+		return "",
+			fmt.Errorf("existing </style> tag not found")
+	}
+
+	/*
+		-------------------------------------------------------
+		Insert generated CSS immediately before </style>.
+		-------------------------------------------------------
+	*/
+
+	return htmlContent[:styleEnd] +
+			"\n" +
+			css +
+			"\n" +
+			htmlContent[styleEnd:],
+		nil
+}
+
+// convertToMap
+func convertToMap(value interface{}) (map[string]interface{}, error) {
+
+	switch v := value.(type) {
+
+	case map[string]interface{}:
+		return v, nil
+
+	case string:
+		var result map[string]interface{}
+
+		err := json.Unmarshal(
+			[]byte(v),
+			&result,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+
+	case []byte:
+		var result map[string]interface{}
+
+		err := json.Unmarshal(
+			v,
+			&result,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+
+	default:
+		raw, err := json.Marshal(v)
+
+		if err != nil {
+			return nil, err
+		}
+
+		var result map[string]interface{}
+
+		err = json.Unmarshal(
+			raw,
+			&result,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+}
+
+//==================================================================
+//PROCESS 2D MAP TABLE DATA FORMATTING OF GOHTML TEMPLATE ENDS HERE
+//==================================================================

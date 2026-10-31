@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"html/template"
 	"io"
 	"log"
@@ -109,61 +110,6 @@ func CreateFuncMap() template.FuncMap {
 		},
 	}
 }
-func formatInteger(famt string, ctype byte) string {
-	// Handle the Indian and Western numbering formats
-	n := len(famt)
-	if n <= 3 {
-		// No formatting needed for numbers with 3 or fewer digits
-		return famt
-	}
-
-	// Format the first three digits (thousands)
-	result := famt[n-3:]
-
-	if ctype == 'a' || ctype == 'A' {
-		// Format the remaining digits in groups of two (lakhs, crores, etc.)
-		for i := n - 3; i > 0; i -= 2 {
-			start := i - 2
-			if start < 0 {
-				start = 0
-			}
-			result = famt[start:i] + "," + result
-		}
-	}
-	if ctype == 'c' || ctype == 'C' {
-		// Format the remaining digits in groups of three (millions, billions, etc.)
-		for i := n - 3; i > 0; i -= 3 {
-			start := i - 3
-			if start < 0 {
-				start = 0
-			}
-			result = famt[start:i] + "," + result
-		}
-	}
-
-	// Return the formatted integer
-	return result
-}
-
-func formatDecimal(famt string, ctype byte) string {
-	decimalpart := ""
-	decimallen, _ := strconv.Atoi(string(ctype))
-	//damt, _ := strconv.Atoi(string(famt))
-	var decimalFloat float64 = 0
-	if decimallen == 0 {
-		decimalFloat, _ = strconv.ParseFloat("0."+"0", 64)
-	} else {
-		decimalFloat, _ = strconv.ParseFloat("0."+string(famt), 64)
-	}
-	if decimallen == 0 {
-		return decimalpart
-	} else {
-		formatString := fmt.Sprintf("%%.%df", decimallen) // Generate format string
-		decimalpart = fmt.Sprintf(formatString, decimalFloat)
-		decimalpart = decimalpart[1:] // Remove the leading "0"
-		return decimalpart
-	}
-}
 
 func formatNumber(value interface{}, fds string) string {
 	integralpart := ""
@@ -206,13 +152,14 @@ func formatNumber(value interface{}, fds string) string {
 // Helper functions and function to return table html contents for a json data to update in out file.
 
 func escapeHTML(s string) string {
-	return strings.NewReplacer(
+	replacer := strings.NewReplacer(
 		"&", "&amp;",
 		"<", "&lt;",
 		">", "&gt;",
 		`"`, "&#34;",
 		"'", "&#39;",
-	).Replace(s)
+	)
+	return replacer.Replace(s)
 }
 
 // formatValue is to determine which formatting function to call
@@ -460,48 +407,7 @@ func EmailTriggerforReport(iCompany uint, iReference uint, iClient uint, iEmail 
 	return nil
 }
 
-func CeateFuncMap() template.FuncMap {
-	return template.FuncMap{
-		"formatNumber": formatNumber,
-	}
-}
-
-func FormatNumber(value interface{}, fds string) string {
-	integralpart := ""
-	decimalpart := ""
-	famt := ""
-	famount := ""
-	decimallen, _ := strconv.Atoi(string(fds[1]))
-	if _, ok := value.(float64); ok {
-		famt = strconv.FormatFloat(value.(float64), 'f', decimallen, 64) // Format float64 with d decimal places
-	}
-	if _, ok := value.(int); ok {
-		famt = strconv.FormatFloat(float64(value.(int)), 'f', decimallen, 64) // Format float64 with d decimal places
-	}
-	if _, ok := value.(string); ok {
-		famt = value.(string)
-	}
-	parts := strings.Split(famt, ".")
-	if fds[0] == 'a' || fds[0] == 'A' {
-		integralpart = formatInteger(parts[0], fds[0])
-	} else if fds[0] == 'c' || fds[0] == 'C' {
-		integralpart = formatInteger(parts[0], fds[0])
-	} else if fds[0] == 'd' || fds[0] == 'D' {
-		integralpart = parts[0]
-	} else {
-		integralpart = parts[0]
-	}
-
-	if len(parts) > 1 {
-		decimalpart = formatDecimal(parts[1], fds[1])
-		famount = integralpart + decimalpart
-	} else {
-		famount = integralpart
-	}
-	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
-}
-
-func FormatInteger(famt string, ctype byte) string {
+func formatInteger(famt string, ctype byte) string {
 	// Handle the Indian and Western numbering formats
 	n := len(famt)
 	if n <= 3 {
@@ -537,7 +443,7 @@ func FormatInteger(famt string, ctype byte) string {
 	return result
 }
 
-func FormatDecimal(famt string, ctype byte) string {
+func formatDecimal(famt string, ctype byte) string {
 	decimalpart := ""
 	decimallen, _ := strconv.Atoi(string(ctype))
 	//damt, _ := strconv.Atoi(string(famt))
@@ -1784,63 +1690,48 @@ func ToSnakeCase(str string) string {
 
 /*
 =====================================================================
-PROCESS 2D MAP TABLE DATA FORMATTING OF GOHTML TEMPLATE BEGINS HERE
+PROCESS TABLE DATA FORMATTING OF GOHTML TEMPLATE BEGINS HERE
 =====================================================================
 
 ProcessTable performs all table-related processing.
-
 Parameters:
-
 	htmlContent
 	    Pointer to the existing HTML document.
-
 	fieldName
 	    Name of the field used in the GoHTML.
-
 	    Example:
 	    "otable_data"
-
 	tableValue
 	    Actual value of the table field.
-
 	    Supported values:
 	    - map[string]interface{}
 	    - JSON string
 	    - []byte containing JSON
 	    - other JSON-compatible values
-
 	format
 	    Table formatting instruction.
-
 	    Examples:
 	    "t4"
 	    "T4"
 	    "t10"
-
 	    t4 means:
-
 	        t = table
 	        4 = maximum 4 data columns
-
 The function:
-
 	1. Validates the table format.
 	2. Generates the exact GoHTML placeholder.
 	3. Generates the table HTML.
 	4. Replaces the placeholder.
 	5. Generates table CSS.
 	6. Injects CSS into the existing <style> tag.
-
 The supplied htmlContent is modified in-place.
 ===========================================================
 */
 
-func ProcessTable(htmlContent *string, fieldName string, tableValue interface{}, format string) error {
+func ProcessTable(htmlContent *string, fieldName string, tableValue interface{}, format string, orientation string, originalExpression string) error {
 
 	if htmlContent == nil {
-		return fmt.Errorf(
-			"htmlContent cannot be nil",
-		)
+		return fmt.Errorf("htmlContent cannot be nil")
 	}
 
 	/*
@@ -1849,14 +1740,10 @@ func ProcessTable(htmlContent *string, fieldName string, tableValue interface{},
 		=======================================================
 	*/
 
-	columnCount, isTable :=
-		parseTableFormat(format)
+	columnCount, isTable := parseTableFormat(format)
 
 	if !isTable {
-		return fmt.Errorf(
-			"invalid table format %q: expected tN or TN",
-			format,
-		)
+		return fmt.Errorf("invalid table format %q: expected tN or TN", format)
 	}
 
 	/*
@@ -1874,7 +1761,8 @@ func ProcessTable(htmlContent *string, fieldName string, tableValue interface{},
 		    {{ formatNumber $.otable_data "t4" }}
 	*/
 
-	placeholder := buildPlaceholder(fieldName, format)
+	// placeholder := buildPlaceholder(fieldName, format, orientation)
+	placeholder := originalExpression
 
 	/*
 		=======================================================
@@ -1882,26 +1770,18 @@ func ProcessTable(htmlContent *string, fieldName string, tableValue interface{},
 		=======================================================
 	*/
 
-	data, err := convertToMap(tableValue)
+	data, err := toJSONValue(tableValue) // for all type of fields
 
 	if err != nil {
-		return fmt.Errorf(
-			"unable to convert table data: %w",
-			err,
-		)
+		return fmt.Errorf("unable to convert table data: %w", err)
 	}
 
 	/*
 		=======================================================
-		4. GENERATE TABLE HTML
+		4. GENERATE TABLE HTML (all field types supported)
 		=======================================================
 	*/
-
-	tableHTML :=
-		buildTableHTML(
-			data,
-			columnCount,
-		)
+	tableHTML := buildTableHTMLForValue(data, fieldName, columnCount, orientation)
 
 	/*
 		=======================================================
@@ -1914,19 +1794,10 @@ func ProcessTable(htmlContent *string, fieldName string, tableValue interface{},
 		placeholder,
 	) {
 
-		return fmt.Errorf(
-			"table placeholder not found: %s",
-			placeholder,
-		)
+		return fmt.Errorf("table placeholder not found: %s", placeholder)
 	}
 
-	*htmlContent =
-		strings.Replace(
-			*htmlContent,
-			placeholder,
-			tableHTML,
-			1,
-		)
+	*htmlContent = strings.Replace(*htmlContent, placeholder, tableHTML, 1)
 
 	/*
 		=======================================================
@@ -1934,8 +1805,7 @@ func ProcessTable(htmlContent *string, fieldName string, tableValue interface{},
 		=======================================================
 	*/
 
-	tableCSS :=
-		buildTableCSS()
+	tableCSS := buildTableCSS()
 
 	/*
 		=======================================================
@@ -1955,18 +1825,13 @@ func ProcessTable(htmlContent *string, fieldName string, tableValue interface{},
 		    Third table -> CSS not duplicated
 	*/
 
-	updatedHTML, err :=
-		injectCSS(
-			*htmlContent,
-			tableCSS,
-		)
+	updatedHTML, err := injectCSS(*htmlContent, tableCSS)
 
 	if err != nil {
 		return err
 	}
 
-	*htmlContent =
-		updatedHTML
+	*htmlContent = updatedHTML
 
 	return nil
 }
@@ -1998,9 +1863,7 @@ Maximum allowed = 10.
 func parseTableFormat(format string) (int, bool) {
 
 	format =
-		strings.TrimSpace(
-			format,
-		)
+		strings.TrimSpace(format)
 
 	if len(format) < 2 {
 		return 0, false
@@ -2025,9 +1888,7 @@ func parseTableFormat(format string) (int, bool) {
 	*/
 
 	count, err :=
-		strconv.Atoi(
-			format[1:],
-		)
+		strconv.Atoi(format[1:])
 
 	if err != nil {
 		return 0, false
@@ -2052,21 +1913,6 @@ func parseTableFormat(format string) (int, bool) {
 
 /*
 ===========================================================
-BUILD GOHTML PLACEHOLDER
-===========================================================
-*/
-
-func buildPlaceholder(fieldName string, format string) string {
-
-	return `{{ formatNumber $.` +
-		fieldName +
-		` "` +
-		format +
-		`" }}`
-}
-
-/*
-===========================================================
 GET TABLE TITLE
 ===========================================================
 
@@ -2076,14 +1922,14 @@ Reads:
 
 The title is used as the first table header.
 
-If the field is absent, "Parameter" is used.
+If the field is absent, "" is used.
 ===========================================================
 */
 
 func getTableTitle(data map[string]interface{}) string {
 	// TFH4 is the preferred inner grid title. Keep the older
 	// TableGridTitle key working for backward compatibility.
-	const defaultGridTitle = "Parameter"
+	const defaultGridTitle = ""
 	if gridtitle := getMetadataString(data, "TFH4"); gridtitle != "" {
 		return gridtitle
 	}
@@ -2144,6 +1990,252 @@ func isTableMetadata(key string) bool {
 
 /*
 ===========================================================
+GENERIC JSON TABLE SUPPORT
+===========================================================
+
+Supported values:
+
+	scalar       -> label/value table
+	[]any        -> vertical or horizontal 1-D table
+	[][]any      -> matrix; *_hor transposes the matrix
+	map[string]any -> key/value table, vertical or horizontal
+	map-of-maps  -> existing comparison-table format
+
+The orientation is inferred from the field name suffix _ver or _hor.
+If neither suffix is present, vertical is used.
+*/
+func toJSONValue(value interface{}) (interface{}, error) {
+	switch v := value.(type) {
+	case string:
+		var decoded interface{}
+		if err := json.Unmarshal([]byte(v), &decoded); err == nil {
+			return decoded, nil
+		}
+		return v, nil
+	case []byte:
+		var decoded interface{}
+		if err := json.Unmarshal(v, &decoded); err != nil {
+			return nil, err
+		}
+		return decoded, nil
+	default:
+		raw, err := json.Marshal(value)
+		if err != nil {
+			return nil, err
+		}
+		var decoded interface{}
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			return nil, err
+		}
+		return decoded, nil
+	}
+}
+
+func buildTableHTMLForValue(value interface{}, fieldName string, maxColumns int, orientation string) string {
+	// Keep the established comparison-table renderer for map-of-map data.
+	if obj, ok := value.(map[string]interface{}); ok {
+		// Optional metadata wrapper: {"TFH1": "...", "data": ...}.
+		if payload, exists := obj["data"]; exists {
+			meta := map[string]interface{}{}
+			for k, v := range obj {
+				if k != "data" {
+					meta[k] = v
+				}
+			}
+			return buildSimpleTableHTML(payload, maxColumns, orientation, meta)
+		}
+		for key, item := range obj {
+			if isTableMetadata(key) {
+				continue
+			}
+			if _, isObject := item.(map[string]interface{}); isObject {
+				return buildTableHTML(obj, maxColumns)
+			}
+		}
+	}
+	return buildSimpleTableHTML(value, maxColumns, orientation, nil)
+}
+
+func buildSimpleTableHTML(value interface{}, maxColumns int, orientation string, metadata map[string]interface{}) string {
+	if orientation == "" {
+		orientation = "v" // backward-compatible default when third argument is omitted
+	}
+
+	var b strings.Builder
+	if metadata != nil {
+		if h := getOuterHeading(metadata); h != "" {
+			b.WriteString(`<div class="tabledata-outer-heading">` + escapeHTML(h) + `</div>` + "\n")
+		}
+		if h := getOuterSubHeading(metadata); h != "" {
+			b.WriteString(`<div class="tabledata-outer-subheading">` + escapeHTML(h) + `</div>` + "\n")
+		}
+	}
+	b.WriteString(`<table class="tabledata-table">` + "\n")
+
+	switch v := value.(type) {
+	case []interface{}:
+		if isMapArray(v) {
+			// 2D map array: map keys are column titles; each map is a data row.
+			columnSet := make(map[string]bool)
+			for _, item := range v {
+				rowMap, _ := item.(map[string]interface{})
+				for key := range rowMap {
+					columnSet[key] = true
+				}
+			}
+			columns := make([]string, 0, len(columnSet))
+			for key := range columnSet {
+				columns = append(columns, key)
+			}
+			sort.Strings(columns)
+			if len(columns) > maxColumns {
+				columns = columns[:maxColumns]
+			}
+			b.WriteString("<thead><tr>")
+			for _, key := range columns {
+				b.WriteString(`<th class="tabledata-column">` + escapeHTML(key) + `</th>`)
+			}
+			b.WriteString("</tr></thead><tbody>\n")
+			for _, item := range v {
+				rowMap, _ := item.(map[string]interface{})
+				b.WriteString("<tr>")
+				for _, key := range columns {
+					b.WriteString(`<td class="tabledata-value">` + escapeHTML(valueToString(rowMap[key])) + `</td>`)
+				}
+				b.WriteString("</tr>\n")
+			}
+			b.WriteString("</tbody>\n")
+		} else if is2DArray(v) {
+			rows := make([][]interface{}, 0, len(v))
+			for _, item := range v {
+				row, _ := item.([]interface{})
+				rows = append(rows, row)
+			}
+			if orientation == "h" {
+				rows = transposeRows(rows)
+			}
+			b.WriteString("<tbody>\n")
+			for _, row := range rows {
+				b.WriteString("<tr>")
+				limit := len(row)
+				if limit > maxColumns {
+					limit = maxColumns
+				}
+				for i := 0; i < limit; i++ {
+					b.WriteString(`<td class="tabledata-value">` + escapeHTML(valueToString(row[i])) + `</td>`)
+				}
+				b.WriteString("</tr>\n")
+			}
+			b.WriteString("</tbody>\n")
+		} else if orientation == "h" {
+			// 1D array: values only, no synthetic column headings.
+			b.WriteString("<tbody><tr>")
+			limit := len(v)
+			if limit > maxColumns {
+				limit = maxColumns
+			}
+			for i := 0; i < limit; i++ {
+				b.WriteString(`<td class="tabledata-value">` + escapeHTML(valueToString(v[i])) + `</td>`)
+			}
+			b.WriteString("</tr></tbody>\n")
+		} else {
+			// 1D array: values only, one value per row.
+			limit := len(v)
+			if limit > 100 {
+				limit = 100
+			}
+			b.WriteString("<tbody>\n")
+			for _, item := range v[:limit] {
+				b.WriteString(`<tr><td class="tabledata-value">` + escapeHTML(valueToString(item)) + `</td></tr>` + "\n")
+			}
+			b.WriteString("</tbody>\n")
+		}
+	case map[string]interface{}:
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		if orientation == "h" {
+			if len(keys) > maxColumns {
+				keys = keys[:maxColumns]
+			}
+			// Map keys are meaningful titles, so keep them as headers.
+			b.WriteString("<thead><tr>")
+			for _, k := range keys {
+				b.WriteString(`<th class="tabledata-column">` + escapeHTML(k) + `</th>`)
+			}
+			b.WriteString("</tr></thead><tbody><tr>")
+			for _, k := range keys {
+				b.WriteString(`<td class="tabledata-value">` + escapeHTML(valueToString(v[k])) + `</td>`)
+			}
+			b.WriteString("</tr></tbody>\n")
+		} else {
+			// A 1D map is a key/value table;
+			limit := len(keys)
+			if limit > 100 {
+				limit = 100
+			}
+			for _, k := range keys[:limit] {
+				b.WriteString(`<tr><td class="tabledata-row-heading">` + escapeHTML(k) + `</td><td class="tabledata-value">` + escapeHTML(valueToString(v[k])) + `</td></tr>` + "\n")
+			}
+			b.WriteString("</tbody>\n")
+		}
+	default:
+		// Scalar: exactly one cell containing the value, with no label/header.
+		b.WriteString(`<tbody><tr><td class="tabledata-value">` + escapeHTML(valueToString(v)) + `</td></tr></tbody>` + "\n")
+	}
+	b.WriteString("</table>\n")
+	if metadata != nil {
+		if h := getInnerFooterHeading(metadata); h != "" {
+			b.WriteString(`<div class="tabledata-outer-subheading">` + escapeHTML(h) + `</div>` + "\n")
+		}
+		if h := getOuterFooter(metadata); h != "" {
+			b.WriteString(`<div class="tabledata-outer-footer">` + escapeHTML(h) + `</div>` + "\n")
+		}
+	}
+	return b.String()
+}
+
+func isMapArray(v []interface{}) bool {
+	if len(v) == 0 {
+		return false
+	}
+	_, ok := v[0].(map[string]interface{})
+	return ok
+}
+
+func is2DArray(v []interface{}) bool {
+	if len(v) == 0 {
+		return false
+	}
+	_, ok := v[0].([]interface{})
+	return ok
+}
+
+func transposeRows(rows [][]interface{}) [][]interface{} {
+	max := 0
+	for _, row := range rows {
+		if len(row) > max {
+			max = len(row)
+		}
+	}
+	out := make([][]interface{}, max)
+	for c := 0; c < max; c++ {
+		out[c] = make([]interface{}, 0, len(rows))
+		for _, row := range rows {
+			if c < len(row) {
+				out[c] = append(out[c], row[c])
+			} else {
+				out[c] = append(out[c], nil)
+			}
+		}
+	}
+	return out
+}
+
+/*
+===========================================================
 GET TABLE COLUMNS
 ===========================================================
 
@@ -2153,16 +2245,12 @@ Column names are collected from the inner objects.
 ===========================================================
 */
 
-func getColumns(
-	data map[string]interface{},
-	maxColumns int,
-) []string {
+func getColumns(data map[string]interface{}, maxColumns int) []string {
 
 	columnSet :=
 		make(map[string]bool)
 
 	for rowName, rowValue := range data {
-
 		/*
 			---------------------------------------------------
 			TableGridTitle is not a table row.
@@ -2170,7 +2258,6 @@ func getColumns(
 		*/
 
 		if isTableMetadata(rowName) {
-
 			continue
 		}
 
@@ -2182,25 +2269,14 @@ func getColumns(
 		}
 
 		for columnName := range row {
-
 			columnSet[columnName] = true
 		}
 	}
 
-	columns :=
-		make(
-			[]string,
-			0,
-			len(columnSet),
-		)
+	columns := make([]string, 0, len(columnSet))
 
 	for columnName := range columnSet {
-
-		columns =
-			append(
-				columns,
-				columnName,
-			)
+		columns = append(columns, columnName)
 	}
 
 	/*
@@ -2218,9 +2294,7 @@ func getColumns(
 	*/
 
 	if len(columns) > maxColumns {
-
-		columns =
-			columns[:maxColumns]
+		columns = columns[:maxColumns]
 	}
 
 	return columns
@@ -2232,10 +2306,7 @@ BUILD TABLE HTML
 ===========================================================
 */
 
-func buildTableHTML(
-	data map[string]interface{},
-	maxColumns int,
-) string {
+func buildTableHTML(data map[string]interface{}, maxColumns int) string {
 	outerHeading := getOuterHeading(data)             // TFH1: centered above table
 	outerSubHeading := getOuterSubHeading(data)       // TFH2: left aligned above table
 	innerHeading := getInnerTableHeading(data)        // TFH3: centered row inside table
@@ -2339,22 +2410,15 @@ func valueToString(value interface{}) string {
 	}
 
 	switch v := value.(type) {
-
 	case string:
-
 		if strings.TrimSpace(v) == "" {
 			return "-"
 		}
-
 		return v
 
 	case float64:
-
 		if v == float64(int64(v)) {
-			return strconv.FormatInt(
-				int64(v),
-				10,
-			)
+			return strconv.FormatInt(int64(v), 10)
 		}
 
 		return strconv.FormatFloat(v, 'f', -1, 64)
@@ -2406,52 +2470,35 @@ GENERATED TABLE DATA CSS
 }
 
 .tabledata-table {
-
     width: 100%;
-
     border-collapse: collapse;
-
     table-layout: fixed;
-
     font-family: Arial, sans-serif;
-
     font-size: 14px;
-
     margin-top: 15px;
-
     margin-bottom: 15px;
 }
 
 .tabledata-table th,
 .tabledata-table td {
-
     border: 1px solid #999;
-
     padding: 8px;
-
     text-align: left;
-
     vertical-align: top;
-
     word-wrap: break-word;
-
     overflow-wrap: break-word;
 }
 
 .tabledata-table thead th {
-
     font-weight: bold;
-
     background-color: #f2f2f2;
 }
 
 .tabledata-heading {
-
     width: 20%;
 }
 
 .tabledata-column {
-
     text-align: center;
 }
 
@@ -2462,11 +2509,8 @@ OPTIONAL TABLE HEADING
 */
 
 .tabledata-table-heading th {
-
     text-align: center;
-
     font-weight: bold;
-
     background-color: #f2f2f2;
 }
 
@@ -2477,23 +2521,17 @@ OPTIONAL FOOTER HEADING
 */
 
 .tabledata-footer-heading td {
-
     text-align: left;
-
     font-weight: bold;
-
     background-color: #ffffff;
 }
 
 .tabledata-row-heading {
-
     font-weight: bold;
-
     background-color: #f7f7f7;
 }
 
 .tabledata-value {
-
     background-color: #ffffff;
 }
 `
@@ -2523,7 +2561,6 @@ Third call:
 */
 
 func injectCSS(htmlContent string, css string) (string, error) {
-
 	/*
 		-------------------------------------------------------
 		Do not inject the same CSS more than once.
@@ -2567,64 +2604,6 @@ func injectCSS(htmlContent string, css string) (string, error) {
 		nil
 }
 
-// convertToMap
-func convertToMap(value interface{}) (map[string]interface{}, error) {
-
-	switch v := value.(type) {
-
-	case map[string]interface{}:
-		return v, nil
-
-	case string:
-		var result map[string]interface{}
-
-		err := json.Unmarshal(
-			[]byte(v),
-			&result,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-
-	case []byte:
-		var result map[string]interface{}
-
-		err := json.Unmarshal(
-			v,
-			&result,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-
-	default:
-		raw, err := json.Marshal(v)
-
-		if err != nil {
-			return nil, err
-		}
-
-		var result map[string]interface{}
-
-		err = json.Unmarshal(
-			raw,
-			&result,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return result, nil
-	}
-}
-
 //==================================================================
-//PROCESS 2D MAP TABLE DATA FORMATTING OF GOHTML TEMPLATE ENDS HERE
+//PROCESS TABLE DATA FORMATTING OF GOHTML TEMPLATE ENDS HERE
 //==================================================================

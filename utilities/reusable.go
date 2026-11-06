@@ -111,7 +111,7 @@ func CreateFuncMap() template.FuncMap {
 	}
 }
 
-func formatNumber(value interface{}, fds string) string {
+func formatNumber(value interface{}, fds string) (interface{}, error) {
 	integralpart := ""
 	decimalpart := ""
 	famt := ""
@@ -145,7 +145,7 @@ func formatNumber(value interface{}, fds string) string {
 	} else {
 		famount = integralpart
 	}
-	return fmt.Sprintf("%s", famount) // Format float64 with 2 decimal places and comma separators
+	return fmt.Sprintf("%s", famount), nil // Format float64 with 2 decimal places and comma separators
 }
 
 /****************************************************************************************************/
@@ -164,10 +164,12 @@ func escapeHTML(s string) string {
 
 // formatValue is to determine which formatting function to call
 // func formatValue(value interface{}, fds string) error {
-func formatValue(value interface{}, fds string) error {
+func formatValue(value interface{}, fds string) (interface{}, error) {
+
+	fds = strings.TrimSpace(fds)
 
 	if fds == "" {
-		return errors.New("format string cannot be empty")
+		return "", fmt.Errorf("format string cannot be empty")
 	}
 
 	switch fds[0] {
@@ -176,21 +178,20 @@ func formatValue(value interface{}, fds string) error {
 		'c', 'C',
 		'd', 'D':
 
-		formatNumber(value, fds)
+		fmt.Println("Before formatNumber")
+		result, _ := formatNumber(value, fds)
+		fmt.Println("After formatNumber:", result)
 
-		return nil
+		return result, nil
 
 	case 't', 'T':
 
 		// Table processing is handled separately
 		// after the field name is identified.
-		return nil
+		return value, nil
 
 	default:
-
-		return errors.New(
-			"Incorrect Format Type - " + fds,
-		)
+		return "", fmt.Errorf("Incorrect Format Type - %q", fds)
 	}
 }
 

@@ -41,17 +41,22 @@ func main() {
 
 	// Check the number of command-line arguments
 	if len(os.Args) > 3 {
-		fmt.Println("Error: Too many arguments provided. Please provide <basefilename> [<option>] ...")
+		fmt.Println("Error: Too many arguments provided.")
 		fmt.Println("Usage: cmd <basefilename> [<option>] ...")
-		fmt.Println("Option | 0 - htm to pdf | 1 - html to pdf | 2 - gohtml to html | 3 - gohtml to pdf |")
+		fmt.Println("Options with JSON FILE | 10 - htm to pdf  | 11 - html to pdf    | 12 - gohtml to pdf | 13 - gohtml to HTML | ")
+		fmt.Println("Options w/o JSON FILE  |  0 - htm to html |  1 - html to gohtml |  2 - htm to gohtml |")
+		os.Exit(1)
 	} else if len(os.Args) == 3 {
 		iFile = os.Args[1]
 		option = os.Args[2]
 	} else if len(os.Args) == 2 {
 		iFile = os.Args[1]
-		option = "0"
+		option = "10"
 	} else {
-		fmt.Printf("Error: No arguments provided.\n")
+		fmt.Println("Error: No arguments provided.")
+		fmt.Println("Usage: cmd <basefilename> [<option>] ...")
+		fmt.Println("Options with JSON FILE | 10 - htm to pdf  | 11 - html to pdf    | 12 - gohtml to pdf | 13 - gohtml to HTML | ")
+		fmt.Println("Options w/o JSON FILE  |  0 - htm to html |  1 - html to gohtml |  2 - htm to gohtml |")
 		os.Exit(1)
 	}
 
@@ -59,17 +64,14 @@ func main() {
 	checkInputFilesExist(iFile, option)
 	fmt.Println("  In Progress...")
 
-	if option == "3" {
-		fmt.Println("Option: 3 Merge gohtml with Json data & PDF Generation...")
-		// Create outfile html file to verify the correctness of gohtml file
-		// testgohtmljson(iFile)
-		// fmt.Println("...testgohtmljson completed successfully...")
-		// Create pdf file to verify the correctness of gohtml file
-		pdfgohtmljson(iFile)
-		fmt.Println("...pdfgohtmljson completed successfully...")
-	}
-	if option == "2" {
-		fmt.Println("Option: 2 Test gohtml with Json & HTML File Generation Only...")
+	if option == "13" {
+		fmt.Println("Option: 13 Test gohtml with Json & HTML File Generation Only...")
+		// Create htmlFile for using in html2gohtml processing
+		// htm2html(iFile)
+		// fmt.Println("...htm2html completed successfully...")
+		// Create gohtmlFile for using in testgohtmljson processing
+		// html2gohtml(iFile)
+		// fmt.Println("...html2gohtml completed successfully...")
 		// Create outfile html file to verify the correctness of gohtml file
 		testgohtmljson(iFile)
 		fmt.Println("...testgohtmljson completed successfully...")
@@ -77,8 +79,28 @@ func main() {
 		// pdfgohtmljson(iFile)
 		// fmt.Println("...pdfgohtmljson completed successfully...")
 	}
-	if option == "1" {
-		fmt.Println("Option: 1 Create GoHTML & Merge with Json data & PDF Generation...")
+
+	if option == "12" {
+		fmt.Println("Option: 12 Merge gohtml with Json data & PDF Generation...")
+		// Create htmlFile for using in html2gohtml processing
+		// htm2html(iFile)
+		// fmt.Println("...htm2html completed successfully...")
+		// Create gohtmlFile for using in testgohtmljson processing
+		// html2gohtml(iFile)
+		// fmt.Println("...html2gohtml completed successfully...")
+		// Create outfile html file to verify the correctness of gohtml file
+		// testgohtmljson(iFile)
+		// fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		pdfgohtmljson(iFile)
+		fmt.Println("...pdfgohtmljson completed successfully...")
+	}
+
+	if option == "11" {
+		fmt.Println("Option: 11 Create GoHTML & Merge with Json data & PDF Generation...")
+		// Create htmlFile for using in html2gohtml processing
+		//htm2html(iFile)
+		//fmt.Println("...htm2html completed successfully...")
 		// Create gohtmlFile for using in testgohtmljson processing
 		html2gohtml(iFile)
 		fmt.Println("...html2gohtml completed successfully...")
@@ -89,8 +111,9 @@ func main() {
 		pdfgohtmljson(iFile)
 		fmt.Println("...pdfgohtmljson completed successfully...")
 	}
-	if option == "0" {
-		fmt.Println("Option: 0 Create HTML, GoHTML & Merge with Json data & PDF Generation...")
+
+	if option == "10" {
+		fmt.Println("Option: 10 Create HTML, GoHTML & Merge with Json data & PDF Generation...")
 		// Create htmlFile for using in html2gohtml processing
 		htm2html(iFile)
 		fmt.Println("...htm2html completed successfully...")
@@ -104,6 +127,54 @@ func main() {
 		pdfgohtmljson(iFile)
 		fmt.Println("...pdfgohtmljson completed successfully...")
 	}
+
+	if option == "2" {
+		fmt.Println("Option: 2 Using htm File Create HTML & GOHTML Files Only...")
+		// Create htmlFile for using in html2gohtml processing
+		htm2html(iFile)
+		fmt.Println("...htm2html completed successfully...")
+		// Create gohtmlFile for using in testgohtmljson processing
+		html2gohtml(iFile)
+		fmt.Println("...html2gohtml completed successfully...")
+		// Create outfile html file to verify the correctness of gohtml file
+		// testgohtmljson(iFile)
+		// fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		//pdfgohtmljson(iFile)
+		//fmt.Println("...pdfgohtmljson completed successfully...")
+	}
+
+	if option == "1" {
+		fmt.Println("Option: 1 Using htm1 File Create GOHTML File Only...")
+		// Create htmlFile for using in html2gohtml processing
+		//htm2html(iFile)
+		//fmt.Println("...htm2html completed successfully...")
+		// Create gohtmlFile for using in testgohtmljson processing
+		html2gohtml(iFile)
+		fmt.Println("...html2gohtml completed successfully...")
+		// Create outfile html file to verify the correctness of gohtml file
+		// testgohtmljson(iFile)
+		// fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		//pdfgohtmljson(iFile)
+		//fmt.Println("...pdfgohtmljson completed successfully...")
+	}
+
+	if option == "0" {
+		fmt.Println("Option: 0 Using htm File Create HTML File Only...")
+		// Create htmlFile for using in html2gohtml processing
+		htm2html(iFile)
+		fmt.Println("...htm2html completed successfully...")
+		// Create gohtmlFile for using in testgohtmljson processing
+		//html2gohtml(iFile)
+		//fmt.Println("...html2gohtml completed successfully...")
+		// Create outfile html file to verify the correctness of gohtml file
+		// testgohtmljson(iFile)
+		// fmt.Println("...testgohtmljson completed successfully...")
+		// Create pdf file to verify the correctness of gohtml file
+		//pdfgohtmljson(iFile)
+		//fmt.Println("...pdfgohtmljson completed successfully...")
+	}
 }
 
 // / END OF MAIN ///////////////////////////////////
@@ -111,17 +182,33 @@ func main() {
 // Function to check if required files exist
 func checkInputFilesExist(arg string, opt string) {
 
-	jFile := arg + ".json"
+	jFile := ""
 	hFile := ""
 	hgFile := ""
 	fgFile := ""
-	// Check for JSON file
-	if _, err := os.Stat(jFile); os.IsNotExist(err) {
-		fmt.Printf("Error: File '%s' does not exist.\n", jFile)
-		os.Exit(1)
-	}
+
 	// File names to check depending upon runopt value
-	if opt == "0" {
+	if opt == "13" {
+		jFile = arg + ".json"
+		hFile = arg + ".gohtml"
+		hgFile = arg + "-h.gohtml"
+		fgFile = arg + "-f.gohtml"
+	} else if opt == "12" {
+		jFile = arg + ".json"
+		hFile = arg + ".gohtml"
+		hgFile = arg + "-h.gohtml"
+		fgFile = arg + "-f.gohtml"
+	} else if opt == "11" {
+		jFile = arg + ".json"
+		hFile = arg + ".html"
+		hgFile = arg + "-h.html"
+		fgFile = arg + "-f.html"
+	} else if opt == "10" {
+		jFile = arg + ".json"
+		hFile = arg + ".htm"
+		hgFile = arg + "-h.htm"
+		fgFile = arg + "-f.htm"
+	} else if opt == "2" {
 		hFile = arg + ".htm"
 		hgFile = arg + "-h.htm"
 		fgFile = arg + "-f.htm"
@@ -129,16 +216,19 @@ func checkInputFilesExist(arg string, opt string) {
 		hFile = arg + ".html"
 		hgFile = arg + "-h.html"
 		fgFile = arg + "-f.html"
-	} else if opt == "2" {
-		hFile = arg + ".gohtml"
-		hgFile = arg + "-h.gohtml"
-		fgFile = arg + "-f.gohtml"
-	} else if opt == "3" {
-		hFile = arg + ".gohtml"
-		hgFile = arg + "-h.gohtml"
-		fgFile = arg + "-f.gohtml"
+	} else if opt == "0" {
+		hFile = arg + ".htm"
+		hgFile = arg + "-h.htm"
+		fgFile = arg + "-f.htm"
 	}
 
+	// Check for JSON File depending on runopt
+	if opt != "0" && opt != "1" && opt != "2" {
+		if _, err := os.Stat(hFile); os.IsNotExist(err) {
+			fmt.Printf("Error: JSON File '%s' does not exist.\n", jFile)
+			os.Exit(1)
+		}
+	}
 	// Check for HTML File it shall be htm or html or gohtml depending on runopt
 	if _, err := os.Stat(hFile); os.IsNotExist(err) {
 		fmt.Printf("Error: File '%s' does not exist.\n", hFile)
@@ -157,7 +247,11 @@ func checkInputFilesExist(arg string, opt string) {
 		os.Exit(1)
 	}
 	// Continue processing...
-	fmt.Printf("All files '%s','%s','%s' and '%s' exist. Start Processing...\n", jFile, hFile, hgFile, fgFile)
+	if opt != "0" && opt != "1" && opt != "2" {
+		fmt.Printf("All files '%s','%s','%s' and '%s' exist. Start Processing...\n", jFile, hFile, hgFile, fgFile)
+	} else {
+		fmt.Printf("All files '%s','%s' and '%s' exist. Start Processing...\n", hFile, hgFile, fgFile)
+	}
 }
 
 // ////  HTM2HTML FUNCTION /////////////////////////////////////////////////
